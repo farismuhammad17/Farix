@@ -17,38 +17,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "../include/pmm.h"
-#include "../include/vmm.h"
-#include "../include/heap.h"
-#include "../include/io.h"
-#include "../include/idt.h"
 #include "../include/pic.h"
-#include "../include/terminal.h"
-#include "../include/multiboot.h"
 
-extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
-    init_terminal();
+void pic_remap() {
+    // ICW1
+    outb(PIC1_COMMAND, 0x11);
+    outb(PIC2_COMMAND, 0x11);
 
-    init_pmm(mbi);
-    init_vmm();
-    init_heap();
+    // ICW2
+    outb(PIC1_DATA, 0x20); // Master -> 32
+    outb(PIC2_DATA, 0x28);         // Slave -> 40
 
-    if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
-        echo("OS Error: Invalid Multiboot Magic Number");
-        while(1) { asm volatile("hlt"); }
+    // ICW3
+    outb(PIC1_DATA, 0x04);
+    outb(PIC2_DATA, 0x02);
+
+    // ICW4
+    outb(PIC1_DATA, 0x01);
+    outb(PIC2_DATA, 0x01);
+
+    // Use 0xFD to ONLY enable Keyboard (IRQ 1). Disable Timer (IRQ 0) for now.
+    outb(PIC1_DATA, 0xFD);
+    outb(PIC2_DATA, 0xFF);
+
+    outb(0x64, 0xAE); // Enable keyboard
+    while (inb(0x64) & 0x01) {
+        inb(0x60);
     }
-
-    init_idt();
-    pic_remap();
-
-    // Enable interrupts
-    asm volatile("sti");
-
-    echo("Initialized Kernel");
-
-    // The OS must NEVER die.
-    // Interrupts take back control from this loop whenever
-    // they are called, so the OS is never stuck in the
-    // while loop forever.
-    while (1) {};
 }

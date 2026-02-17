@@ -51,6 +51,9 @@ _start:
 	/* Setup the Stack */
 	mov $stack_top, %esp
 
+	push %ebx    # This becomes 'mbi'
+    push %eax    # This becomes 'magic'
+
 	/* Call the C++ kernel_main function */
 	call kernel_main
 

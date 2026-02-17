@@ -17,38 +17,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "../include/pmm.h"
-#include "../include/vmm.h"
-#include "../include/heap.h"
 #include "../include/io.h"
-#include "../include/idt.h"
-#include "../include/pic.h"
-#include "../include/terminal.h"
-#include "../include/multiboot.h"
 
-extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
-    init_terminal();
-
-    init_pmm(mbi);
-    init_vmm();
-    init_heap();
-
-    if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
-        echo("OS Error: Invalid Multiboot Magic Number");
-        while(1) { asm volatile("hlt"); }
-    }
-
-    init_idt();
-    pic_remap();
-
-    // Enable interrupts
-    asm volatile("sti");
-
-    echo("Initialized Kernel");
-
-    // The OS must NEVER die.
-    // Interrupts take back control from this loop whenever
-    // they are called, so the OS is never stuck in the
-    // while loop forever.
-    while (1) {};
+void outb(uint16_t port, uint8_t val) {
+    asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
+}
+uint8_t inb(uint16_t port) {
+    uint8_t ret;
+    asm volatile ( "inb %1, %0" : "=a"(ret) : "Nd"(port) );
+    return ret;
 }

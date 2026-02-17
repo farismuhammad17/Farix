@@ -26,6 +26,8 @@ SECTIONS
     /* It leaves the lower memory free for BIOS and VGA hardware.         */
     . = 1M;
 
+    _kernel_start = .;
+
     /* The Multiboot section comes FIRST.                            */
     /* GRUB needs to find the 'Magic Numbers' at the very beginning. */
     .text BLOCK(4K) : ALIGN(4K)
@@ -52,4 +54,6 @@ SECTIONS
         *(COMMON)
         *(.bss)
     }
+
+    _kernel_end = .;
 }
