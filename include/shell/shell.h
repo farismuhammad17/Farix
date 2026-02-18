@@ -17,24 +17,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef VMM_H
-#define VMM_H
+#ifndef SHELL_H
+#define SHELL_H
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "types/string.h"
 
-#include "config.h"
-#include "pmm.h"
+extern string* shell_buffer;
+extern bool shell_buffer_ready;
 
-#define PAGE_PRESENT  0x1   // 01 in binary  - If page is in RAM
-#define PAGE_RW       0x2   // 10 in binary  - 0 = Read-only,   1 = Read/Write
-#define PAGE_USER     0x4   // 100 in binary - 0 = Kernel only, 1 = Everyone
+void init_shell();
+void shell_update();
 
-#define ENTRIES_PER_TABLE 1024
-
-void init_vmm();
-
-void vmm_map_page(void* phys, void* virt, uint32_t flags);
-void vmm_switch_directory(uint32_t* directory);
+void shell_parse(const string& input);
 
 #endif

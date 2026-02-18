@@ -1,5 +1,12 @@
 # Changelog
 
+## LATEST
+
+- **Refactored project structure**: Each file in [include](include) and [src](src) are moved to a designated folder.
+- **Strings**: Implemented basic strings.
+- **Shell**: Implemented basic shell commands - `help`, `clear,` `memstat`, and `echo`.
+- **Command line history**: Shell allowed UP and DOWN arrow to traverse history.
+
 ## Complete Memory Stack - *17th Feb, 2026*
 
 - **Refactored project structure**: Header files into [include](include) and C++ files into [src](src)

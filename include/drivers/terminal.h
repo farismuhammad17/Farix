@@ -21,12 +21,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define TERMINAL_H
 
 #include <stddef.h>
+#include <stdint.h>
 
-#include "io.h"
+#include "types/string.h"
 
 #define WIDTH   80
 #define HEIGHT  25
 #define MEMORY  0xB8000
+
+#define INDENT_LEN 4
+
+#define MAX_TERMINAL_LINE_HISTORY_LEN 200
+#define MAX_TERMINAL_CMD_HISTORY_LEN  50
+
+#define KEY_UP    0x11
+#define KEY_DOWN  0x12
 
 extern size_t    cursor_x;
 extern size_t    cursor_y;
@@ -52,6 +61,18 @@ enum vga_color {
 	VGA_COLOR_WHITE         = 15,
 };
 
+struct TerminalCmd {
+    string command;
+    TerminalCmd* next;
+    TerminalCmd* prev;
+};
+
+struct TerminalLine {
+    uint16_t data[WIDTH]; // Store the characters AND the colors
+    TerminalLine* next;
+    TerminalLine* prev;
+};
+
 inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg) {
 	return fg | bg << 4;
 }
@@ -64,10 +85,21 @@ size_t strlen(const char* str);
 void init_terminal();
 
 void update_cursor(size_t x, size_t y);
+void terminal_clear();
+
+void terminal_scroll();
+void save_line_to_history (uint16_t* line_data);
+void save_cmd_to_history  (string command);
+void cmd_history_up   ();
+void cmd_history_down ();
 
 void echo_at   (char c, uint8_t color, size_t x, size_t y);
 void echo_char (char c);
 void echo      (const char* data);
 void echo      (const char* data, char end);
+void echo      (string data);
+void echo      (string data, char end);
+
+bool handle_special_chars(char c);
 
 #endif

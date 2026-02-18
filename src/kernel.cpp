@@ -17,14 +17,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "../include/pmm.h"
-#include "../include/vmm.h"
-#include "../include/heap.h"
-#include "../include/io.h"
-#include "../include/idt.h"
-#include "../include/pic.h"
-#include "../include/terminal.h"
-#include "../include/multiboot.h"
+#include "memory/pmm.h"
+#include "memory/vmm.h"
+#include "memory/heap.h"
+#include "architecture/multiboot.h"
+#include "architecture/io.h"
+#include "cpu/idt.h"
+#include "cpu/pic.h"
+#include "drivers/terminal.h"
+#include "shell/shell.h"
 
 extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_terminal();
@@ -32,6 +33,8 @@ extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_pmm(mbi);
     init_vmm();
     init_heap();
+
+    init_shell();
 
     if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
         echo("OS Error: Invalid Multiboot Magic Number");
@@ -44,11 +47,12 @@ extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
     // Enable interrupts
     asm volatile("sti");
 
-    echo("Initialized Kernel");
-
     // The OS must NEVER die.
     // Interrupts take back control from this loop whenever
     // they are called, so the OS is never stuck in the
     // while loop forever.
-    while (1) {};
+    while (1) {
+        shell_update();  // Check if a command is ready
+        asm volatile("hlt");
+    }
 }

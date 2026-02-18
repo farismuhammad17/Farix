@@ -17,31 +17,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef HEAP_H
-#define HEAP_H
+#include "architecture/io.h"
 
-#include <stdint.h>
-#include <stddef.h>
-
-#include "../include/pmm.h"
-#include "../include/vmm.h"
-
-struct HeapSegment {
-    size_t size;
-    HeapSegment* next;
-    HeapSegment* prev;
-    bool is_free;
-    uint32_t magic;
-};
-
-void  init_heap();
-void* malloc(size_t size);
-void  free(void* ptr);
-
-void* operator new      (size_t size);
-void* operator new[]    (size_t size);
-void  operator delete   (void* p);
-void  operator delete[] (void* p);
-void  operator delete   (void* p, size_t size);
-
-#endif
+void outb(uint16_t port, uint8_t val) {
+    asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
+}
+uint8_t inb(uint16_t port) {
+    uint8_t ret;
+    asm volatile ( "inb %1, %0" : "=a"(ret) : "Nd"(port) );
+    return ret;
+}

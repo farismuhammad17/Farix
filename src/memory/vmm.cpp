@@ -17,7 +17,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "../include/vmm.h"
+#include "config.h"
+#include "memory/pmm.h"
+
+#include "memory/vmm.h"
 
 static uint32_t* kernel_directory = nullptr;
 

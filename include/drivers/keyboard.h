@@ -17,20 +17,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef PMM_H
-#define PMM_H
+#ifndef KEYBOARD_H
+#define KEYBOARD_H
 
-#include <stdint.h>
-#include <stddef.h>
+#define KBD_LEN 58
 
-#include "config.h"
-#include "multiboot.h"
+extern bool shift_pressed;
+extern unsigned char kbd[128];
 
-#define BITMAP_SIZE 32768   // 32768 integers * 32 bits * 4096 bytes = 4GB of RAM management.
-
-void init_pmm(multiboot_info* mbi);
-
-void* pmm_alloc_page();
-void  pmm_free_page(void* addr);
+extern "C" void keyboard_handler();
 
 #endif

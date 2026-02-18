@@ -17,31 +17,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "../include/pic.h"
+#ifndef PMM_H
+#define PMM_H
 
-void pic_remap() {
-    // ICW1
-    outb(PIC1_COMMAND, 0x11);
-    outb(PIC2_COMMAND, 0x11);
+#include <stdint.h>
+#include <stddef.h>
 
-    // ICW2
-    outb(PIC1_DATA, 0x20); // Master -> 32
-    outb(PIC2_DATA, 0x28);         // Slave -> 40
+#include "architecture/multiboot.h"
 
-    // ICW3
-    outb(PIC1_DATA, 0x04);
-    outb(PIC2_DATA, 0x02);
+#define BITMAP_SIZE 32768   // 32768 integers * 32 bits * 4096 bytes = 4GB of RAM management.
 
-    // ICW4
-    outb(PIC1_DATA, 0x01);
-    outb(PIC2_DATA, 0x01);
+void init_pmm(multiboot_info* mbi);
 
-    // Use 0xFD to ONLY enable Keyboard (IRQ 1). Disable Timer (IRQ 0) for now.
-    outb(PIC1_DATA, 0xFD);
-    outb(PIC2_DATA, 0xFF);
+void* pmm_alloc_page();
+void  pmm_free_page(void* addr);
 
-    outb(0x64, 0xAE); // Enable keyboard
-    while (inb(0x64) & 0x01) {
-        inb(0x60);
-    }
-}
+#endif

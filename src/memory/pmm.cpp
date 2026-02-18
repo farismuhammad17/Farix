@@ -17,7 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "../include/pmm.h"
+#include "config.h"
+
+#include "memory/pmm.h"
 
 // Defined in scripts/linker.ld
 extern "C" uint32_t _kernel_start;

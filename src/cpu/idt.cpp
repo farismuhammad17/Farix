@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "../include/idt.h"
+#include "cpu/idt.h"
 
 struct idt_entry idt[256];
 struct idt_ptr   idtp;

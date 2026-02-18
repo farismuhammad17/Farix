@@ -17,7 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "../include/heap.h"
+#include "config.h"
+#include "memory/pmm.h"
+#include "memory/vmm.h"
+
+#include "memory/heap.h"
 
 static void* heap_start = (void*) 0x1000000;
 static HeapSegment* first_segment = nullptr;
@@ -103,6 +107,28 @@ void free(void* ptr) {
             current->next->prev = current->prev;
         }
     }
+}
+
+size_t get_heap_total() {
+    size_t total = 0;
+    HeapSegment* current = first_segment;
+    while (current != nullptr) {
+        total += current->size + sizeof(HeapSegment);
+        current = current->next;
+    }
+    return total;
+}
+
+size_t get_heap_used() {
+    size_t used = 0;
+    HeapSegment* current = first_segment;
+    while (current != nullptr) {
+        if (!current->is_free) {
+            used += current->size;
+        }
+        current = current->next;
+    }
+    return used;
 }
 
 void* operator new(size_t size) {

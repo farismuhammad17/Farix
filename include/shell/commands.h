@@ -17,17 +17,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef KEYBOARD_H
-#define KEYBOARD_H
+#ifndef SHELL_COMMANDS_H
+#define SHELL_COMMANDS_H
 
-#include "io.h"
-#include "terminal.h"
+#include "types/string.h"
 
-#define KBD_LEN 58
+typedef void (*command_func_t)(const string& args);
 
-extern bool shift_pressed;
-extern unsigned char kbd[128];
+struct ShellCommand {
+    const char* name;
+    command_func_t function;
+    const char* help_text;
+};
 
-extern "C" void keyboard_handler();
+extern ShellCommand command_table[];
+
+void cmd_help(const string& args);
+void cmd_clear(const string& args);
+void cmd_echo(const string& args);
+void cmd_memstat(const string& args);
 
 #endif
