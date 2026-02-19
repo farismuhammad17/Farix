@@ -253,6 +253,14 @@ void echo(string data, char end) {
     echo_char(end);
 }
 
+void echo(int data) {
+    echo(string::from_int(data));
+}
+
+void echo(int data, char end) {
+    echo(string::from_int(data), end);
+}
+
 bool handle_special_chars(char c) {
     if (c == '\n') {
         cursor_x = 0;

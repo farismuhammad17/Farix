@@ -18,32 +18,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "architecture/io.h"
+#include "process/task.h"
 
-#include "cpu/pic.h"
+void init_timer(uint32_t frequency) {
+    uint32_t divisor = 1193182 / frequency;
 
-void pic_remap() {
-    // ICW1
-    outb(PIC1_COMMAND, 0x11);
-    outb(PIC2_COMMAND, 0x11);
+    outb(0x43, 0x36);
 
-    // ICW2
-    outb(PIC1_DATA, 0x20); // Master -> 32
-    outb(PIC2_DATA, 0x28); // Slave -> 40
+    uint8_t low  = (uint8_t) (divisor & 0xFF);
+    uint8_t high = (uint8_t) ((divisor >> 8) & 0xFF);
 
-    // ICW3
-    outb(PIC1_DATA, 0x04);
-    outb(PIC2_DATA, 0x02);
+    outb(0x40, low);
+    outb(0x40, high);
+}
 
-    // ICW4
-    outb(PIC1_DATA, 0x01);
-    outb(PIC2_DATA, 0x01);
-
-    // 0xFC (11111100) enables both IRQ 0 (Timer) and IRQ 1 (Keyboard)
-    outb(PIC1_DATA, 0xFC);
-    outb(PIC2_DATA, 0xFF);
-
-    outb(0x64, 0xAE); // Enable keyboard
-    while (inb(0x64) & 0x01) {
-        inb(0x60);
-    }
+extern "C" void timer_handler() {
+    // Send EOI to the PIC
+    outb(0x20, 0x20);
+    schedule(); // Swap tasks
 }

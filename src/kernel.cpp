@@ -24,8 +24,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "architecture/io.h"
 #include "cpu/idt.h"
 #include "cpu/pic.h"
+#include "cpu/timer.h"
+#include "process/task.h"
 #include "drivers/terminal.h"
 #include "shell/shell.h"
+
+#define THREAD_HZ 100
+
+void shell_thread() {
+    while (1) {
+        shell_update();  // Check if a command is ready
+        asm volatile("hlt");
+    }
+}
 
 extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_terminal();
@@ -44,15 +55,19 @@ extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_idt();
     pic_remap();
 
+    init_multitasking();
+    init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms
+
     // Enable interrupts
     asm volatile("sti");
+
+    create_task(shell_thread);
 
     // The OS must NEVER die.
     // Interrupts take back control from this loop whenever
     // they are called, so the OS is never stuck in the
     // while loop forever.
     while (1) {
-        shell_update();  // Check if a command is ready
         asm volatile("hlt");
     }
 }

@@ -17,9 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "drivers/terminal.h"
 #include "memory/heap.h"
 
+#include "drivers/terminal.h"
 #include "shell/commands.h"
 
 ShellCommand command_table[] = {

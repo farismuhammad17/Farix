@@ -7,6 +7,8 @@ else
     $(error "i686-elf nor i386-elf found")
 endif
 
+NASM = nasm
+
 CC = $(PREFIX)gcc
 AS = $(PREFIX)as
 LINKER = scripts/linker.ld
@@ -16,15 +18,17 @@ CFLAGS = -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti -Iinclude
 LDFLAGS = -T $(LINKER) -ffreestanding -O2 -nostdlib -lgcc
 
 CPP_SOURCES := $(shell find src -name '*.cpp')
+ASM_SOURCES := $(shell find src -name '*.asm')
 
 CPP_OBJECTS := $(patsubst src/%.cpp, build/%.o, $(CPP_SOURCES))
+ASM_OBJECTS := $(patsubst src/%.asm, build/%.o, $(ASM_SOURCES))
 
 BOOT_OBJECT = build/boot.o
 
 all: farix.bin
 
-farix.bin: $(BOOT_OBJECT) $(CPP_OBJECTS)
-	$(CC) -o $@ $(LDFLAGS) $(BOOT_OBJECT) $(CPP_OBJECTS)
+farix.bin: $(BOOT_OBJECT) $(CPP_OBJECTS) $(ASM_OBJECTS)
+	$(CC) -o $@ $(LDFLAGS) $(BOOT_OBJECT) $(CPP_OBJECTS) $(ASM_OBJECTS)
 
 build/boot.o: src/boot.s
 	mkdir -p $(@D)
@@ -33,6 +37,10 @@ build/boot.o: src/boot.s
 build/%.o: src/%.cpp
 	mkdir -p $(@D)
 	$(CC) -c $< -o $@ $(CFLAGS)
+
+build/%.o: src/%.asm
+	mkdir -p $(@D)
+	$(NASM) -f elf32 $< -o $@
 
 clean:
 	rm -rf build farix.bin

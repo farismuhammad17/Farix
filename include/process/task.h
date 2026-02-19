@@ -17,32 +17,42 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef IDT_H
-#define IDT_H
+#ifndef TASK_H
+#define TASK_H
 
 #include <stdint.h>
 
-extern "C" {
-    void default_handler_stub();
-    void timer_handler_stub();
-    void keyboard_handler_stub();
-}
+enum TASK_STATE {
+    TASK_RUNNING  = 0,
+    TASK_READY    = 1,
+    TASK_SLEEPING = 2,
+    TASK_DEAD     = 3
+};
 
-struct idt_entry {
-    uint16_t base_low;    // Lower 16 bits of the handler address
-    uint16_t sel;         // Kernel Segment Selector (0x08)
-    uint8_t  always0;     // This byte must be 0
-    uint8_t  flags;       // That "Permission Slip" byte (0x8E)
-    uint16_t base_high;   // Upper 16 bits of the handler address
-} __attribute__((packed));
+struct cpu_state {
+    uint32_t eax, ebx, ecx, edx, esi, edi, ebp;
+    uint32_t eip, cs, eflags, esp, ss;
+};
 
-struct idt_ptr {
-    uint16_t limit; // 2 bytes
-    uint32_t base;  // 4 bytes
-} __attribute__((packed));
+struct task {
+    task* next;                 // Linked list for the scheduler
+    uint32_t id;                // Thread ID
+    uint32_t stack_pointer;     // Current ESP
+    uint32_t* stack_base;       // Memory allocated for the stack
+    uint32_t state;             // Running, Ready, etc.
+    uint32_t* stack_origin;
+    void (*entry_func)();
+};
 
-void init_idt();
+extern task* current_task;
 
-void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
+void init_multitasking();
+
+task* create_task(void (*entry_point)());
+void  schedule();
+
+void yield();
+
+extern "C" void switch_task(uint32_t* old_esp, uint32_t new_esp);
 
 #endif

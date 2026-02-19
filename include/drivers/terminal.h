@@ -99,6 +99,8 @@ void echo      (const char* data);
 void echo      (const char* data, char end);
 void echo      (string data);
 void echo      (string data, char end);
+void echo      (int data);
+void echo      (int data, char end);
 
 bool handle_special_chars(char c);
 

@@ -1,6 +1,12 @@
 # Changelog
 
-## LATEST
+## Multithreading - *19th Feb, 2026*
+
+- **Implemented threads**
+- **Integer parameted for terminal echo**: the `echo` function can now take an integer type as input.
+- **Dynamic heap size**: Heap can now expand its size if it has to.
+
+## Shell - *18th Feb, 2026*
 
 - **Refactored project structure**: Each file in [include](include) and [src](src) are moved to a designated folder.
 - **Strings**: Implemented basic strings.

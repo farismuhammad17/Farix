@@ -17,33 +17,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "architecture/io.h"
+#ifndef TIMER_H
+#define TIMER_H
 
-#include "cpu/pic.h"
+#include <stdint.h>
 
-void pic_remap() {
-    // ICW1
-    outb(PIC1_COMMAND, 0x11);
-    outb(PIC2_COMMAND, 0x11);
+void init_timer(uint32_t frequency);
 
-    // ICW2
-    outb(PIC1_DATA, 0x20); // Master -> 32
-    outb(PIC2_DATA, 0x28); // Slave -> 40
+extern "C" void timer_handler();
 
-    // ICW3
-    outb(PIC1_DATA, 0x04);
-    outb(PIC2_DATA, 0x02);
-
-    // ICW4
-    outb(PIC1_DATA, 0x01);
-    outb(PIC2_DATA, 0x01);
-
-    // 0xFC (11111100) enables both IRQ 0 (Timer) and IRQ 1 (Keyboard)
-    outb(PIC1_DATA, 0xFC);
-    outb(PIC2_DATA, 0xFF);
-
-    outb(0x64, 0xAE); // Enable keyboard
-    while (inb(0x64) & 0x01) {
-        inb(0x60);
-    }
-}
+#endif

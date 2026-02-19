@@ -31,6 +31,9 @@ void init_idt() {
         idt_set_gate(i, base, 0x08, 0x8E);
     }
 
+    // Register Timer Handler at index 32 (IRQ 0)
+    idt_set_gate(32, (uint32_t) timer_handler_stub, 0x08, 0x8E);
+
     // Register Keyboard Handler at index 33
     idt_set_gate(33, (uint32_t) keyboard_handler_stub, 0x08, 0x8E);
 

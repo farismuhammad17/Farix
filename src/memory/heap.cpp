@@ -24,11 +24,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/heap.h"
 
 static void* heap_start = (void*) 0x1000000;
+static void* heap_end   = (void*) ((uint32_t) heap_start + PAGE_SIZE);
 static HeapSegment* first_segment = nullptr;
 
 void init_heap() {
-    void* phys = pmm_alloc_page();
-    vmm_map_page(phys, heap_start, PAGE_PRESENT | PAGE_RW);
+    uint32_t initial_pages = 16; // 64KB - Plenty for 2 stacks + headers
+
+    for (uint32_t i = 0; i < initial_pages; i++) {
+        void* phys = pmm_alloc_page();
+        // We call the existing vmm_map_page
+        vmm_map_page(phys, (void*)((uint32_t)heap_start + i * PAGE_SIZE), PAGE_PRESENT | PAGE_RW);
+    }
 
     first_segment = (HeapSegment*) heap_start;
 
@@ -75,8 +81,9 @@ void* malloc(size_t size) {
         current = current->next;
     }
 
-    // Out of memory
-    return nullptr;
+    // Reaching here means we are out of memory
+    heap_expand(size);
+    return malloc(size);
 }
 
 void free(void* ptr) {
@@ -107,6 +114,31 @@ void free(void* ptr) {
             current->next->prev = current->prev;
         }
     }
+}
+
+void heap_expand(size_t size) {
+    size_t total_needed = size + sizeof(HeapSegment);
+    size_t pages_to_alloc = (total_needed / PAGE_SIZE) + 1;
+
+    for (size_t i = 0; i < pages_to_alloc; i++) {
+        void* phys = pmm_alloc_page();
+        vmm_map_page(phys, heap_end, PAGE_PRESENT | PAGE_RW);
+        heap_end = (void*)((uint32_t)heap_end + PAGE_SIZE);
+    }
+
+    HeapSegment* new_seg = (HeapSegment*)((uint32_t)heap_end - (pages_to_alloc * PAGE_SIZE));
+    new_seg->size = (pages_to_alloc * PAGE_SIZE) - sizeof(HeapSegment);
+    new_seg->is_free = true;
+    new_seg->magic = 0x12345678;
+
+    HeapSegment* current = first_segment;
+    while (current->next != nullptr) current = current->next;
+
+    current->next = new_seg;
+    new_seg->prev = current;
+    new_seg->next = nullptr;
+
+    free((void*)((uint32_t)new_seg + sizeof(HeapSegment)));
 }
 
 size_t get_heap_total() {

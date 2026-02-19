@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-#define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002
+#define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002 // Refer https://wiki.osdev.org/Multiboot
 
 struct multiboot_mmap_entry {
     uint32_t size;

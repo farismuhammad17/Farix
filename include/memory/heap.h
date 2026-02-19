@@ -35,6 +35,8 @@ void   init_heap();
 void*  malloc(size_t size);
 void   free(void* ptr);
 
+void   heap_expand(size_t size);
+
 size_t get_heap_total();
 size_t get_heap_used();
 
