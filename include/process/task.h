@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include "types/string.h"
+
 enum TASK_STATE {
     TASK_RUNNING  = 0,
     TASK_READY    = 1,
@@ -42,13 +44,14 @@ struct task {
     uint32_t state;             // Running, Ready, etc.
     uint32_t* stack_origin;
     void (*entry_func)();
+    string name;
 };
 
 extern task* current_task;
 
 void init_multitasking();
 
-task* create_task(void (*entry_point)());
+task* create_task(void (*entry_point)(), string name);
 void  schedule();
 
 void yield();

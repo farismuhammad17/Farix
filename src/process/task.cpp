@@ -52,11 +52,12 @@ void init_multitasking() {
     total_tasks++;
 }
 
-task* create_task(void (*entry_point)()) {
+task* create_task(void (*entry_point)(), string name) {
     task* new_task = new task();
 
-    new_task->id = next_pid++;
+    new_task->id         = next_pid++;
     new_task->entry_func = entry_point;
+    new_task->name       = name;
 
     uint32_t* stack = (uint32_t*) malloc(4096);
     uint32_t* esp = stack + 1024; // High address

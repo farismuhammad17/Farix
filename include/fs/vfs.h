@@ -17,29 +17,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef SHELL_COMMANDS_H
-#define SHELL_COMMANDS_H
+#ifndef VFS_H
+#define VFS_H
 
 #include "types/string.h"
 
-typedef void (*command_func_t)(const string& args);
-
-struct ShellCommand {
-    const char* name;
-    command_func_t function;
-    const char* help_text;
+struct File {
+    uint8_t* data; // Pointer to the actual content in RAM
+    size_t   size;
+    bool is_directory;
 };
 
-extern ShellCommand command_table[];
+struct FileOperations {
+    bool   (*read)(string name, void* buffer, size_t size);
+    bool   (*write)(string name, const void* buffer, size_t size);
+    bool   (*create)(string name);
+    bool   (*remove)(string name);
+    File*  (*get)(string name);
+};
 
-void cmd_help(const string& args);
-void cmd_clear(const string& args);
-void cmd_echo(const string& args);
-void cmd_memstat(const string& args);
+void vfs_mount(FileOperations* ops);
 
-void cmd_cat(const string& args);
-void cmd_write(const string& args);
-void cmd_touch(const string& args);
-void cmd_rm(const string& args);
+bool  fs_read   (string name, void* buffer, size_t size);
+bool  fs_write  (string name, const void* buffer, size_t size);
+bool  fs_create (string name);
+bool  fs_remove(string name);
+File* fs_get    (string name);
 
 #endif

@@ -43,6 +43,8 @@ public:
     char    operator[](size_t index) const { return buffer[index]; }
     char&   operator[](size_t index) { return buffer[index]; }
 
+    string* split(char delim, int lim, size_t& out_count) const;
+    size_t  count(char c) const;
     void    pop_back();
 
     char*   c_str()  const { return buffer; }

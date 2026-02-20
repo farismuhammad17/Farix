@@ -1,5 +1,13 @@
 # Changelog
 
+## Ramdisk file system - *20 Feb, 2026*
+
+- **Map data type**: Basic key-value pair data type.
+- **String methods**: Split and count methods.
+- **Implemented RAMDISK**: Files can be created inside the memory.
+- **Implemented touch, cat, write, rm to shell**: Currently only interacts with files in ram (disks are unimplemented).
+- **VFS Abstraction**: For scalability to disks.
+
 ## Multithreading - *19th Feb, 2026*
 
 - **Implemented threads**

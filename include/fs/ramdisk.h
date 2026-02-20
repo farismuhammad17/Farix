@@ -17,29 +17,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef SHELL_COMMANDS_H
-#define SHELL_COMMANDS_H
+#ifndef RAMDISK_H
+#define RAMDISK_H
 
-#include "types/string.h"
+#include "types/map.h"
+#include "fs/vfs.h"
 
-typedef void (*command_func_t)(const string& args);
+extern FileOperations ramdisk_ops;
 
-struct ShellCommand {
-    const char* name;
-    command_func_t function;
-    const char* help_text;
-};
+void   init_ramdisk();
 
-extern ShellCommand command_table[];
-
-void cmd_help(const string& args);
-void cmd_clear(const string& args);
-void cmd_echo(const string& args);
-void cmd_memstat(const string& args);
-
-void cmd_cat(const string& args);
-void cmd_write(const string& args);
-void cmd_touch(const string& args);
-void cmd_rm(const string& args);
+bool   ramdisk_read(string name, void* buffer, size_t size);
+bool   ramdisk_write(string name, const void* buffer, size_t size);
+bool   ramdisk_create(string name);
+bool   ramdisk_remove(string name);
+File*  ramdisk_get(string name);
 
 #endif

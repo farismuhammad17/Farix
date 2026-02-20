@@ -78,6 +78,38 @@ bool string::operator==(const string& other) const {
     return true;
 }
 
+string* string::split(char delim, int lim, size_t& out_count) const {
+    size_t occurrences = count(delim);
+    size_t max_parts = (lim > 0 && lim <= occurrences) ? lim + 1 : occurrences + 1;
+
+    string* parts = new string[max_parts];
+    out_count = 0;
+    string current = "";
+
+    for (size_t i = 0; i < len; i++) {
+        if (this->buffer[i] == delim && (lim == 0 || out_count < lim)) {
+            parts[out_count++] = current;
+            current = "";
+        } else {
+            current += this->buffer[i];
+        }
+    }
+
+    parts[out_count++] = current;
+
+    return parts;
+}
+
+size_t string::count(char c) const {
+    size_t out = 0;
+    for (size_t i = 0; i < len; i++) {
+        if (this->buffer[i] == c) {
+            out++;
+        }
+    }
+    return out;
+}
+
 void string::pop_back() {
     if (len > 0) {
         buffer[len - 1] = '\0';
