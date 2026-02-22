@@ -1,10 +1,12 @@
+OS := $(shell uname -s)
+
 # Look for cross-compilers
 ifeq ($(shell which i686-elf-gcc >/dev/null 2>&1; echo $$?), 0)
-    PREFIX = i686-elf-
+PREFIX = i686-elf-
 else ifeq ($(shell which i386-elf-gcc >/dev/null 2>&1; echo $$?), 0)
-    PREFIX = i386-elf-
+PREFIX = i386-elf-
 else
-    $(error "i686-elf nor i386-elf found")
+$(error "i686-elf nor i386-elf found")
 endif
 
 NASM = nasm
@@ -43,10 +45,23 @@ build/%.o: src/%.asm
 	$(NASM) -f elf32 $< -o $@
 
 clean:
-	rm -rf build farix.bin
+	rm -rf build farix.bin disk.img
 
-run: farix.bin
-	qemu-system-i386 -kernel farix.bin -full-screen
+disk.img:
+	@echo "Creating disk.img for $(OS)"
 
-run_nofs: farix.bin
-	qemu-system-i386 -kernel farix.bin
+	qemu-img create -f raw disk.img 64M
+
+ifeq ($(OS), Darwin)
+		hdiutil create -size 64m -fs "MS-DOS FAT32" -volname "FARIX" -type UDIF -layout NONE disk.img
+		mv disk.img.dmg disk.img
+		rm -f disk.dmg.sparseimage
+else
+		mkfs.fat -F 32 -n FARIX disk.img
+endif
+
+run: farix.bin disk.img
+	qemu-system-i386 -kernel farix.bin -drive format=raw,file=disk.img,index=0,media=disk -full-screen
+
+run_nofs: farix.bin disk.img
+	qemu-system-i386 -kernel farix.bin -drive format=raw,file=disk.img,index=0,media=disk

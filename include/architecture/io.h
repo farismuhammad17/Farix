@@ -22,7 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-void outb(uint16_t port, uint8_t val);
-uint8_t inb(uint16_t port);
+void     outb (uint16_t port, uint8_t val);
+void     outw (uint16_t port, uint16_t val);
+uint8_t  inb  (uint16_t port);
+uint16_t inw  (uint16_t port);
 
 #endif

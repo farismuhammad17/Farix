@@ -1,5 +1,10 @@
 # Changelog
 
+## Global Descriptor Table - *22 Feb, 2026*
+
+- **GDT**: Suspiciously works without refactoring anything else
+- **I/O word**: `inw` and `outw` in `io.h`
+
 ## Ramdisk file system - *20 Feb, 2026*
 
 - **Map data type**: Basic key-value pair data type.

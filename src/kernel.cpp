@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/heap.h"
 #include "architecture/multiboot.h"
 #include "architecture/io.h"
+#include "cpu/gdt.h"
 #include "cpu/idt.h"
 #include "cpu/pic.h"
 #include "cpu/timer.h"
@@ -41,6 +42,8 @@ void shell_thread() {
 }
 
 extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
+    init_gdt();
+
     init_terminal();
 
     init_pmm(mbi);
@@ -59,6 +62,8 @@ extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
 
     init_multitasking();
     init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms
+
+    // init_ata();
 
     init_ramdisk();
     vfs_mount(&ramdisk_ops);    // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
