@@ -40,6 +40,11 @@ bool fs_create(string name) {
     return current_fs_ops->create(name);
 }
 
+bool fs_mkdir(string name) {
+    if (!current_fs_ops || !current_fs_ops->mkdir) return false;
+    return current_fs_ops->mkdir(name);
+}
+
 bool fs_remove(string name) {
     if (!current_fs_ops || !current_fs_ops->remove) return false;
     return current_fs_ops->remove(name);
@@ -48,4 +53,9 @@ bool fs_remove(string name) {
 File* fs_get(string name) {
     if (!current_fs_ops || !current_fs_ops->get) return nullptr;
     return current_fs_ops->get(name);
+}
+
+FileNode* fs_getall(string path) {
+    if (!current_fs_ops || !current_fs_ops->getall) return nullptr;
+    return current_fs_ops->getall(path);
 }

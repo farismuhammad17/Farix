@@ -22,8 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "types/string.h"
 
+extern string* shell_directory;
 extern string* shell_buffer;
-extern bool shell_buffer_ready;
+extern bool    shell_buffer_ready;
 
 void init_shell();
 void shell_update();

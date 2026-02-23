@@ -95,6 +95,21 @@ public:
         }
     }
 
+    K* keys() {
+        if (_size == 0) return nullptr;
+
+        K* key_list = new K[_size];
+        size_t count = 0;
+
+        for (size_t i = 0; i < _capacity; i++) {
+            if (entries[i].active) {
+                key_list[count++] = entries[i].key;
+            }
+        }
+
+        return key_list;
+    }
+
     V get(K key) {
         for (size_t i = 0; i < _capacity; i++) {
             if (entries[i].active && entries[i].key == key) {
@@ -104,6 +119,10 @@ public:
         return V(); // Return null/default if not found
     }
 
+    size_t capacity() {
+        return _capacity;
+    }
+
     bool contains(K key) {
         for (size_t i = 0; i < _capacity; i++) {
             if (entries[i].active && entries[i].key == key) {
@@ -111,6 +130,10 @@ public:
             }
         }
         return false;
+    }
+
+    Pair<K, V>& getEntryInternal(size_t i) {
+        return entries[i];
     }
 
     K getKeyAt(size_t index) {

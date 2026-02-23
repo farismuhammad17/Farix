@@ -99,6 +99,7 @@ void echo      (const char* data);
 void echo      (const char* data, char end);
 void echo      (string data);
 void echo      (string data, char end);
+void echo      (string data, string end);
 void echo      (int data);
 void echo      (int data, char end);
 

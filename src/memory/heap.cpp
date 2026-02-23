@@ -23,22 +23,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "memory/heap.h"
 
-static void* heap_start = (void*) 0x1000000;
-static void* heap_end   = (void*) ((uint32_t) heap_start + PAGE_SIZE);
+static void*        heap_start    = (void*) 0x1000000;
+static void*        heap_end      = nullptr;
 static HeapSegment* first_segment = nullptr;
 
 void init_heap() {
-    uint32_t initial_pages = 16; // 64KB - Plenty for 2 stacks + headers
+    uint32_t initial_pages = 16;
 
     for (uint32_t i = 0; i < initial_pages; i++) {
         void* phys = pmm_alloc_page();
-        // We call the existing vmm_map_page
-        vmm_map_page(phys, (void*)((uint32_t)heap_start + i * PAGE_SIZE), PAGE_PRESENT | PAGE_RW);
+        vmm_map_page(phys, (void*)((uint32_t) heap_start + i * PAGE_SIZE), PAGE_PRESENT | PAGE_RW);
     }
 
-    first_segment = (HeapSegment*) heap_start;
+    heap_end = (void*)((uint32_t) heap_start + (initial_pages * PAGE_SIZE));
 
-    first_segment->size    = PAGE_SIZE - sizeof(HeapSegment);
+    first_segment = (HeapSegment*) heap_start;
+    first_segment->size    = (initial_pages * PAGE_SIZE) - sizeof(HeapSegment);
     first_segment->next    = nullptr;
     first_segment->prev    = nullptr;
     first_segment->is_free = true;
@@ -116,28 +116,39 @@ void free(void* ptr) {
     }
 }
 
+void memcpy(void* dest, const void* source, size_t n) {
+    uint8_t* dst = (uint8_t*) dest;
+    uint8_t* src = (uint8_t*) source;
+    for (size_t i = 0; i < n; i++) dst[i] = src[i];
+}
+
 void heap_expand(size_t size) {
     size_t total_needed = size + sizeof(HeapSegment);
-    size_t pages_to_alloc = (total_needed / PAGE_SIZE) + 1;
+    size_t pages_to_alloc = (total_needed + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    HeapSegment* new_seg = (HeapSegment*)heap_end;
 
     for (size_t i = 0; i < pages_to_alloc; i++) {
         void* phys = pmm_alloc_page();
-        vmm_map_page(phys, heap_end, PAGE_PRESENT | PAGE_RW);
-        heap_end = (void*)((uint32_t)heap_end + PAGE_SIZE);
+        vmm_map_page(phys, (void*)((uint32_t)heap_end + (i * PAGE_SIZE)), PAGE_PRESENT | PAGE_RW);
     }
 
-    HeapSegment* new_seg = (HeapSegment*)((uint32_t)heap_end - (pages_to_alloc * PAGE_SIZE));
+    heap_end = (void*)((uint32_t)heap_end + (pages_to_alloc * PAGE_SIZE));
+
     new_seg->size = (pages_to_alloc * PAGE_SIZE) - sizeof(HeapSegment);
     new_seg->is_free = true;
     new_seg->magic = 0x12345678;
 
-    HeapSegment* current = first_segment;
-    while (current->next != nullptr) current = current->next;
+    // Link it to the end of the chain
+    HeapSegment* last = first_segment;
+    while (last->next != nullptr) last = last->next;
 
-    current->next = new_seg;
-    new_seg->prev = current;
+    last->next = new_seg;
+    new_seg->prev = last;
     new_seg->next = nullptr;
 
+    // Merge this new free block with the previous one if possible
+    // free function already handles merging
     free((void*)((uint32_t)new_seg + sizeof(HeapSegment)));
 }
 

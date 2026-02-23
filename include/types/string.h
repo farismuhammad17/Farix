@@ -29,8 +29,10 @@ private:
     size_t len;
 
 public:
-    string(const char* str = "");
+    string(const char* str = nullptr);
     string(const string& other);
+    string(const char* str, char c);
+    string(char* allocated_buffer, size_t length);
     ~string();
 
     string& operator=(const string& other);
@@ -44,7 +46,13 @@ public:
     char&   operator[](size_t index) { return buffer[index]; }
 
     string* split(char delim, int lim, size_t& out_count) const;
+    string* upper() const;
+    string  substr(int start) const;
     size_t  count(char c) const;
+    size_t  find(char c, size_t start) const;
+    bool    starts_with(const string& other) const;
+    bool    ends_with(const string& other) const;
+    bool    contains(char c) const;
     void    pop_back();
 
     char*   c_str()  const { return buffer; }

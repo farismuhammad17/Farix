@@ -23,10 +23,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "shell/shell.h"
 #include "shell/commands.h"
 
+string* shell_directory = nullptr;
 string* shell_buffer    = nullptr;
 bool shell_buffer_ready = false;
 
 void init_shell() {
+    shell_directory = new string("/");
     shell_buffer = new string("");
     shell_buffer_ready = false;
 

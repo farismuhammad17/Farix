@@ -27,10 +27,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cpu/pic.h"
 #include "cpu/timer.h"
 #include "process/task.h"
+#include "drivers/ata.h"
 #include "drivers/terminal.h"
 #include "shell/shell.h"
 #include "fs/vfs.h"
 #include "fs/ramdisk.h"
+#include "fs/fat32.h"
 
 #define THREAD_HZ 100
 
@@ -63,10 +65,12 @@ extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_multitasking();
     init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms
 
-    // init_ata();
+    init_ata();
 
     init_ramdisk();
-    vfs_mount(&ramdisk_ops);    // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
+    init_fat32();
+
+    vfs_mount(&fat32_ops);    // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
 
     // Enable interrupts
     asm volatile("sti");

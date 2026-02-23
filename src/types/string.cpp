@@ -27,18 +27,39 @@ static size_t strlen(const char* str) {
     return l;
 }
 
-string::string(const char* str) {
-    len = strlen(str);
-    buffer = new char[len + 1];
-    for (size_t i = 0; i < len; i++) buffer[i] = str[i];
-    buffer[len] = '\0';
+string::string(const char* str) : buffer(nullptr), len(0) {
+    if (str) {
+        len = strlen(str);
+        buffer = new char[len + 1];
+        memcpy(buffer, str, len + 1);
+    } else {
+        buffer = new char[1];
+        buffer[0] = '\0';
+    }
 }
 
 string::string(const string& other) {
-    len = other.len;
+    len    = other.len;
     buffer = new char[len + 1];
-    for (size_t i = 0; i <= len; i++) buffer[i] = other.buffer[i];
+    memcpy(buffer, other.buffer, len + 1);
+}
+
+string::string(const char* str, char c) {
+    size_t str_len = str ? strlen(str) : 0;
+    len = str_len + 1;
+    buffer = new char[len + 1];
+
+    if (str_len > 0) {
+        memcpy(buffer, str, str_len);
+    }
+
+    buffer[str_len] = c;
     buffer[len] = '\0';
+}
+
+string::string(char* allocated_buffer, size_t length) {
+    buffer = allocated_buffer;
+    len    = length;
 }
 
 string::~string() {
@@ -49,11 +70,18 @@ string::~string() {
 
 string& string::operator=(const string& other) {
     if (this == &other) return *this;
+    if (buffer) delete[] buffer;
 
-    delete[] buffer;
     len = other.len;
-    buffer = new char[len + 1];
-    for (size_t i = 0; i <= len; i++) buffer[i] = other.buffer[i];
+
+    if (other.buffer) {
+        buffer = new char[len + 1];
+        memcpy(buffer, other.buffer, len + 1);
+    } else {
+        buffer = new char[1];
+        buffer[0] = '\0';
+        len = 0;
+    }
 
     return *this;
 }
@@ -80,7 +108,7 @@ bool string::operator==(const string& other) const {
 
 string* string::split(char delim, int lim, size_t& out_count) const {
     size_t occurrences = count(delim);
-    size_t max_parts = (lim > 0 && lim <= occurrences) ? lim + 1 : occurrences + 1;
+    size_t max_parts   = (lim > 0 && lim <= occurrences) ? lim + 1 : occurrences + 1;
 
     string* parts = new string[max_parts];
     out_count = 0;
@@ -100,6 +128,34 @@ string* string::split(char delim, int lim, size_t& out_count) const {
     return parts;
 }
 
+string* string::upper() const {
+    string* result = new string(*this);
+
+    for (size_t i = 0; i < len; ++i) {
+        if (result->buffer[i] >= 'a' && result->buffer[i] <= 'z') {
+            result->buffer[i] -= 32;
+        }
+    }
+
+    return result;
+}
+
+string string::substr(int start) const {
+    if (start >= (int)len) return string("");
+
+    size_t new_len = len - start;
+    char* temp = new char[new_len + 1];
+
+    for (size_t i = 0; i < new_len; i++) {
+        temp[i] = buffer[start + i];
+    }
+    temp[new_len] = '\0';
+
+    string result(temp);
+    delete[] temp;
+    return result;
+}
+
 size_t string::count(char c) const {
     size_t out = 0;
     for (size_t i = 0; i < len; i++) {
@@ -108,6 +164,36 @@ size_t string::count(char c) const {
         }
     }
     return out;
+}
+
+size_t string::find(char c, size_t start) const {
+    for (size_t i = start; i < len; i++) {
+        if (buffer[i] == c) return i;
+    }
+    return (size_t)-1;
+}
+
+bool string::starts_with(const string& other) const {
+    if (other.len > len) return false;
+    for (size_t i = 0; i < other.len; i++) {
+        if (buffer[i] != other.buffer[i]) return false;
+    }
+    return true;
+}
+
+bool string::ends_with(const string& other) const {
+    if (other.len > len) return false;
+    for (size_t i = other.len - 1; i > 0; i--) {
+        if (buffer[i] != other.buffer[i]) return false;
+    }
+    return true;
+}
+
+bool string::contains(char c) const {
+    for (int i = 0; i < this->length(); i++) {
+        if ((*this)[i] == c) return true;
+    }
+    return false;
 }
 
 void string::pop_back() {
@@ -171,13 +257,12 @@ string string::from_hex(uint32_t n) {
 
 void string::operator+=(char c) {
     char* new_buffer = new char[len + 2];
-
-    for (size_t i = 0; i < len; i++) new_buffer[i] = buffer[i];
-
+    if (buffer) {
+        memcpy(new_buffer, buffer, len);
+        delete[] buffer;
+    }
     new_buffer[len] = c;
     new_buffer[len + 1] = '\0';
-
-    delete[] buffer;
     buffer = new_buffer;
     len++;
 }
@@ -185,53 +270,35 @@ void string::operator+=(char c) {
 string operator+(const string& lhs, const string& rhs) {
     size_t total_len = lhs.length() + rhs.length();
 
-    char* temp = new char[total_len + 1];
+    char* b = new char[total_len + 1];
 
-    for (size_t i = 0; i < lhs.length(); i++) {
-        temp[i] = lhs[i];
-    }
-    for (size_t i = 0; i < rhs.length(); i++) {
-        temp[lhs.length() + i] = rhs[i];
-    }
+    memcpy(b, lhs.c_str(), lhs.length());
+    memcpy(b + lhs.length(), rhs.c_str(), rhs.length());
+    b[total_len] = '\0';
 
-    temp[total_len] = '\0';
-
-    string result(temp);
-    delete[] temp;
-
-    return result;
+    return string(b, total_len);
 }
 
 string operator+(const string& lhs, char rhs) {
-    size_t new_len = lhs.length() + 1;
-    char* temp = new char[new_len + 1];
+    size_t old_len = lhs.length();
+    size_t new_len = old_len + 1;
+    char* temp    = new char[new_len + 1];
 
-    for (size_t i = 0; i < lhs.length(); i++) {
-        temp[i] = lhs[i];
-    }
-
-    temp[lhs.length()] = rhs;
+    memcpy(temp, lhs.c_str(), old_len);
+    temp[old_len] = rhs;
     temp[new_len] = '\0';
 
-    string result(temp);
-    delete[] temp;
-
-    return result;
+    return string(temp, new_len);
 }
 
 string operator+(char lhs, const string& rhs) {
-    size_t new_len = rhs.length() + 1;
-    char* temp = new char[new_len + 1];
+    size_t old_len = rhs.length();
+    size_t new_len = old_len + 1;
+    char* temp    = new char[new_len + 1];
 
     temp[0] = lhs;
-    for (size_t i = 0; i < rhs.length(); i++) {
-        temp[i + 1] = rhs[i];
-    }
-
+    memcpy(temp + 1, rhs.c_str(), old_len);
     temp[new_len] = '\0';
 
-    string result(temp);
-    delete[] temp;
-
-    return result;
+    return string(temp, new_len);
 }

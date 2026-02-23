@@ -17,31 +17,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef SHELL_COMMANDS_H
-#define SHELL_COMMANDS_H
+#ifndef ATA_H
+#define ATA_H
 
-#include "types/string.h"
+#define STATUS_BSY 0x80
+#define STATUS_DRQ 0x08
 
-typedef void (*command_func_t)(const string& args);
+#include <stdint.h>
 
-struct ShellCommand {
-    const char* name;
-    command_func_t function;
-    const char* help_text;
-};
-
-extern ShellCommand command_table[];
-
-void cmd_help(const string& args);
-void cmd_clear(const string& args);
-void cmd_echo(const string& args);
-void cmd_memstat(const string& args);
-
-void cmd_cat(const string& args);
-void cmd_write(const string& args);
-void cmd_touch(const string& args);
-void cmd_mkdir(const string& args);
-void cmd_rm(const string& args);
-void cmd_ls(const string& args);
+void init_ata();
+void ata_read_sector(uint32_t lba, uint8_t* buffer);
+void ata_write_sector(uint32_t lba, uint8_t* buffer);
+void ata_wait_ready();
 
 #endif

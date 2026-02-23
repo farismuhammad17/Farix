@@ -25,12 +25,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 extern FileOperations ramdisk_ops;
 
-void   init_ramdisk();
+void      init_ramdisk();
 
-bool   ramdisk_read(string name, void* buffer, size_t size);
-bool   ramdisk_write(string name, const void* buffer, size_t size);
-bool   ramdisk_create(string name);
-bool   ramdisk_remove(string name);
-File*  ramdisk_get(string name);
+bool      ramdisk_read   (string name, void* buffer, size_t size);
+bool      ramdisk_write  (string name, const void* buffer, size_t size);
+bool      ramdisk_create (string name);
+bool      ramdisk_mkdir  (string name);
+bool      ramdisk_remove (string name);
+File*     ramdisk_get    (string name);
+FileNode* ramdisk_getall (string path);
 
 #endif

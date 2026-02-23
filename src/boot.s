@@ -38,7 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 .section .bss
 .align 16
 stack_bottom:
-.skip 16384 /* 16 KiB of space */
+.skip 65536 /* 64 KiB of space */
 stack_top:
 
 /* The actual entry point where the CPU begins execution */
@@ -71,10 +71,10 @@ cli
 .global keyboard_handler_stub
 .extern keyboard_handler
 
-default_handler_stub:
-    pusha                # Save state, just in case
-    popa
-    iret
+default_handler_stub:          /* Shouldn't be seen unless it's an error */
+    movl $0x0F210F21, 0xB8000  /* Puts '!' on screen                     */
+    cli
+    hlt
 
 keyboard_handler_stub:
     pusha                # Save all general-purpose registers

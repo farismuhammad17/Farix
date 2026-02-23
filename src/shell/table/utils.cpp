@@ -17,19 +17,36 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include "drivers/terminal.h"
+#include "memory/heap.h"
+
 #include "shell/commands.h"
 
-ShellCommand command_table[] = {
-    {"help", cmd_help, "Display help information"},
-    {"clear", cmd_clear, "Clear the terminal screen"},
-    {"echo", cmd_echo, "Echoes to the terminal"},
-    {"memstat", cmd_memstat, "Memory statistics"},
-    {"cat", cmd_cat, "Read file"},
-    {"write", cmd_write, "Write to a file"},
-    {"touch", cmd_touch, "Create new file"},
-    {"mkdir", cmd_mkdir, "Create new folder"},
-    {"rm", cmd_rm, "Delete file"},
-    {"ls", cmd_ls, "List directory contents"},
+void cmd_help(const string& args) {
+    for (size_t i = 0; command_table[i].name != nullptr; i++) {
+        string cmd = string(command_table[i].name);
+        string indent = "\t";
+        if (cmd.length() < INDENT_LEN) {
+            indent = indent + '\t';
+        }
+        echo(cmd + indent + command_table[i].help_text);
+    }
+}
 
-    {nullptr, nullptr, nullptr} // to mark the end
-};
+void cmd_clear(const string& args) {
+    terminal_clear();
+}
+
+void cmd_echo(const string& args) {
+    echo(args);
+}
+
+void cmd_memstat(const string& args) {
+    size_t total = get_heap_total() / 1024;
+    size_t used  = get_heap_used()  / 1024;
+    size_t free  = total - used;
+
+    echo("Total:\t" + string::from_int(total));
+    echo("Used:\t"  + string::from_int(used));
+    echo("Free:\t"  + string::from_int(free));
+}

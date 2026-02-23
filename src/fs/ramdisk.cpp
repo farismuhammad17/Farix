@@ -28,8 +28,10 @@ FileOperations ramdisk_ops = {
     .read   = ramdisk_read,
     .write  = ramdisk_write,
     .create = ramdisk_create,
+    .mkdir  = ramdisk_mkdir,
     .remove = ramdisk_remove,
-    .get    = ramdisk_get
+    .get    = ramdisk_get,
+    .getall = ramdisk_getall
 };
 
 void init_ramdisk() {
@@ -73,8 +75,21 @@ bool ramdisk_create(string name) {
     File* new_file = new File();
     new_file->data = nullptr; // Empty file
     new_file->size = 0;
+    new_file->is_directory = false;
 
     files->put(name, new_file);
+    return true;
+}
+
+bool ramdisk_mkdir(string name) {
+    if (files->contains(name)) return false; // Already exists (file or folder)
+
+    File* new_dir = new File();
+    new_dir->data = nullptr;
+    new_dir->size = 0;
+    new_dir->is_directory = true;
+
+    files->put(name, new_dir);
     return true;
 }
 
@@ -96,4 +111,33 @@ bool ramdisk_remove(string name) {
 
 File* ramdisk_get(string name) {
     return files->get(name);
+}
+
+FileNode* ramdisk_getall(string path) {
+    FileNode* head = nullptr;
+
+    // Normalize path for consistent checking
+    if (path.starts_with("/")) path = "";
+
+    for (size_t i = 0; i < files->capacity(); i++) {
+        Pair<string, File*>& entry = files->getEntryInternal(i);
+
+        if (entry.active) {
+            string name = entry.key;
+
+            if (name.starts_with(path) && name != "" && !name.substr(path.length()).contains('/')) {
+                FileNode* newNode = new FileNode();
+                if (!newNode) return head;
+
+                newNode->file.size = entry.value->size;
+                newNode->file.is_directory = entry.value->is_directory;
+                newNode->file.name = name;
+
+                newNode->next = head;
+                head = newNode;
+            }
+        }
+    }
+
+    return head;
 }

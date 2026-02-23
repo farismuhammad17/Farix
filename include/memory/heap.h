@@ -34,6 +34,7 @@ struct HeapSegment {
 void   init_heap();
 void*  malloc(size_t size);
 void   free(void* ptr);
+void   memcpy(void* dest, const void* source, size_t n);
 
 void   heap_expand(size_t size);
 

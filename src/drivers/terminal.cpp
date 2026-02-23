@@ -253,6 +253,14 @@ void echo(string data, char end) {
     echo_char(end);
 }
 
+void echo(string data, string end) {
+    const char* buffer = data.c_str();
+    for (size_t i = 0; i < data.length(); i++) {
+        echo_char(buffer[i]);
+    }
+    echo(end, "\0");
+}
+
 void echo(int data) {
     echo(string::from_int(data));
 }

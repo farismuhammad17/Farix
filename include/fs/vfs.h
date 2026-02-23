@@ -23,25 +23,35 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "types/string.h"
 
 struct File {
+    string   name;
     uint8_t* data; // Pointer to the actual content in RAM
     size_t   size;
     bool is_directory;
 };
 
-struct FileOperations {
-    bool   (*read)(string name, void* buffer, size_t size);
-    bool   (*write)(string name, const void* buffer, size_t size);
-    bool   (*create)(string name);
-    bool   (*remove)(string name);
-    File*  (*get)(string name);
+struct FileNode {
+    File file;
+    FileNode* next;
 };
 
-void vfs_mount(FileOperations* ops);
+struct FileOperations {
+    bool  (*read)   (string name, void* buffer, size_t size);
+    bool  (*write)  (string name, const void* buffer, size_t size);
+    bool  (*create) (string name);
+    bool  (*mkdir)  (string name);
+    bool  (*remove) (string name);
+    File* (*get)    (string name);
+    FileNode* (*getall) (string path);
+};
 
-bool  fs_read   (string name, void* buffer, size_t size);
-bool  fs_write  (string name, const void* buffer, size_t size);
-bool  fs_create (string name);
-bool  fs_remove(string name);
-File* fs_get    (string name);
+void      vfs_mount (FileOperations* ops);
+
+bool      fs_read   (string name, void* buffer, size_t size);
+bool      fs_write  (string name, const void* buffer, size_t size);
+bool      fs_create (string name);
+bool      fs_mkdir  (string name);
+bool      fs_remove (string name);
+File*     fs_get    (string name);
+FileNode* fs_getall (string path);
 
 #endif
