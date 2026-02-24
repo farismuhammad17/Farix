@@ -37,6 +37,7 @@ void cmd_clear(const string& args);
 void cmd_echo(const string& args);
 void cmd_memstat(const string& args);
 
+void cmd_cd(const string& args);
 void cmd_cat(const string& args);
 void cmd_write(const string& args);
 void cmd_touch(const string& args);

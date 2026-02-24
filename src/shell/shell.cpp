@@ -32,7 +32,8 @@ void init_shell() {
     shell_buffer = new string("");
     shell_buffer_ready = false;
 
-    echo("farix> ", '\0');
+    echo(*shell_directory, '\0');
+    echo("> ", '\0');
 }
 
 void shell_update() {
@@ -42,7 +43,8 @@ void shell_update() {
         *shell_buffer = "";
         shell_buffer_ready = false;
 
-        echo("farix> ", '\0');
+        echo(*shell_directory, '\0');
+        echo("> ", '\0');
     }
 }
 

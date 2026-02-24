@@ -141,7 +141,7 @@ string* string::upper() const {
 }
 
 string string::substr(int start) const {
-    if (start >= (int)len) return string("");
+    if (start >= (int) len) return string("");
 
     size_t new_len = len - start;
     char* temp = new char[new_len + 1];
@@ -150,6 +150,21 @@ string string::substr(int start) const {
         temp[i] = buffer[start + i];
     }
     temp[new_len] = '\0';
+
+    string result(temp);
+    delete[] temp;
+    return result;
+}
+
+string string::substr(int start, int stop) const {
+    if (stop - start >= (int) len) return string("");
+
+    char* temp = new char[stop - start];
+
+    for (size_t i = start; i < stop; i++) {
+        temp[i - start] = buffer[i];
+    }
+    temp[stop - start + 1] = '\0';
 
     string result(temp);
     delete[] temp;

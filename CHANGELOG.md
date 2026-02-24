@@ -1,5 +1,12 @@
 # Changelog
 
+## Change Directory Shell Command - *24 Feb, 2026*
+
+- **Shell**
+  - `cd` command: Changes current directory (doesn't work perfectly with RAMDisk, will be fixed later).
+- **String**
+  - `substr` method: Returns the sub-string of given string between two indices.
+
 ## FAT32 file system - *23 Feb, 2026*
 
 - **ATA drivers**

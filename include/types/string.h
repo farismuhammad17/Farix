@@ -48,6 +48,7 @@ public:
     string* split(char delim, int lim, size_t& out_count) const;
     string* upper() const;
     string  substr(int start) const;
+    string  substr(int start, int stop) const;
     size_t  count(char c) const;
     size_t  find(char c, size_t start) const;
     bool    starts_with(const string& other) const;

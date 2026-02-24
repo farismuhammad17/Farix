@@ -23,8 +23,76 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "shell/commands.h"
 
+string full_path_to(const string& filename) {
+    string path;
+
+    if (filename.starts_with("/")) {
+        // User provided absolute path
+        return filename.substr(1); // Removes the leading '/'
+    } else {
+        // User provided relative path
+        string dir = *shell_directory;
+
+        if (dir.starts_with("/")) dir = dir.substr(1); // Remove leading '/'
+
+        if (dir == "" || dir == "/") {
+            return filename;
+        } else {
+            return dir + "/" + filename;
+        }
+    }
+}
+
+void cmd_cd(const string& args) {
+    size_t  count = 0;
+    string* parts = args.split('/', 0, count);
+
+    string temp_path;
+
+    if (args.starts_with("/")) {
+        temp_path = "/";
+    } else {
+        temp_path = *shell_directory;
+    }
+
+    for (size_t i = 0; i < count; i++) {
+        if (parts[i] == "..") {
+            if (temp_path == "/" || temp_path == "") continue;
+
+            int last_slash = -1;
+            for (int j = 0; j < (int) temp_path.length() - 1; j++) {
+                if (temp_path[j] == '/') last_slash = j;
+            }
+
+            if (last_slash <= 0) temp_path = "/";
+            else temp_path = temp_path.substr(0, last_slash);
+
+        } else if (parts[i] == "." || parts[i] == "") {
+            continue;
+        } else {
+            if (!temp_path.ends_with("/")) temp_path = temp_path + "/";
+            temp_path = temp_path + parts[i];
+
+            File* f = fs_get(temp_path);
+            if (!f || !f->is_directory) {
+                echo("cd: no such directory: ", '\0');
+                echo(parts[i]);
+
+                delete[] parts;
+                return;
+            }
+        }
+    }
+
+    *shell_directory = temp_path;
+
+    delete[] parts;
+}
+
 void cmd_cat(const string& args) {
-    File* f = fs_get(args);
+    string filename = full_path_to(args);
+
+    File* f = fs_get(filename);
     if (!f) {
         echo("File not found");
         return;
@@ -32,7 +100,7 @@ void cmd_cat(const string& args) {
 
     char buffer[f->size + 1]; // String isn't needed, we know the exact length needed
 
-    if (fs_read(args, buffer, f->size)) {
+    if (fs_read(filename, buffer, f->size)) {
         buffer[f->size] = '\0'; // Null-terminate the string
         echo(buffer);
     } else {
@@ -41,7 +109,7 @@ void cmd_cat(const string& args) {
 }
 
 void cmd_write(const string& args) {
-    size_t out_count = 0;
+    size_t  out_count = 0;
     string* parts = args.split(' ', 1, out_count);
 
     if (out_count != 2) {
@@ -52,21 +120,21 @@ void cmd_write(const string& args) {
     string filename = parts[0];
     string content  = parts[1];
 
-    if (!fs_write(filename, content.c_str(), content.length())) {
+    if (!fs_write(full_path_to(filename), content.c_str(), content.length())) {
         echo("Error: Could not write to file.");
     }
 }
 
 void cmd_touch(const string& args) {
-    fs_create(args);
+    fs_create(full_path_to(args));
 }
 
 void cmd_mkdir(const string& args) {
-    fs_mkdir(args);
+    fs_mkdir(full_path_to(args));
 }
 
 void cmd_rm(const string& args) {
-    fs_remove(args);
+    fs_remove(full_path_to(args));
 }
 
 void cmd_ls(const string& args) {

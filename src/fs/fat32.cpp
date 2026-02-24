@@ -265,6 +265,7 @@ bool fat32_read(string name, void* buffer, size_t size) {
 
 bool fat32_write(string name, const void* buffer, size_t size) {
     // Resolve path to find the parent directory cluster
+
     size_t part_count = 0;
     string* parts = name.split('/', 0, part_count);
 

@@ -65,3 +65,5 @@ run: farix.bin disk.img
 
 run_nofs: farix.bin disk.img
 	qemu-system-i386 -kernel farix.bin -drive format=raw,file=disk.img,index=0,media=disk
+
+-include debug.mk # A seperate makefile for debugging

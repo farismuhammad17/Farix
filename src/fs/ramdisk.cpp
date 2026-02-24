@@ -41,7 +41,7 @@ void init_ramdisk() {
 bool ramdisk_read(string name, void* buffer, size_t size) {
     File* file = ramdisk_get(name);
 
-    if (!file || !file->data) return false;
+    if (!file || !file->data || file->is_directory) return false;
 
     size_t bytes_to_read = (size < file->size) ? size : file->size;
 
@@ -54,7 +54,7 @@ bool ramdisk_read(string name, void* buffer, size_t size) {
 
 bool ramdisk_write(string name, const void* buffer, size_t size) {
     File* file = ramdisk_get(name);
-    if (!file) return false;
+    if (!file || file->is_directory) return false;
 
     if (file->data) free(file->data);
 
