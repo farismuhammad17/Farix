@@ -20,19 +20,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef RAMDISK_H
 #define RAMDISK_H
 
-#include "types/map.h"
+#include <string>
+
 #include "fs/vfs.h"
 
 extern FileOperations ramdisk_ops;
 
 void      init_ramdisk();
 
-bool      ramdisk_read   (string name, void* buffer, size_t size);
-bool      ramdisk_write  (string name, const void* buffer, size_t size);
-bool      ramdisk_create (string name);
-bool      ramdisk_mkdir  (string name);
-bool      ramdisk_remove (string name);
-File*     ramdisk_get    (string name);
-FileNode* ramdisk_getall (string path);
+bool      ramdisk_read   (std::string& name, void* buffer, size_t size);
+bool      ramdisk_write  (std::string& name, const void* buffer, size_t size);
+bool      ramdisk_create (std::string& name);
+bool      ramdisk_mkdir  (std::string& name);
+bool      ramdisk_remove (std::string& name);
+File*     ramdisk_get    (std::string& name);
+FileNode* ramdisk_getall (std::string& path);
 
 #endif

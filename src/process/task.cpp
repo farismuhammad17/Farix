@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <string>
+
 #include "memory/heap.h"
 
 #include "process/task.h"
@@ -52,14 +54,14 @@ void init_multitasking() {
     total_tasks++;
 }
 
-task* create_task(void (*entry_point)(), string name) {
+task* create_task(void (*entry_point)(), std::string name) {
     task* new_task = new task();
 
     new_task->id         = next_pid++;
     new_task->entry_func = entry_point;
     new_task->name       = name;
 
-    uint32_t* stack = (uint32_t*) malloc(4096);
+    uint32_t* stack = (uint32_t*) kmalloc(4096);
     uint32_t* esp = stack + 1024; // High address
 
     // The IRET Frame (Pushed in the order IRET pops them)
@@ -92,7 +94,7 @@ void schedule() {
         task* zombie = last->next;
         last->next = zombie->next;
 
-        free(zombie->stack_origin);
+        kfree(zombie->stack_origin);
         delete zombie;
 
         total_tasks--;

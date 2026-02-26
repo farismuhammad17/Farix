@@ -20,7 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef KEYBOARD_H
 #define KEYBOARD_H
 
-#define KBD_LEN 58
+#define KBD_LEN        58
+#define KBD_BUFFER_LEN 1024
+
+extern char kbd_buffer[KBD_BUFFER_LEN];
+extern volatile int  kbd_head;
+extern volatile int  kbd_tail;
 
 extern bool shift_pressed;
 extern unsigned char kbd[128];

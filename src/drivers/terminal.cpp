@@ -17,6 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdlib.h>
+#include <string.h>
+
 #include "architecture/io.h"
 #include "shell/shell.h"
 
@@ -35,13 +38,6 @@ int           cmd_history_count = 0;
 TerminalLine* line_history_head  = nullptr;
 TerminalLine* line_history_tail  = nullptr;
 int           line_history_count = 0;
-
-size_t strlen(const char* str) {
-	size_t len = 0;
-	while (str[len])
-		len++;
-	return len;
-}
 
 void init_terminal() {
 	cursor_x = 0;
@@ -135,12 +131,12 @@ void save_line_to_history(uint16_t* line_data) {
     }
 }
 
-void save_cmd_to_history(string command) {
+void save_cmd_to_history(const char* command) {
     TerminalCmd* newNode = new TerminalCmd();
-    newNode->command = command;
 
-    newNode->next = nullptr;
-    newNode->prev = cmd_history_tail;
+    newNode->command = strdup(command);
+    newNode->next    = nullptr;
+    newNode->prev    = cmd_history_tail;
 
     if (cmd_history_tail) {
         cmd_history_tail->next = newNode;
@@ -159,7 +155,9 @@ void save_cmd_to_history(string command) {
             cmd_history_head->prev = nullptr;
         }
 
+        free((void*) toDelete->command);
         delete toDelete;
+
         cmd_history_count--;
     }
 }
@@ -167,33 +165,39 @@ void save_cmd_to_history(string command) {
 void cmd_history_up() {
     if (cmd_history_head == nullptr) return;
 
-    if (cmd_current_line == nullptr) cmd_current_line = cmd_history_tail;
-    else if (cmd_current_line->prev) cmd_current_line = cmd_current_line->prev;
+    if (cmd_current_line == nullptr) {
+        cmd_current_line = cmd_history_tail;
+    } else if (cmd_current_line->prev) {
+        cmd_current_line = cmd_current_line->prev;
+    }
 
-    // Prompt "farix> " is 7 chars
-    while (cursor_x > 7) {
+    while (cursor_x > shell_directory.size() + 2) {
         echo_char('\b');
     }
 
-    echo(cmd_current_line->command, '\0');
-
-    *shell_buffer = cmd_current_line->command;
+    printf("%s", cmd_current_line->command);
+    shell_buffer = cmd_current_line->command;
 }
 
 void cmd_history_down() {
-    if (cmd_history_head == nullptr) return;
+    if (cmd_history_head == nullptr || cmd_current_line == nullptr) return;
+
+    cmd_current_line = cmd_current_line->next;
 
     if (cmd_current_line == nullptr) cmd_current_line = cmd_history_tail;
     else if (cmd_current_line->next) cmd_current_line = cmd_current_line->next;
 
-    // Prompt "farix> " is 7 chars
-    while (cursor_x > 7) {
+    while (cursor_x > shell_directory.size() + 2) {
         echo_char('\b');
     }
 
-    echo(cmd_current_line->command, '\0');
-
-    *shell_buffer = cmd_current_line->command;
+    if (cmd_current_line != nullptr) {
+        printf("%s", cmd_current_line->command);
+        shell_buffer = cmd_current_line->command;
+    } else {
+        // We went past the most recent command, clear the buffer
+        shell_buffer = "";
+    }
 }
 
 void echo_at(char c, uint8_t color, size_t x, size_t y) {
@@ -210,10 +214,6 @@ void echo_char(char c) {
         }
     }
 
-    if (c == '\0') {
-        cursor_x--;
-    }
-
     if (cursor_y >= HEIGHT) {
         terminal_scroll();
     }
@@ -221,83 +221,27 @@ void echo_char(char c) {
     update_cursor(cursor_x, cursor_y);
 }
 
-void echo(const char* data) {
-    size_t size = strlen(data);
-	for (size_t i = 0; i < size; i++) {
-	    echo_char(data[i]);
-	}
-	echo_char('\n');
-}
-
-void echo(const char* data, char end) {
-    size_t size = strlen(data);
-	for (size_t i = 0; i < size; i++) {
-	    echo_char(data[i]);
-	}
-	echo_char(end);
-}
-
-void echo(string data) {
-    const char* buffer = data.c_str();
-    for (size_t i = 0; i < data.length(); i++) {
-        echo_char(buffer[i]);
-    }
-    echo_char('\n');
-}
-
-void echo(string data, char end) {
-    const char* buffer = data.c_str();
-    for (size_t i = 0; i < data.length(); i++) {
-        echo_char(buffer[i]);
-    }
-    echo_char(end);
-}
-
-void echo(string data, string end) {
-    const char* buffer = data.c_str();
-    for (size_t i = 0; i < data.length(); i++) {
-        echo_char(buffer[i]);
-    }
-    echo(end, "\0");
-}
-
-void echo(int data) {
-    echo(string::from_int(data));
-}
-
-void echo(int data, char end) {
-    echo(string::from_int(data), end);
-}
-
 bool handle_special_chars(char c) {
     if (c == '\n') {
         cursor_x = 0;
         cursor_y++;
 
-        save_cmd_to_history(*shell_buffer);
-
         return true;
     }
 
     else if (c == '\b') {
+        size_t prompt_len = 2;
+
+        if (cursor_x <= prompt_len) {
+            return true;
+        }
+
         if (cursor_x > 0) {
             cursor_x--;
-        }
-        else if (cursor_y > 0) {
+        } else if (cursor_y > 0) {
+            // Wrap back to the previous line
             cursor_y--;
-
             cursor_x = WIDTH - 1;
-            while (cursor_x > 0) {
-                uint16_t entry = terminal_buffer[cursor_y * WIDTH + cursor_x];
-                unsigned char char_at_pos = (unsigned char)(entry & 0xFF);
-
-                if (char_at_pos != ' ') {
-                    if (cursor_x < WIDTH - 1) cursor_x++;
-                    break;
-                }
-
-                cursor_x--;
-            }
         }
 
         echo_at(' ', terminal_color, cursor_x, cursor_y);
@@ -307,6 +251,12 @@ bool handle_special_chars(char c) {
 
     else if (c == '\t') {
         cursor_x += INDENT_LEN - cursor_x % INDENT_LEN;
+
+        if (cursor_x >= WIDTH) {
+            cursor_x = 0;
+            cursor_y++;
+        }
+
         return true;
     }
 

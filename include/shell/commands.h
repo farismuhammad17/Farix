@@ -20,9 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef SHELL_COMMANDS_H
 #define SHELL_COMMANDS_H
 
-#include "types/string.h"
+#include <string>
 
-typedef void (*command_func_t)(const string& args);
+typedef void (*command_func_t)(const std::string& args);
 
 struct ShellCommand {
     const char* name;
@@ -32,17 +32,17 @@ struct ShellCommand {
 
 extern ShellCommand command_table[];
 
-void cmd_help(const string& args);
-void cmd_clear(const string& args);
-void cmd_echo(const string& args);
-void cmd_memstat(const string& args);
+void cmd_help(const std::string& args);
+void cmd_clear(const std::string& args);
+void cmd_echo(const std::string& args);
+void cmd_memstat(const std::string& args);
 
-void cmd_cd(const string& args);
-void cmd_cat(const string& args);
-void cmd_write(const string& args);
-void cmd_touch(const string& args);
-void cmd_mkdir(const string& args);
-void cmd_rm(const string& args);
-void cmd_ls(const string& args);
+void cmd_cd(const std::string& args);
+void cmd_cat(const std::string& args);
+void cmd_write(const std::string& args);
+void cmd_touch(const std::string& args);
+void cmd_mkdir(const std::string& args);
+void cmd_rm(const std::string& args);
+void cmd_ls(const std::string& args);
 
 #endif

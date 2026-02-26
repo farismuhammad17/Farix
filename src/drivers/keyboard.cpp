@@ -17,10 +17,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdio.h>
+
 #include "architecture/io.h"
 #include "drivers/terminal.h"
-#include "shell/shell.h"
-#include "types/string.h"
 
 #include "drivers/keyboard.h"
 
@@ -44,25 +44,33 @@ constexpr bool echo_scancodes = false;
 
 static bool is_extended = false;
 
+char kbd_buffer[KBD_BUFFER_LEN];
+volatile int kbd_head = 0;
+volatile int kbd_tail = 0;
+
+void push_to_kbd_buffer(char c) {
+    int next = (kbd_head + 1) % KBD_BUFFER_LEN;
+    if (next != kbd_tail) {
+        kbd_buffer[kbd_head] = c;
+        kbd_head = next;
+    }
+}
+
 extern "C" void keyboard_handler() {
     uint8_t scancode = inb(0x60);
 
     if (echo_scancodes) {
-        echo("Scancode: 0x", '\0');
-        echo(string::from_hex(scancode));
+        printf("Scancode: 0x%x\n", scancode);
     }
 
     if (scancode == 0xE0) {
         is_extended = true;
-        outb(0x20, 0x20); // Still need to ack the PIC
-        return;
     }
-
-    if (is_extended) {
+    else if (is_extended) {
         if (scancode == 0x48) {
-            echo_char(KEY_UP);
+            push_to_kbd_buffer(KEY_UP);
         } else if (scancode == 0x50) {
-            echo_char(KEY_DOWN);
+            push_to_kbd_buffer(KEY_DOWN);
         }
         is_extended = false;
         // DO NOT CONTINUE to normal key processing
@@ -78,18 +86,7 @@ extern "C" void keyboard_handler() {
             char c = kbd[scancode + offset];
 
             if (c > 0) {
-                if (c == '\n') {
-                    shell_buffer_ready = true;
-                    echo_char(c);
-                } else if (c == '\b') {
-                    if (shell_buffer->length() > 0) {
-                        shell_buffer->pop_back();
-                        echo_char(c);
-                    }
-                } else {
-                    *shell_buffer += c;
-                    echo_char(c);
-                }
+                push_to_kbd_buffer(c);
             }
         }
     }

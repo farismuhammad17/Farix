@@ -1,5 +1,29 @@
 # Changelog
 
+## Standard C Library - *26 Feb, 2026*
+
+- Implemented `libc` through `newlib`.
+- **Make file**
+  - `get_deps` to download newlib.
+  - `libc` to compile the standard library.
+- **Keyboard**
+  - Implemented keyboard buffer.
+- **Heap**
+  - Renamed `malloc` to `kmalloc`.
+  - Renamed `free` to `kfree`.
+  - Renamed `memcpy` to `kmemcpy`.
+  - Implemented `kmemset`.
+  - Implemented `check_heap`.
+  - Heap functions will now always `check_heap`.
+- **Terminal**
+  - Removed `strlen`.
+- **Refactoring**
+  - Removed `config.h` and moved PAGE_SIZE to `pmm.h` instead.
+  - Replaced all instance of string and map with standard library's.
+- **Removed**
+  - Every project file to swap out for libc equivalents.
+  - Custom string and map implementations.
+
 ## Change Directory Shell Command - *24 Feb, 2026*
 
 - **Shell**

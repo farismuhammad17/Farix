@@ -17,23 +17,28 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <string>
+#include <vector>
+#include <stdio.h>
+
 #include "fs/vfs.h"
+#include "memory/heap.h"
 #include "drivers/terminal.h"
 #include "shell/shell.h"
 
 #include "shell/commands.h"
 
-string full_path_to(const string& filename) {
-    string path;
+std::string full_path_to(const std::string& filename) {
+    std::string path;
 
-    if (filename.starts_with("/")) {
+    if (filename[0] == '/') {
         // User provided absolute path
         return filename.substr(1); // Removes the leading '/'
     } else {
         // User provided relative path
-        string dir = *shell_directory;
+        std::string dir = shell_directory;
 
-        if (dir.starts_with("/")) dir = dir.substr(1); // Remove leading '/'
+        if (!dir.empty() && dir[0] == '/') dir = dir.substr(1); // Remove leading '/'
 
         if (dir == "" || dir == "/") {
             return filename;
@@ -43,24 +48,29 @@ string full_path_to(const string& filename) {
     }
 }
 
-void cmd_cd(const string& args) {
-    size_t  count = 0;
-    string* parts = args.split('/', 0, count);
+void cmd_cd(const std::string& args) {
+    std::vector<std::string> parts;
+    size_t start = 0, end = 0;
+    while ((end = args.find('/', start)) != std::string::npos) {
+        parts.push_back(args.substr(start, end - start));
+        start = end + 1;
+    }
+    parts.push_back(args.substr(start));
 
-    string temp_path;
+    std::string temp_path;
 
-    if (args.starts_with("/")) {
+    if (!args.empty() && args[0] == '/') {
         temp_path = "/";
     } else {
-        temp_path = *shell_directory;
+        temp_path = shell_directory;
     }
 
-    for (size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < parts.size(); i++) {
         if (parts[i] == "..") {
             if (temp_path == "/" || temp_path == "") continue;
 
             int last_slash = -1;
-            for (int j = 0; j < (int) temp_path.length() - 1; j++) {
+            for (int j = 0; j < (int)temp_path.length() - 1; j++) {
                 if (temp_path[j] == '/') last_slash = j;
             }
 
@@ -70,78 +80,103 @@ void cmd_cd(const string& args) {
         } else if (parts[i] == "." || parts[i] == "") {
             continue;
         } else {
-            if (!temp_path.ends_with("/")) temp_path = temp_path + "/";
+            if (!temp_path.empty() && temp_path.back() != '/') temp_path = temp_path + "/";
             temp_path = temp_path + parts[i];
 
             File* f = fs_get(temp_path);
             if (!f || !f->is_directory) {
-                echo("cd: no such directory: ", '\0');
-                echo(parts[i]);
-
-                delete[] parts;
+                printf("cd: no such directory: %s\n", parts[i].c_str());
                 return;
             }
         }
     }
 
-    *shell_directory = temp_path;
-
-    delete[] parts;
+    shell_directory = temp_path;
 }
 
-void cmd_cat(const string& args) {
-    string filename = full_path_to(args);
-
-    File* f = fs_get(filename);
-    if (!f) {
-        echo("File not found");
+void cmd_cat(const std::string& args) {
+    if (args.empty()) {
+        printf("Usage: cat <filename>\n");
         return;
     }
 
-    char buffer[f->size + 1]; // String isn't needed, we know the exact length needed
+    std::string filename = full_path_to(args);
+    File* f = fs_get(filename);
+
+    if (!f) {
+        printf("cat: %s: No such file\n", args.c_str());
+        return;
+    }
+
+    if (f->size == 0) return;
+
+    if (f->size > 65536) {
+        printf("cat: File too large for buffer\n");
+        return;
+    }
+
+    char* buffer = (char*) kmalloc(f->size + 1);
+    if (!buffer) {
+        printf("cat: out of memory\n");
+        return;
+    }
+
+    kmemset(buffer, 0, f->size + 1);
 
     if (fs_read(filename, buffer, f->size)) {
-        buffer[f->size] = '\0'; // Null-terminate the string
-        echo(buffer);
+        buffer[f->size] = '\0';
+        printf("%s\n", buffer);
     } else {
-        echo("Error reading file | File might be empty");
+        printf("cat: error reading file\n");
+    }
+
+    kfree(buffer);
+
+    get_heap_total();
+}
+
+void cmd_write(const std::string& args) {
+    size_t first_space = args.find(' ');
+    if (first_space == std::string::npos) return;
+
+    std::string filename = args.substr(0, first_space);
+    std::string content = args.substr(first_space + 1);
+
+    std::string path = full_path_to(filename);
+
+    if (!fs_write(path, content.c_str(), content.length())) {
+        printf("Error: Could not write to file %s\n", filename.c_str());
     }
 }
 
-void cmd_write(const string& args) {
-    size_t  out_count = 0;
-    string* parts = args.split(' ', 1, out_count);
-
-    if (out_count != 2) {
-        echo("Syntax: write filename content");
-        return;
-    }
-
-    string filename = parts[0];
-    string content  = parts[1];
-
-    if (!fs_write(full_path_to(filename), content.c_str(), content.length())) {
-        echo("Error: Could not write to file.");
-    }
+void cmd_touch(const std::string& args) {
+    if (args.empty()) return;
+    std::string path = full_path_to(args);
+    fs_create(path);
 }
 
-void cmd_touch(const string& args) {
-    fs_create(full_path_to(args));
+void cmd_mkdir(const std::string& args) {
+    if (args.empty()) return;
+    std::string path = full_path_to(args);
+    fs_mkdir(path);
 }
 
-void cmd_mkdir(const string& args) {
-    fs_mkdir(full_path_to(args));
+void cmd_rm(const std::string& args) {
+    if (args.empty()) return;
+    std::string path = full_path_to(args);
+    fs_remove(path);
 }
 
-void cmd_rm(const string& args) {
-    fs_remove(full_path_to(args));
-}
+void cmd_ls(const std::string& args) {
+    std::string target_path = args.empty() ? shell_directory : full_path_to(args);
 
-void cmd_ls(const string& args) {
-    FileNode* head = fs_getall(*shell_directory);
+    FileNode* head = fs_getall(target_path);
+    FileNode* temp = nullptr;
 
     while (head) {
-        echo(head->file.name);
-        head = head->next;
+        printf("%s\n", head->file.name.c_str());
+        temp = head->next;
+        kfree(head);
+        head = temp;
     }
 }

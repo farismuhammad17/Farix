@@ -20,13 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef VFS_H
 #define VFS_H
 
-#include "types/string.h"
+#include <string>
 
 struct File {
-    string   name;
-    uint8_t* data; // Pointer to the actual content in RAM
-    size_t   size;
-    bool is_directory;
+    std::string   name;
+    uint8_t*      data; // Pointer to the actual content in RAM
+    size_t        size;
+    bool          is_directory;
 };
 
 struct FileNode {
@@ -35,23 +35,23 @@ struct FileNode {
 };
 
 struct FileOperations {
-    bool  (*read)   (string name, void* buffer, size_t size);
-    bool  (*write)  (string name, const void* buffer, size_t size);
-    bool  (*create) (string name);
-    bool  (*mkdir)  (string name);
-    bool  (*remove) (string name);
-    File* (*get)    (string name);
-    FileNode* (*getall) (string path);
+    bool      (*read)   (std::string& name, void* buffer, size_t size);
+    bool      (*write)  (std::string& name, const void* buffer, size_t size);
+    bool      (*create) (std::string& name);
+    bool      (*mkdir)  (std::string& name);
+    bool      (*remove) (std::string& name);
+    File*     (*get)    (std::string& name);
+    FileNode* (*getall) (std::string& path);
 };
 
 void      vfs_mount (FileOperations* ops);
 
-bool      fs_read   (string name, void* buffer, size_t size);
-bool      fs_write  (string name, const void* buffer, size_t size);
-bool      fs_create (string name);
-bool      fs_mkdir  (string name);
-bool      fs_remove (string name);
-File*     fs_get    (string name);
-FileNode* fs_getall (string path);
+bool      fs_read   (std::string& name, void* buffer, size_t size);
+bool      fs_write  (std::string& name, const void* buffer, size_t size);
+bool      fs_create (std::string& name);
+bool      fs_mkdir  (std::string& name);
+bool      fs_remove (std::string& name);
+File*     fs_get    (std::string& name);
+FileNode* fs_getall (std::string& path);
 
 #endif

@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef HEAP_H
 #define HEAP_H
 
+#define HEAP_MAGIC 0x12345678
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -32,11 +34,13 @@ struct HeapSegment {
 };
 
 void   init_heap();
-void*  malloc(size_t size);
-void   free(void* ptr);
-void   memcpy(void* dest, const void* source, size_t n);
+void*  kmalloc(size_t size);
+void   kfree(void* ptr);
 
-void   heap_expand(size_t size);
+void   kmemcpy(void* dest, const void* source, size_t n);
+void   kmemset(void* s, int c, size_t n);
+
+void   kheap_expand(size_t size);
 
 size_t get_heap_total();
 size_t get_heap_used();

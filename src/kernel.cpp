@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdio.h>
+
 #include "memory/pmm.h"
 #include "memory/vmm.h"
 #include "memory/heap.h"
@@ -43,27 +45,28 @@ void shell_thread() {
     }
 }
 
+extern "C" void _init();
+
 extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_gdt();
-
     init_terminal();
 
     init_pmm(mbi);
     init_vmm();
     init_heap();
 
-    init_shell();
+    _init();
 
     if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
-        echo("OS Error: Invalid Multiboot Magic Number");
+        printf("OS Error: Invalid Multiboot Magic Number");
         while(1) { asm volatile("hlt"); }
     }
 
     init_idt();
     pic_remap();
 
-    init_multitasking();
-    init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms
+    // Enable interrupts
+    asm volatile("sti");
 
     init_ata();
 
@@ -72,8 +75,10 @@ extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
 
     vfs_mount(&fat32_ops);    // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
 
-    // Enable interrupts
-    asm volatile("sti");
+    init_multitasking();
+    init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms
+
+    init_shell();
 
     create_task(shell_thread, "Shell");
 

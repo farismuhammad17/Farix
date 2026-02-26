@@ -23,8 +23,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
-#include "types/string.h"
-
 #define WIDTH   80
 #define HEIGHT  25
 #define MEMORY  0xB8000
@@ -62,7 +60,7 @@ enum vga_color {
 };
 
 struct TerminalCmd {
-    string command;
+    const char*  command;
     TerminalCmd* next;
     TerminalCmd* prev;
 };
@@ -80,8 +78,6 @@ inline uint16_t vga_entry(unsigned char uc, uint8_t color) {
 	return (uint16_t) uc | (uint16_t) color << 8;
 }
 
-size_t strlen(const char* str);
-
 void init_terminal();
 
 void update_cursor(size_t x, size_t y);
@@ -89,19 +85,12 @@ void terminal_clear();
 
 void terminal_scroll();
 void save_line_to_history (uint16_t* line_data);
-void save_cmd_to_history  (string command);
+void save_cmd_to_history  (const char* command);
 void cmd_history_up   ();
 void cmd_history_down ();
 
 void echo_at   (char c, uint8_t color, size_t x, size_t y);
 void echo_char (char c);
-void echo      (const char* data);
-void echo      (const char* data, char end);
-void echo      (string data);
-void echo      (string data, char end);
-void echo      (string data, string end);
-void echo      (int data);
-void echo      (int data, char end);
 
 bool handle_special_chars(char c);
 

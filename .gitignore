@@ -1,4 +1,6 @@
 build/
+libc_build/
+newlib-cygwin/
 pending/
 disk.img
 TODO.md

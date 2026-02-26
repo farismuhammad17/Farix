@@ -17,54 +17,82 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "types/string.h"
+#include <stdio.h>
+#include <string>
+
+#include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 
 #include "shell/shell.h"
 #include "shell/commands.h"
 
-string* shell_directory = nullptr;
-string* shell_buffer    = nullptr;
-bool shell_buffer_ready = false;
+std::string shell_directory;
+std::string shell_buffer;
+bool        shell_buffer_ready = false;
 
 void init_shell() {
-    shell_directory = new string("/");
-    shell_buffer = new string("");
+    setvbuf(stdout, NULL, _IONBF, 0);
+
+    shell_directory = "/";
+    shell_buffer = "";
     shell_buffer_ready = false;
 
-    echo(*shell_directory, '\0');
-    echo("> ", '\0');
+    printf("%s> ", shell_directory.c_str());
 }
 
 void shell_update() {
-    if (shell_buffer_ready) {
-        shell_parse(*shell_buffer);
+    while (kbd_tail != kbd_head) {
+        char c = kbd_buffer[kbd_tail];
+        kbd_tail = (kbd_tail + 1) % KBD_BUFFER_LEN;
 
-        *shell_buffer = "";
+        if (c == '\n') {
+            echo_char('\n'); // Standard newline
+            shell_buffer_ready = true;
+            break;
+        } else if (c == '\b') {
+            if (shell_buffer.length() > 0) {
+                shell_buffer.pop_back();
+                echo_char('\b');
+            }
+        } else {
+            shell_buffer += c;
+            echo_char(c);
+        }
+    }
+
+    if (shell_buffer_ready) {
+        if (!shell_buffer.empty()) {
+            // TODO: This causes heap corruptions,
+            // will be implemented later, it's literally
+            // 1:27 am as I write this.
+            // save_cmd_to_history(shell_buffer.c_str());
+            shell_parse(shell_buffer);
+        }
+
+        shell_buffer = "";
         shell_buffer_ready = false;
 
-        echo(*shell_directory, '\0');
-        echo("> ", '\0');
+        const char* display_dir = shell_directory.empty() ? "/" : shell_directory.c_str();
+        printf("%s> ", display_dir);
     }
 }
 
-void shell_parse(const string& input) {
-    if (input.length() == 0) return;
+void shell_parse(const std::string& input) {
+    if (input.empty()) return;
 
-    string cmd_name  = "";
-    string args      = "";
-    bool found_space = false;
+    std::string cmd_name;
+    std::string args;
 
-    for (size_t i = 0; i < input.length(); i++) {
-        char c = input[i];
+    size_t space_pos = input.find(' ');
 
-        if (!found_space && c == ' ') {
-            found_space = true;
-            continue;
-        }
-
-        if (!found_space) cmd_name += c;
-        else              args += c;
+    if (space_pos != std::string::npos) {
+        // We found a space: split into cmd and args
+        cmd_name = input.substr(0, space_pos);
+        args     = input.substr(space_pos + 1);
+    } else {
+        // No space: the whole input is the command
+        cmd_name = input;
+        args     = "";
     }
 
     for (int i = 0; command_table[i].name != nullptr; i++) {
@@ -74,5 +102,5 @@ void shell_parse(const string& input) {
         }
     }
 
-    echo("Command not found");
+    printf("Command not found: %s\n", cmd_name.c_str());
 }

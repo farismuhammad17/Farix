@@ -25,37 +25,37 @@ void vfs_mount(FileOperations* ops) {
     current_fs_ops = ops;
 }
 
-bool fs_read(string name, void* buffer, size_t size) {
+bool fs_read(std::string& name, void* buffer, size_t size) {
     if (!current_fs_ops || !current_fs_ops->read) return false;
     return current_fs_ops->read(name, buffer, size);
 }
 
-bool fs_write(string name, const void* buffer, size_t size) {
-    if (!current_fs_ops || !current_fs_ops->read) return false;
+bool fs_write(std::string& name, const void* buffer, size_t size) {
+    if (!current_fs_ops || !current_fs_ops->write) return false;
     return current_fs_ops->write(name, buffer, size);
 }
 
-bool fs_create(string name) {
+bool fs_create(std::string& name) {
     if (!current_fs_ops || !current_fs_ops->create) return false;
     return current_fs_ops->create(name);
 }
 
-bool fs_mkdir(string name) {
+bool fs_mkdir(std::string& name) {
     if (!current_fs_ops || !current_fs_ops->mkdir) return false;
     return current_fs_ops->mkdir(name);
 }
 
-bool fs_remove(string name) {
+bool fs_remove(std::string& name) {
     if (!current_fs_ops || !current_fs_ops->remove) return false;
     return current_fs_ops->remove(name);
 }
 
-File* fs_get(string name) {
+File* fs_get(std::string& name) {
     if (!current_fs_ops || !current_fs_ops->get) return nullptr;
     return current_fs_ops->get(name);
 }
 
-FileNode* fs_getall(string path) {
+FileNode* fs_getall(std::string& path) {
     if (!current_fs_ops || !current_fs_ops->getall) return nullptr;
     return current_fs_ops->getall(path);
 }

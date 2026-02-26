@@ -17,18 +17,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef SHELL_H
-#define SHELL_H
+#include <stddef.h>
+#include <stdlib.h>
 
-#include <string>
+void* operator new(size_t size) {
+    return malloc(size);
+}
 
-extern std::string shell_directory;
-extern std::string shell_buffer;
-extern bool        shell_buffer_ready;
+void* operator new[](size_t size) {
+    return malloc(size);
+}
 
-void init_shell();
-void shell_update();
+void operator delete(void* p) noexcept {
+    free(p);
+}
 
-void shell_parse(const std::string& input);
+void operator delete[](void* p) noexcept {
+    free(p);
+}
 
-#endif
+void operator delete(void* p, size_t size) noexcept {
+    (void) size; // Prevent unused parameter warning
+    free(p);
+}
+
+void operator delete[](void* p, size_t size) noexcept {
+    (void)size;
+    free(p);
+}

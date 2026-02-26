@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef FAT32_H
 #define FAT32_H
 
+#include <string>
 #include <stdint.h>
 
 struct FAT32Header {
@@ -73,12 +74,12 @@ extern FileOperations fat32_ops;
 
 void      init_fat32();
 
-bool      fat32_read   (string name, void* buffer, size_t size);
-bool      fat32_write  (string name, const void* buffer, size_t size);
-bool      fat32_create (string name);
-bool      fat32_mkdir  (string name);
-bool      fat32_remove (string name);
-File*     fat32_get    (string name);
-FileNode* fat32_getall (string path);
+bool      fat32_read   (std::string& name, void* buffer, size_t size);
+bool      fat32_write  (std::string& name, const void* buffer, size_t size);
+bool      fat32_create (std::string& name);
+bool      fat32_mkdir  (std::string& name);
+bool      fat32_remove (std::string& name);
+File*     fat32_get    (std::string& name);
+FileNode* fat32_getall (std::string& path);
 
 #endif

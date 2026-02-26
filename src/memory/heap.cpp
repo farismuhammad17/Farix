@@ -17,7 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "config.h"
+#include <stdio.h>
+
 #include "memory/pmm.h"
 #include "memory/vmm.h"
 
@@ -26,6 +27,40 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 static void*        heap_start    = (void*) 0x1000000;
 static void*        heap_end      = nullptr;
 static HeapSegment* first_segment = nullptr;
+
+bool check_heap() {
+    HeapSegment* current = first_segment;
+    while (current != nullptr) {
+        // Magic Check
+        if (current->magic != HEAP_MAGIC) {
+            printf("HEAP CORRUPTION: Bad Magic at %p (Val: %x)\n", current, current->magic);
+            return false;
+        }
+
+        // Alignment Check
+        if (((uint32_t)current & 0x3) != 0) {
+            printf("HEAP CORRUPTION: Unaligned segment pointer %p\n", current);
+            return false;
+        }
+
+        // Pointer Check
+        if (current->next != nullptr) {
+            if (current->next <= current) {
+                printf("HEAP CORRUPTION: Circular or backwards link at %p -> %p\n", current, current->next);
+                return false;
+            }
+            if (current->next->prev != current) {
+                printf("HEAP CORRUPTION: Broken backlink! %p->next is %p, but that block's prev is %p\n",
+                        current, current->next, current->next->prev);
+                return false;
+            }
+        }
+
+        current = current->next;
+    }
+
+    return true;
+}
 
 void init_heap() {
     uint32_t initial_pages = 16;
@@ -42,10 +77,15 @@ void init_heap() {
     first_segment->next    = nullptr;
     first_segment->prev    = nullptr;
     first_segment->is_free = true;
-    first_segment->magic   = 0x12345678;
+    first_segment->magic   = HEAP_MAGIC;
 }
 
-void* malloc(size_t size) {
+void* kmalloc(size_t size) {
+    if (!check_heap()) {
+        printf("malloc: Heap corrupted for size %u\n", size);
+        while(1);
+    }
+
     // Align size to 4 bytes
     if (size % 4 != 0) {
         size = (size & ~0x3) + 4;
@@ -57,20 +97,22 @@ void* malloc(size_t size) {
         if (current->is_free && current->size >= size) {
             // We need enough space for the requested size + a new header + at least 4 bytes of data
             if (current->size > size + sizeof(HeapSegment) + 4) {
-                HeapSegment* next_seg = (HeapSegment*) ((uint32_t) current + sizeof(HeapSegment) + size);
+                size_t total_offset = sizeof(HeapSegment) + size;
+                if (total_offset % 4 != 0) total_offset = (total_offset & ~0x3) + 4;
+                HeapSegment* next_seg = (HeapSegment*) ((uint32_t) current + total_offset);
 
-                next_seg->size    = current->size - size - sizeof(HeapSegment);
+                next_seg->size = current->size - total_offset;
                 next_seg->is_free = true;
                 next_seg->next    = current->next;
                 next_seg->prev    = current;
-                next_seg->magic   = 0x12345678;
+                next_seg->magic   = HEAP_MAGIC;
 
                 if (current->next != nullptr) {
                     current->next->prev = next_seg;
                 }
 
                 current->next = next_seg;
-                current->size = size;
+                current->size = total_offset - sizeof(HeapSegment);
             }
 
             current->is_free = false;
@@ -82,47 +124,52 @@ void* malloc(size_t size) {
     }
 
     // Reaching here means we are out of memory
-    heap_expand(size);
-    return malloc(size);
+    kheap_expand(size);
+    return kmalloc(size);
 }
 
-void free(void* ptr) {
+void kfree(void* ptr) {
+    if (!check_heap()) {
+        printf("free: Heap corrupted of %p\n", ptr);
+        while(1);
+    }
+
     if (ptr == nullptr) return;
-
     HeapSegment* current = (HeapSegment*) ((uint32_t) ptr - sizeof(HeapSegment));
-
-    if (current->magic != 0x12345678) return;
+    if (current->magic != HEAP_MAGIC) return;
 
     current->is_free = true;
 
-    // Merge with Next (Merge Right)
-    if (current->next != nullptr && current->next->is_free) {
+    // Merge Right
+    if (current->next && current->next->is_free && current->next->magic == HEAP_MAGIC) {
         current->size += current->next->size + sizeof(HeapSegment);
-
         current->next = current->next->next;
-        if (current->next != nullptr) {
-            current->next->prev = current;
-        }
+        if (current->next) current->next->prev = current;
     }
 
-    // Merge with Prev (Merge Left)
-    if (current->prev != nullptr && current->prev->is_free) {
-        current->prev->size += current->size + sizeof(HeapSegment);
-        current->prev->next =  current->next;
+    // Merge Left
+    if (current->prev && current->prev->is_free && current->prev->magic == HEAP_MAGIC) {
+        HeapSegment* prev = current->prev;
+        prev->size += current->size + sizeof(HeapSegment);
+        prev->next = current->next;
+        if (current->next) current->next->prev = prev;
 
-        if (current->next != nullptr) {
-            current->next->prev = current->prev;
-        }
+        current->magic = 0;
     }
 }
 
-void memcpy(void* dest, const void* source, size_t n) {
+void kmemcpy(void* dest, const void* source, size_t n) {
     uint8_t* dst = (uint8_t*) dest;
     uint8_t* src = (uint8_t*) source;
     for (size_t i = 0; i < n; i++) dst[i] = src[i];
 }
 
-void heap_expand(size_t size) {
+void kmemset(void* s, int c, size_t n) {
+    uint8_t* p = (uint8_t*) s;
+    for (size_t i = 0; i < n; i++) p[i] = (uint8_t) c;
+}
+
+void kheap_expand(size_t size) {
     size_t total_needed = size + sizeof(HeapSegment);
     size_t pages_to_alloc = (total_needed + PAGE_SIZE - 1) / PAGE_SIZE;
 
@@ -130,14 +177,14 @@ void heap_expand(size_t size) {
 
     for (size_t i = 0; i < pages_to_alloc; i++) {
         void* phys = pmm_alloc_page();
-        vmm_map_page(phys, (void*)((uint32_t)heap_end + (i * PAGE_SIZE)), PAGE_PRESENT | PAGE_RW);
+        vmm_map_page(phys, (void*)((uint32_t) heap_end + (i * PAGE_SIZE)), PAGE_PRESENT | PAGE_RW);
     }
 
     heap_end = (void*)((uint32_t)heap_end + (pages_to_alloc * PAGE_SIZE));
 
     new_seg->size = (pages_to_alloc * PAGE_SIZE) - sizeof(HeapSegment);
     new_seg->is_free = true;
-    new_seg->magic = 0x12345678;
+    new_seg->magic = HEAP_MAGIC;
 
     // Link it to the end of the chain
     HeapSegment* last = first_segment;
@@ -149,10 +196,12 @@ void heap_expand(size_t size) {
 
     // Merge this new free block with the previous one if possible
     // free function already handles merging
-    free((void*)((uint32_t)new_seg + sizeof(HeapSegment)));
+    kfree((void*)((uint32_t)new_seg + sizeof(HeapSegment)));
 }
 
 size_t get_heap_total() {
+    check_heap();
+
     size_t total = 0;
     HeapSegment* current = first_segment;
     while (current != nullptr) {
@@ -172,28 +221,4 @@ size_t get_heap_used() {
         current = current->next;
     }
     return used;
-}
-
-void* operator new(size_t size) {
-    return malloc(size);
-}
-
-void* operator new[](size_t size) {
-    return malloc(size);
-}
-
-void operator delete(void* p) {
-    free(p);
-}
-
-void operator delete(void* p, size_t size) {
-    free(p);
-}
-
-void operator delete[](void* p) {
-    free(p);
-}
-
-void operator delete[](void* p, size_t size) {
-    free(p);
 }
