@@ -36,6 +36,7 @@ void cmd_help(const std::string& args);
 void cmd_clear(const std::string& args);
 void cmd_echo(const std::string& args);
 void cmd_memstat(const std::string& args);
+void cmd_tasks(const std::string& args);
 
 void cmd_cd(const std::string& args);
 void cmd_cat(const std::string& args);

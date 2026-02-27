@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string>
 
 #include "drivers/terminal.h"
+#include "process/task.h"
 #include "memory/heap.h"
 
 #include "shell/commands.h"
@@ -27,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void cmd_help(const std::string& args) {
     for (size_t i = 0; command_table[i].name != nullptr; i++) {
         printf("%-*s %s\n",
-                INDENT_LEN,
+                INDENT_LEN * 2, // *2 because some commands are longer than 4 characters
                 command_table[i].name,
                 command_table[i].help_text);
     }
@@ -42,22 +43,37 @@ void cmd_echo(const std::string& args) {
 }
 
 void cmd_memstat(const std::string& args) {
-    // Disable interrupts to prevent the scheduler from
-    // switching tasks while we use the heap.
+    print_memstat();
+}
+
+void cmd_tasks(const std::string& args) {
+    size_t total_tasks = -1;
+
+    // Disable interrupts to ensure atomicity
     asm volatile("cli");
 
-    size_t total_kb = get_heap_total() / 1024;
-    size_t used_kb  = get_heap_used()  / 1024;
+    task* head = current_task;
+    task* curr = head;
 
+    do {
+        const char* state_str = "READY";
+        if (curr->state == TASK_RUNNING) state_str = "RUNNING";
+        if (curr->state == TASK_SLEEPING) state_str = "SLEEPING";
+        if (curr->state == TASK_DEAD) state_str = "DEAD";
+
+        printf("%-4ld %-5s %s\n",
+            curr->id,
+            state_str,
+            curr->name.c_str()
+        );
+        curr = curr->next;
+
+        total_tasks++;
+    } while (curr != head);
+
+    // Re-enable interrupts
     asm volatile("sti");
 
-    size_t free_kb  = total_kb - used_kb;
-
-    int usage_pct = (total_kb > 0) ? (int)((used_kb * 100) / total_kb) : 0;
-
-    printf("Memory Statistics (KiB):\n");
-    printf("------------------------\n");
-    printf("Total memory: %8u KiB\n", total_kb);
-    printf("Used memory:  %8u KiB [%d%%]\n", used_kb, usage_pct);
-    printf("Free memory:  %8u KiB\n", free_kb);
+    printf("-------------------\n");
+    printf("Total Tasks: %ld\n\n", total_tasks);
 }

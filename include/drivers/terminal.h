@@ -32,9 +32,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MAX_TERMINAL_LINE_HISTORY_LEN 200
 #define MAX_TERMINAL_CMD_HISTORY_LEN  50
 
-#define KEY_UP    0x11
-#define KEY_DOWN  0x12
-
 extern size_t    cursor_x;
 extern size_t    cursor_y;
 extern uint8_t   terminal_color;

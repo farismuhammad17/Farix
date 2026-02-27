@@ -78,6 +78,7 @@ void init_heap() {
     first_segment->prev    = nullptr;
     first_segment->is_free = true;
     first_segment->magic   = HEAP_MAGIC;
+    first_segment->caller  = 0;
 }
 
 void* kmalloc(size_t size) {
@@ -106,6 +107,7 @@ void* kmalloc(size_t size) {
                 next_seg->next    = current->next;
                 next_seg->prev    = current;
                 next_seg->magic   = HEAP_MAGIC;
+                next_seg->caller  = 0;
 
                 if (current->next != nullptr) {
                     current->next->prev = next_seg;
@@ -116,6 +118,7 @@ void* kmalloc(size_t size) {
             }
 
             current->is_free = false;
+            current->caller  = (uint32_t) __builtin_return_address(0);
 
             return (void*)((uint32_t)current + sizeof(HeapSegment));
         }
@@ -139,6 +142,7 @@ void kfree(void* ptr) {
     if (current->magic != HEAP_MAGIC) return;
 
     current->is_free = true;
+    current->caller  = 0;
 
     // Merge Right
     if (current->next && current->next->is_free && current->next->magic == HEAP_MAGIC) {
@@ -154,7 +158,8 @@ void kfree(void* ptr) {
         prev->next = current->next;
         if (current->next) current->next->prev = prev;
 
-        current->magic = 0;
+        current->magic  = 0;
+        current->caller = 0;
     }
 }
 
@@ -196,7 +201,7 @@ void kheap_expand(size_t size) {
 
     // Merge this new free block with the previous one if possible
     // free function already handles merging
-    kfree((void*)((uint32_t)new_seg + sizeof(HeapSegment)));
+    kfree((void*)((uint32_t) new_seg + sizeof(HeapSegment)));
 }
 
 size_t get_heap_total() {
@@ -221,4 +226,44 @@ size_t get_heap_used() {
         current = current->next;
     }
     return used;
+}
+
+void print_memstat() {
+    printf("\n--- HEAP MAP ---\n");
+    printf("Start: %p | End: %p\n", heap_start, heap_end);
+    printf("----------------------------------------------------------------------\n");
+    printf("Address    | Size      | Status | Caller Address\n");
+    printf("----------------------------------------------------------------------\n");
+
+    // Disable interrupts to prevent the scheduler from
+    // switching tasks while we use the heap.
+    asm volatile("cli");
+
+    HeapSegment* current = first_segment;
+    while (current != nullptr) {
+        printf("%p | %-9u | %-6s | 0x%08X\n",
+                current,
+                current->size,
+                current->is_free ? "FREE" : "USED",
+                current->caller);
+        current = current->next;
+    }
+    printf("----------------------------------------------------------------------\n");
+    printf("Total Used: %u bytes\n", get_heap_used());
+    printf("----------------------------------------------------------------------\n\n");
+
+    size_t total_kb = get_heap_total() / 1024;
+    size_t used_kb  = get_heap_used()  / 1024;
+
+    asm volatile("sti");
+
+    size_t free_kb  = total_kb - used_kb;
+
+    int usage_pct = (total_kb > 0) ? (int)((used_kb * 100) / total_kb) : 0;
+
+    printf("Memory Statistics (KiB):\n");
+    printf("------------------------\n");
+    printf("Total memory: %8u KiB\n", total_kb);
+    printf("Used memory:  %8u KiB [%d%%]\n", used_kb, usage_pct);
+    printf("Free memory:  %8u KiB\n", free_kb);
 }

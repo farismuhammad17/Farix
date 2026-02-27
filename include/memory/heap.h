@@ -31,6 +31,7 @@ struct HeapSegment {
     HeapSegment* prev;
     bool is_free;
     uint32_t magic;
+    uint32_t caller;
 };
 
 void   init_heap();
@@ -44,6 +45,8 @@ void   kheap_expand(size_t size);
 
 size_t get_heap_total();
 size_t get_heap_used();
+
+void   print_memstat();
 
 void*  operator new      (size_t size);
 void*  operator new[]    (size_t size);

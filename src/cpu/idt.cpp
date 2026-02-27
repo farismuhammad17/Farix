@@ -24,7 +24,7 @@ struct idt_ptr   idtp;
 
 void init_idt() {
     idtp.limit = (sizeof(struct idt_entry) * 256) - 1;  // Defines the IDT pointer's size how x86 likes
-    idtp.base  = (uint32_t)&idt;                        // The memory address of the IDT array
+    idtp.base  = (uint32_t) &idt;                       // The memory address of the IDT array
 
     for (int i = 0; i < 256; i++) {
         uint32_t base = (uint32_t) default_handler_stub;

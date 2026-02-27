@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string.h>
 
 #include "architecture/io.h"
+#include "drivers/keyboard.h"
 #include "shell/shell.h"
 
 #include "drivers/terminal.h"

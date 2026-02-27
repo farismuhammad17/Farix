@@ -1,5 +1,17 @@
 # Changelog
 
+## Tasks command - *27 Feb, 2026*
+
+- **Keyboard**
+  - Moved `KEY_UP` and `KEY_DOWN` definitions from `terminal.h` to `keyboard.h`.
+- **Heap**
+  - `kmalloc` automatically stores the caller's address for logging.
+- **Shell**
+  - Implemented `tasks` command.
+  - Moved `memstat` logic to `heap.cpp` instead.
+  - `memstat` now prints caller addresses.
+  - `help` command now indents properly.
+
 ## Standard C Library - *26 Feb, 2026*
 
 - Implemented `libc` through `newlib`.

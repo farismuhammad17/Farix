@@ -71,13 +71,13 @@ cli
 .global keyboard_handler_stub
 .extern keyboard_handler
 
-default_handler_stub:          /* Shouldn't be seen unless it's an error */
-    movl $0x0F210F21, 0xB8000  /* Puts '!' on screen                     */
+default_handler_stub:           # Shouldn't be seen unless it's an error, probably in memory
+    movl $0x0F210F21, 0xB8000   # Puts '!' on screen
     cli
     hlt
 
 keyboard_handler_stub:
-    pusha                # Save all general-purpose registers
+    pusha                       # Save all general-purpose registers
     call keyboard_handler
-    popa                 # Restore all registers
-    iret                 # Interrupt Return
+    popa                        # Restore all registers
+    iret                        # Interrupt Return
