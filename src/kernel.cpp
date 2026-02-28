@@ -30,6 +30,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cpu/timer.h"
 #include "process/task.h"
 #include "drivers/ata.h"
+#include "drivers/keyboard.h"
+#include "drivers/mouse.h"
 #include "drivers/terminal.h"
 #include "shell/shell.h"
 #include "fs/vfs.h"
@@ -48,7 +50,11 @@ void shell_thread() {
 extern "C" void _init();
 
 extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
+    init_idt();
     init_gdt();
+
+    pic_remap();
+
     init_terminal();
 
     init_pmm(mbi);
@@ -62,8 +68,8 @@ extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
         while(1) { asm volatile("hlt"); }
     }
 
-    init_idt();
-    pic_remap();
+    init_keyboard();
+    init_mouse();
 
     // Enable interrupts
     asm volatile("sti");

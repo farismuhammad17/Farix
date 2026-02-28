@@ -23,7 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "drivers/keyboard.h"
 
-bool shift_pressed = false;
+bool shift_pressed  = false;
+bool keyboard_ready = false;
 
 unsigned char kbd[128] = {
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
@@ -55,10 +56,33 @@ void push_to_kbd_buffer(char c) {
     }
 }
 
+void init_keyboard() {
+    // Wait for controller to be ready to accept a command
+    while (inb(0x64) & 0x02);
+    outb(0x60, 0xFF); // Send reset
+
+    // Wait for ACK (0xFA)
+    while (!(inb(0x64) & 0x01));
+    inb(0x60); // Read and ignore
+
+    // Wait for Self-Test Passed (0xAA)
+    while (!(inb(0x64) & 0x01));
+    inb(0x60); // Read and ignore
+
+    keyboard_ready = true;
+}
+
 extern "C" void keyboard_handler() {
+    uint8_t status = inb(0x64);
+    if (!(status & 0x01) || (status & 0x20) || !keyboard_ready) { // Data is not ready ready OR it is mouse data OR the keyboard is not ready.
+        outb(0x20, 0x20);
+        return;
+    }
+
     uint8_t scancode = inb(0x60);
 
     if (echo_scancodes) {
+        printf("Status: 0x%x\n", status);
         printf("Scancode: 0x%x\n", scancode);
     }
 
@@ -66,27 +90,17 @@ extern "C" void keyboard_handler() {
         is_extended = true;
     }
     else if (is_extended) {
-        if (scancode == 0x48) {
-            push_to_kbd_buffer(KEY_UP);
-        } else if (scancode == 0x50) {
-            push_to_kbd_buffer(KEY_DOWN);
-        }
+        if (scancode == 0x48) push_to_kbd_buffer(KEY_UP);
+        else if (scancode == 0x50) push_to_kbd_buffer(KEY_DOWN);
         is_extended = false;
-        // DO NOT CONTINUE to normal key processing
     }
-    else { // Use an 'else' here to wrap your normal key logic
-        if (scancode == 0x2A || scancode == 0x36) {
-            shift_pressed = true;
-        } else if (scancode == 0xAA || scancode == 0xB6) {
-            shift_pressed = false;
-        }
+    else {
+        if (scancode == 0x2A || scancode == 0x36) shift_pressed = true;
+        else if (scancode == 0xAA || scancode == 0xB6) shift_pressed = false;
         else if (!(scancode & 0x80)) {
             size_t offset = shift_pressed ? KBD_LEN : 0;
             char c = kbd[scancode + offset];
-
-            if (c > 0) {
-                push_to_kbd_buffer(c);
-            }
+            if (c > 0) push_to_kbd_buffer(c);
         }
     }
 

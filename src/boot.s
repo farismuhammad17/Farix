@@ -69,7 +69,9 @@ cli
 
 .global default_handler_stub
 .global keyboard_handler_stub
+.global mouse_handler_stub
 .extern keyboard_handler
+.extern mouse_handler
 
 default_handler_stub:           # Shouldn't be seen unless it's an error, probably in memory
     movl $0x0F210F21, 0xB8000   # Puts '!' on screen
@@ -81,3 +83,11 @@ keyboard_handler_stub:
     call keyboard_handler
     popa                        # Restore all registers
     iret                        # Interrupt Return
+
+mouse_handler_stub:
+    cli                         # Disable interrupts to prevent nested IRQs
+    pusha
+    call mouse_handler
+    popa
+    sti                         # Re-enable interrupts
+    iret

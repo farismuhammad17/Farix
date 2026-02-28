@@ -17,24 +17,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef KEYBOARD_H
-#define KEYBOARD_H
+#ifndef MOUSE_H
+#define MOUSE_H
 
-#define KEY_UP    0x11
-#define KEY_DOWN  0x12
+#define MOUSE_BUFFER_LEN 16
 
-#define KBD_LEN        58
-#define KBD_BUFFER_LEN 1024
+struct MouseEvent {
+    int8_t x, y;
+    int8_t scroll;
+    bool left, right;
+};
 
-extern char kbd_buffer[KBD_BUFFER_LEN];
-extern volatile int  kbd_head;
-extern volatile int  kbd_tail;
+extern MouseEvent mouse_buffer[16];
+extern uint8_t    buffer_head;
+extern uint8_t    buffer_tail;
 
-extern bool shift_pressed;
-extern unsigned char kbd[128];
+void init_mouse();
 
-void init_keyboard();
-
-extern "C" void keyboard_handler();
+extern "C" void mouse_handler();
 
 #endif

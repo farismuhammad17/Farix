@@ -40,6 +40,8 @@ TerminalLine* line_history_head  = nullptr;
 TerminalLine* line_history_tail  = nullptr;
 int           line_history_count = 0;
 
+int           scroll_offset = 0;
+
 void init_terminal() {
 	cursor_x = 0;
 	cursor_y = 0;

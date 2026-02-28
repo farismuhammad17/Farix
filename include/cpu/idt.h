@@ -26,6 +26,7 @@ extern "C" {
     void default_handler_stub();
     void timer_handler_stub();
     void keyboard_handler_stub();
+    void mouse_handler_stub();
 }
 
 struct idt_entry {

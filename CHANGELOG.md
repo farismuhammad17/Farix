@@ -1,5 +1,16 @@
 # Changelog
 
+## Mouse implementation - *28 Feb, 2026*
+
+- **Mouse**
+  - Detects relative movement.
+  - Detects left and right click.
+  - Detects scroll.
+- **Keyboard**
+  - Implemented `init_keyboard`.
+- **Make file**
+  - `run` and `run_nofs` are informed of the mouse.
+
 ## Tasks command - *27 Feb, 2026*
 
 - **Keyboard**

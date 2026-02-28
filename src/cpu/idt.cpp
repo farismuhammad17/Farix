@@ -37,6 +37,9 @@ void init_idt() {
     // Register Keyboard Handler at index 33
     idt_set_gate(33, (uint32_t) keyboard_handler_stub, 0x08, 0x8E);
 
+    // Register Mouse Handler at index 44 (IRQ 12)
+    idt_set_gate(44, (uint32_t) mouse_handler_stub, 0x08, 0x8E);
+
     asm volatile("lidt %0" : : "m"(idtp));
 }
 

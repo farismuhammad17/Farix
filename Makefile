@@ -117,10 +117,10 @@ clean:
 	rm -rf build farix.bin disk.img
 
 run: farix.bin disk.img
-	qemu-system-i386 -kernel farix.bin -drive format=raw,file=disk.img,index=0,media=disk -full-screen
+	qemu-system-i386 -kernel farix.bin -drive format=raw,file=disk.img,index=0,media=disk -device virtio-mouse-pci -full-screen
 
 run_nofs: farix.bin disk.img
-	qemu-system-i386 -kernel farix.bin -drive format=raw,file=disk.img,index=0,media=disk
+	qemu-system-i386 -kernel farix.bin -drive format=raw,file=disk.img,index=0,media=disk -device virtio-mouse-pci
 
 disk.img:
 	qemu-img create -f raw disk.img 64M

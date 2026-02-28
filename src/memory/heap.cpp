@@ -38,7 +38,7 @@ bool check_heap() {
         }
 
         // Alignment Check
-        if (((uint32_t)current & 0x3) != 0) {
+        if (((uint32_t) current & 0x3) != 0) {
             printf("HEAP CORRUPTION: Unaligned segment pointer %p\n", current);
             return false;
         }
@@ -178,14 +178,14 @@ void kheap_expand(size_t size) {
     size_t total_needed = size + sizeof(HeapSegment);
     size_t pages_to_alloc = (total_needed + PAGE_SIZE - 1) / PAGE_SIZE;
 
-    HeapSegment* new_seg = (HeapSegment*)heap_end;
+    HeapSegment* new_seg = (HeapSegment*) heap_end;
 
     for (size_t i = 0; i < pages_to_alloc; i++) {
         void* phys = pmm_alloc_page();
         vmm_map_page(phys, (void*)((uint32_t) heap_end + (i * PAGE_SIZE)), PAGE_PRESENT | PAGE_RW);
     }
 
-    heap_end = (void*)((uint32_t)heap_end + (pages_to_alloc * PAGE_SIZE));
+    heap_end = (void*)((uint32_t) heap_end + (pages_to_alloc * PAGE_SIZE));
 
     new_seg->size = (pages_to_alloc * PAGE_SIZE) - sizeof(HeapSegment);
     new_seg->is_free = true;
@@ -239,6 +239,9 @@ void print_memstat() {
     // switching tasks while we use the heap.
     asm volatile("cli");
 
+    size_t heap_total = get_heap_total();
+    size_t heap_used  = get_heap_used();
+
     HeapSegment* current = first_segment;
     while (current != nullptr) {
         printf("%p | %-9u | %-6s | 0x%08X\n",
@@ -248,12 +251,13 @@ void print_memstat() {
                 current->caller);
         current = current->next;
     }
+
     printf("----------------------------------------------------------------------\n");
-    printf("Total Used: %u bytes\n", get_heap_used());
+    printf("Total Used: %u bytes\n", heap_used);
     printf("----------------------------------------------------------------------\n\n");
 
-    size_t total_kb = get_heap_total() / 1024;
-    size_t used_kb  = get_heap_used()  / 1024;
+    size_t total_kb = heap_total / 1024;
+    size_t used_kb  = heap_used  / 1024;
 
     asm volatile("sti");
 
@@ -261,9 +265,9 @@ void print_memstat() {
 
     int usage_pct = (total_kb > 0) ? (int)((used_kb * 100) / total_kb) : 0;
 
-    printf("Memory Statistics (KiB):\n");
+    printf("Memory Statistics:\n");
     printf("------------------------\n");
-    printf("Total memory: %8u KiB\n", total_kb);
-    printf("Used memory:  %8u KiB [%d%%]\n", used_kb, usage_pct);
-    printf("Free memory:  %8u KiB\n", free_kb);
+    printf("Total memory: %4u KiB\n", total_kb);
+    printf("Used memory:  %4u KiB [%d%%]\n", used_kb, usage_pct);
+    printf("Free memory:  %4u KiB\n", free_kb);
 }
