@@ -79,16 +79,22 @@ void init_terminal();
 
 void update_cursor(size_t x, size_t y);
 void terminal_clear();
+void refresh_terminal_view();
+void new_line();
 
-void terminal_scroll();
-void save_line_to_history (uint16_t* line_data);
-void save_cmd_to_history  (const char* command);
-void cmd_history_up   ();
-void cmd_history_down ();
+void save_line_to_history(uint16_t* line_data);
+void update_line_history_tail(uint16_t* line_data);
+void scroll_up();
+void scroll_down();
+
+void save_cmd_to_history(const char* command);
+void cmd_history_up();
+void cmd_history_down();
 
 void echo_at   (char c, uint8_t color, size_t x, size_t y);
 void echo_char (char c);
 
-bool handle_special_chars(char c);
+bool handle_special_chars (char c);
+void handle_mouse         ();
 
 #endif

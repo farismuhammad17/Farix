@@ -1,5 +1,15 @@
 # Changelog
 
+## Terminal scrolling - *28 Feb, 2026*
+
+- **Terminal**
+  - Scrolls using the detected mouse scroll.
+  - Mouse scroll detection is in a seperate thread.
+- **Shell**
+  - Implemented `kill` command.
+- **Multithreading**
+  - Implemented `kill_task`.
+
 ## Mouse implementation - *28 Feb, 2026*
 
 - **Mouse**

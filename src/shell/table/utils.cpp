@@ -77,3 +77,13 @@ void cmd_tasks(const std::string& args) {
     printf("-------------------\n");
     printf("Total Tasks: %ld\n\n", total_tasks);
 }
+
+void cmd_kill(const std::string& args) {
+    if (args.empty()) {
+        printf("Usage: kill <pid>\n");
+        return;
+    }
+
+    uint32_t pid = std::stoi(args);
+    kill_task(pid);
+}

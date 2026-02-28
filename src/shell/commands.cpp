@@ -25,6 +25,7 @@ ShellCommand command_table[] = {
     {"echo", cmd_echo, "Echoes to the terminal"},
     {"memstat", cmd_memstat, "Memory statistics"},
     {"tasks", cmd_tasks, "List of running tasks"},
+    {"kill", cmd_kill, "Kill a task given the process ID"},
     {"cd", cmd_cd, "Change directory"},
     {"cat", cmd_cat, "Read file"},
     {"write", cmd_write, "Write to a file"},

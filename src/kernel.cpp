@@ -87,6 +87,7 @@ extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_shell();
 
     create_task(shell_thread, "Shell");
+    create_task(handle_mouse, "Terminal mouse handler");
 
     // The OS must NEVER die.
     // Interrupts take back control from this loop whenever

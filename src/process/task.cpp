@@ -85,6 +85,27 @@ task* create_task(void (*entry_point)(), std::string name) {
     return new_task;
 }
 
+void kill_task(uint32_t id) {
+    // Disable interrupts for safety
+    asm volatile("cli");
+
+    task* target = current_task;
+
+    for (size_t i = 0; i < total_tasks; i++) {
+        if (target->id == id) break;
+        target = target->next;
+    }
+
+    if (target) target->state = TASK_DEAD;
+
+    asm volatile("sti");
+
+    if (target == current_task) {
+        yield();
+        return;
+    }
+}
+
 void schedule() {
     if (!current_task || current_task->next == current_task) return;
 

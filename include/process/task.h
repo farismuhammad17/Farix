@@ -51,6 +51,7 @@ extern task* current_task;
 void init_multitasking();
 
 task* create_task(void (*entry_point)(), std::string name);
+void  kill_task(uint32_t id);
 void  schedule();
 
 void yield();

@@ -21,7 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string.h>
 
 #include "architecture/io.h"
+#include "process/task.h"
 #include "drivers/keyboard.h"
+#include "drivers/mouse.h"
 #include "shell/shell.h"
 
 #include "drivers/terminal.h"
@@ -36,11 +38,12 @@ TerminalCmd*  cmd_history_head  = nullptr;
 TerminalCmd*  cmd_history_tail  = nullptr;
 int           cmd_history_count = 0;
 
-TerminalLine* line_history_head  = nullptr;
-TerminalLine* line_history_tail  = nullptr;
-int           line_history_count = 0;
+TerminalLine* line_history_head    = nullptr;
+TerminalLine* line_history_tail    = nullptr;
+int           line_history_count   = 0;
+int           scroll_offset        = 0;
 
-int           scroll_offset = 0;
+bool          is_scrolling = false;
 
 void init_terminal() {
 	cursor_x = 0;
@@ -80,26 +83,44 @@ void terminal_clear() {
     update_cursor(0, 0);
 }
 
-void terminal_scroll() {
-    save_line_to_history(&terminal_buffer[0]);
+void refresh_terminal_view() {
+    is_scrolling = scroll_offset != 0;
 
-    for (size_t y = 0; y < HEIGHT - 1; y++) {
-        for (size_t x = 0; x < WIDTH; x++) {
-            const size_t current_index = y * WIDTH + x;
-            const size_t next_line_index = (y + 1) * WIDTH + x;
-
-            terminal_buffer[current_index] = terminal_buffer[next_line_index];
-        }
+    TerminalLine* temp = line_history_tail;
+    for (int i = 0; i < scroll_offset; i++) {
+        if (temp->prev) temp = temp->prev;
     }
 
-    const size_t last_row_start = (HEIGHT - 1) * WIDTH;
-    uint16_t empty_char = vga_entry(' ', terminal_color);
+    // Copy history directly into the screen buffer
+    for (int y = HEIGHT - 1; y >= 0; y--) {
+        if (temp) {
+            for (int x = 0; x < WIDTH; x++) {
+                terminal_buffer[y * WIDTH + x] = temp->data[x];
+            }
+            temp = temp->prev; // Walk backwards
+        } else {
+            // Fill top lines with spaces if not enough history
+            for (int x = 0; x < WIDTH; x++) {
+                terminal_buffer[y * WIDTH + x] = vga_entry(' ', terminal_color);
+            }
+        }
+    }
+}
 
+void new_line() {
+    // Move lines up in terminal_buffer (Physical Memory)
+    for (size_t y = 0; y < HEIGHT - 1; y++) {
+        for (size_t x = 0; x < WIDTH; x++) {
+            terminal_buffer[y * WIDTH + x] = terminal_buffer[(y + 1) * WIDTH + x];
+        }
+    }
+    // Clear bottom line in terminal_buffer
     for (size_t x = 0; x < WIDTH; x++) {
-        terminal_buffer[last_row_start + x] = empty_char;
+        terminal_buffer[(HEIGHT - 1) * WIDTH + x] = vga_entry(' ', terminal_color);
     }
 
     cursor_y = HEIGHT - 1;
+    update_cursor(cursor_x, cursor_y);
 }
 
 void save_line_to_history(uint16_t* line_data) {
@@ -132,6 +153,28 @@ void save_line_to_history(uint16_t* line_data) {
         delete toDelete;
         line_history_count--;
     }
+}
+
+void update_line_history_tail(uint16_t* line_data) {
+    for(int i = 0; i < WIDTH; i++) {
+        line_history_tail->data[i] = line_data[i];
+    }
+}
+
+void scroll_up() {
+    if (!line_history_tail) return;
+
+    scroll_offset++;
+    if (scroll_offset > line_history_count) scroll_offset = line_history_count;
+
+    refresh_terminal_view();
+}
+
+void scroll_down() {
+    scroll_offset--;
+    if (scroll_offset < 0) scroll_offset = 0;
+
+    refresh_terminal_view();
 }
 
 void save_cmd_to_history(const char* command) {
@@ -204,12 +247,19 @@ void cmd_history_down() {
 }
 
 void echo_at(char c, uint8_t color, size_t x, size_t y) {
-	terminal_buffer[y * WIDTH + x] = vga_entry(c, color);
+    terminal_buffer[y * WIDTH + x] = vga_entry(c, color);
 }
 
 void echo_char(char c) {
+    if (is_scrolling) {
+        scroll_offset = 0;
+        refresh_terminal_view();
+    }
+
     if (!handle_special_chars(c)) {
         echo_at(c, terminal_color, cursor_x, cursor_y);
+
+        update_line_history_tail(&terminal_buffer[cursor_y * WIDTH]);
 
         if (++cursor_x == WIDTH) {
             cursor_x = 0;
@@ -218,7 +268,7 @@ void echo_char(char c) {
     }
 
     if (cursor_y >= HEIGHT) {
-        terminal_scroll();
+        new_line();
     }
 
     update_cursor(cursor_x, cursor_y);
@@ -226,6 +276,8 @@ void echo_char(char c) {
 
 bool handle_special_chars(char c) {
     if (c == '\n') {
+        save_line_to_history(&terminal_buffer[cursor_y * WIDTH]);
+
         cursor_x = 0;
         cursor_y++;
 
@@ -274,4 +326,24 @@ bool handle_special_chars(char c) {
     }
 
     return false;
+}
+
+void handle_mouse() {
+    while (1) {
+        while (buffer_tail != buffer_head) {
+            MouseEvent event = mouse_buffer[buffer_tail];
+
+            if (event.scroll != 0) {
+                if (event.scroll == 1) {
+                    // Scroll UP one line in the terminal
+                    scroll_down();
+                } else if (event.scroll == -1) {
+                    // Scroll DOWN one line in the terminal
+                    scroll_up();
+                }
+            }
+
+            buffer_tail = (buffer_tail + 1) % MOUSE_BUFFER_LEN;
+        }
+    }
 }
