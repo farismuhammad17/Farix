@@ -23,13 +23,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
-#define WIDTH   80
-#define HEIGHT  25
-#define MEMORY  0xB8000
+#define WIDTH  80
+#define HEIGHT 25
+#define MEMORY 0xB8000
+
+#define ESC             0x1B
+#define ANSI_COLOR_BASE 0xE000
+/*              | ANSI_COLOR_BASE | color
+ | Reset   | 0  | 0xE000
+ | Black   | 30 | 0xE01E
+ | Red     | 31 | 0xE01F
+ | Green   | 32 | 0xE020
+ | Yellow  | 33 | 0xE021
+ | Blue    | 34 | 0xE022
+ | Magenta | 35 | 0xE023
+ | Cyan    | 36 | 0xE024
+ | White   | 37 | 0xE025
+ */
 
 #define INDENT_LEN 4
 
-#define MAX_TERMINAL_LINE_HISTORY_LEN 200
+#define MAX_TERMINAL_LINE_HISTORY_LEN 500
 #define MAX_TERMINAL_CMD_HISTORY_LEN  50
 
 extern size_t    cursor_x;
@@ -94,7 +108,7 @@ void cmd_history_down();
 void echo_at   (char c, uint8_t color, size_t x, size_t y);
 void echo_char (char c);
 
-bool handle_special_chars (char c);
-void handle_mouse         ();
+bool handle_special_chars(char c);
+void handle_mouse();
 
 #endif

@@ -30,7 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 size_t        cursor_x = 0;
 size_t        cursor_y = 0;
-uint8_t       terminal_color  = 0x07;
+uint8_t       terminal_color  = 0;
 uint16_t*     terminal_buffer = (uint16_t*) MEMORY;
 
 TerminalCmd*  cmd_current_line  = nullptr;

@@ -110,11 +110,6 @@ void cmd_cat(const std::string& args) {
 
     if (f->size == 0) return;
 
-    if (f->size > 65536) {
-        printf("cat: File too large for buffer\n");
-        return;
-    }
-
     char* buffer = (char*) kmalloc(f->size + 1);
     if (!buffer) {
         printf("cat: out of memory\n");
@@ -124,10 +119,7 @@ void cmd_cat(const std::string& args) {
     kmemset(buffer, 0, f->size + 1);
 
     if (fs_read(filename, buffer, f->size)) {
-        buffer[f->size] = '\0';
         printf("%s\n", buffer);
-    } else {
-        printf("cat: error reading file\n");
     }
 
     kfree(buffer);

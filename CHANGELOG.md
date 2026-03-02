@@ -1,5 +1,16 @@
 # Changelog
 
+## FAT32 Sector limitation removal - *2 Mar, 2026*
+
+- **FAT32 File System**
+  - Updated disk read routine to iterate through total sectors.
+  - There is no longer a maximum buffer limit to reading a file.
+- **Terminal**
+  - Increase maximum lines remembered in history to 500 from 200.
+  - Unifinished implementation for ANSI escape codes.
+- **Removed**
+  - Empty `config.h` file I forgot to delete.
+
 ## Terminal scrolling - *28 Feb, 2026*
 
 - **Terminal**
