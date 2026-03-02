@@ -1,5 +1,11 @@
 # Changelog
 
+## ANSI Escape codes - *2 Mar, 2026*
+
+- **Terminal**
+  - ANSI support codes now work, though some syntax remain pending.
+  - Replaced `char` usage for `echo_char` and similar function with `uint16_t` for future compatibility.
+
 ## FAT32 Sector limitation removal - *2 Mar, 2026*
 
 - **FAT32 File System**

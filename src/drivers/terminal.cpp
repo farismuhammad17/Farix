@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "architecture/io.h"
@@ -45,10 +46,10 @@ int           scroll_offset        = 0;
 
 bool          is_scrolling = false;
 
-void init_terminal() {
-	cursor_x = 0;
-	cursor_y = 0;
+bool          special_char_mode   = false;
+std::string   special_char_buffer = ""; // TODO: Use char instead
 
+void init_terminal() {
 	update_cursor(0, 0);
 
 	terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
@@ -250,15 +251,20 @@ void echo_at(char c, uint8_t color, size_t x, size_t y) {
     terminal_buffer[y * WIDTH + x] = vga_entry(c, color);
 }
 
-void echo_char(char c) {
+void echo_char(uint16_t c) {
     if (is_scrolling) {
         scroll_offset = 0;
         refresh_terminal_view();
     }
 
-    if (!handle_special_chars(c)) {
-        echo_at(c, terminal_color, cursor_x, cursor_y);
+    if (c == ESC_CODE || special_char_mode) {
+        special_char_mode = true;
+        handle_ansi_char(c);
+        return;
+    }
 
+    if (!handle_special_chars(c)) {
+        echo_at((char) c, terminal_color, cursor_x, cursor_y);
         update_line_history_tail(&terminal_buffer[cursor_y * WIDTH]);
 
         if (++cursor_x == WIDTH) {
@@ -274,7 +280,7 @@ void echo_char(char c) {
     update_cursor(cursor_x, cursor_y);
 }
 
-bool handle_special_chars(char c) {
+bool handle_special_chars(uint16_t c) {
     if (c == '\n') {
         save_line_to_history(&terminal_buffer[cursor_y * WIDTH]);
 
@@ -345,5 +351,73 @@ void handle_mouse() {
 
             buffer_tail = (buffer_tail + 1) % MOUSE_BUFFER_LEN;
         }
+    }
+}
+
+void handle_ansi_char(uint16_t c) {
+    if (c == ESC_CODE || c == '[' && special_char_mode) return;
+
+    if (c == 'm') { // TODO: Only supports foreground, should implement background later, as well as letting ';' be used as a seperator
+             if (special_char_buffer == "0")  terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
+        else if (special_char_buffer == "30") terminal_color = vga_entry_color(VGA_COLOR_BLACK, VGA_COLOR_BLACK);
+        else if (special_char_buffer == "31") terminal_color = vga_entry_color(VGA_COLOR_RED, VGA_COLOR_BLACK);
+        else if (special_char_buffer == "32") terminal_color = vga_entry_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
+        else if (special_char_buffer == "33") terminal_color = vga_entry_color(VGA_COLOR_BROWN, VGA_COLOR_BLACK);
+        else if (special_char_buffer == "34") terminal_color = vga_entry_color(VGA_COLOR_BLUE, VGA_COLOR_BLACK);
+        else if (special_char_buffer == "35") terminal_color = vga_entry_color(VGA_COLOR_MAGENTA, VGA_COLOR_BLACK);
+        else if (special_char_buffer == "36") terminal_color = vga_entry_color(VGA_COLOR_CYAN, VGA_COLOR_BLACK);
+        else if (special_char_buffer == "37") terminal_color = vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+
+        special_char_mode   = false;
+        special_char_buffer = "";
+    } else if (c == 'H' || c == 'f') {
+        size_t seperator = special_char_buffer.find(';');
+
+        cursor_y = std::stoi(special_char_buffer.substr(0, seperator))  - 1;
+        cursor_x = std::stoi(special_char_buffer.substr(seperator + 1)) - 1;
+
+        update_cursor(cursor_x, cursor_y);
+    } else if (c == 'J') {
+        switch (special_char_buffer[0]) {
+            case '0':
+                for (size_t i = cursor_y * WIDTH + cursor_x; i < WIDTH * HEIGHT; i++)
+                    terminal_buffer[i] = vga_entry(' ', terminal_color);
+                break;
+            case '1':
+                for (size_t i = 0; i <= cursor_y * WIDTH + cursor_x; i++)
+                    terminal_buffer[i] = vga_entry(' ', terminal_color);
+                break;
+            case '2': terminal_clear(); break;
+            case '3': terminal_clear(); break; // TODO: \033[3J should also delete the scrollback buffer
+        }
+    } else if (c == 'K') {
+        switch (special_char_buffer[0]) {
+            case '0':
+                for (size_t i = cursor_y * WIDTH + cursor_x; i < (cursor_y + 1) * WIDTH; i++)
+                    terminal_buffer[i] = vga_entry(' ', terminal_color);
+                break;
+            case '1':
+                for (size_t i = cursor_y * WIDTH; i < cursor_y * WIDTH + cursor_x; i++)
+                    terminal_buffer[i] = vga_entry(' ', terminal_color);
+                break;
+            case '2':
+                for (size_t i = cursor_y * WIDTH; i < (cursor_y + 1) * WIDTH; i++)
+                    terminal_buffer[i] = vga_entry(' ', terminal_color);
+                break;
+        }
+    } else if (c == 'A') { // TODO Clamp the values so that the cursor doesn't fall outside of the terminal
+        cursor_y -= std::stoi(special_char_buffer);
+        update_cursor(cursor_x, cursor_y);
+    } else if (c == 'B') {
+        cursor_y += std::stoi(special_char_buffer);
+        update_cursor(cursor_x, cursor_y);
+    } else if (c == 'C') {
+        cursor_x += std::stoi(special_char_buffer);
+        update_cursor(cursor_x, cursor_y);
+    } else if (c == 'D') {
+        cursor_x -= std::stoi(special_char_buffer);
+        update_cursor(cursor_x, cursor_y);
+    } else {
+        special_char_buffer += c;
     }
 }

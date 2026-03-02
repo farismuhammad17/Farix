@@ -27,19 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define HEIGHT 25
 #define MEMORY 0xB8000
 
-#define ESC             0x1B
-#define ANSI_COLOR_BASE 0xE000
-/*              | ANSI_COLOR_BASE | color
- | Reset   | 0  | 0xE000
- | Black   | 30 | 0xE01E
- | Red     | 31 | 0xE01F
- | Green   | 32 | 0xE020
- | Yellow  | 33 | 0xE021
- | Blue    | 34 | 0xE022
- | Magenta | 35 | 0xE023
- | Cyan    | 36 | 0xE024
- | White   | 37 | 0xE025
- */
+#define ESC_CODE 0x1B
 
 #define INDENT_LEN 4
 
@@ -106,9 +94,10 @@ void cmd_history_up();
 void cmd_history_down();
 
 void echo_at   (char c, uint8_t color, size_t x, size_t y);
-void echo_char (char c);
+void echo_char (uint16_t c);
 
-bool handle_special_chars(char c);
+bool handle_special_chars(uint16_t c);
 void handle_mouse();
+void handle_ansi_char(uint16_t c);
 
 #endif
