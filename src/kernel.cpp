@@ -37,6 +37,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "fs/vfs.h"
 #include "fs/ramdisk.h"
 #include "fs/fat32.h"
+#include "fs/elf.h"
 
 #define THREAD_HZ 100
 

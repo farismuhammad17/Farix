@@ -17,23 +17,32 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef VMM_H
-#define VMM_H
+#include <string.h>
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "memory/heap.h"
+#include "cpu/gdt.h"
 
-#define PAGE_PRESENT  0x1   // 01 in binary  - If page is in RAM
-#define PAGE_RW       0x2   // 10 in binary  - 0 = Read-only,   1 = Read/Write
-#define PAGE_USER     0x4   // 100 in binary - 0 = Kernel only, 1 = Everyone
+#include "cpu/tss.h"
 
-#define ENTRIES_PER_TABLE 1024
+extern GDTEntry gdt[6];
+TSSEntry tss_entry;
 
-extern uint32_t* kernel_directory;
+void init_tss(uint32_t idx, uint32_t kss, uint32_t kesp) {
+    uint32_t base = (uint32_t) &tss_entry;
+    uint32_t limit = sizeof(TSSEntry);
 
-void init_vmm();
+    // Access: 0x89 (Present, Executable, Accessed, Ring 0)
+    gdt_set_entry(idx, base, limit, 0x89, 0x00);
 
-void vmm_map_page(uint32_t* dir, void* phys, void* virt, uint32_t flags);
-void vmm_switch_directory(uint32_t* directory);
+    kmemset(&tss_entry, 0, sizeof(TSSEntry));
 
-#endif
+    tss_entry.ss0  = kss;     // Usually 0x10 (Kernel Data)
+    tss_entry.esp0 = kesp;
+
+    // Set the I/O map base to the size of the TSS to disable it
+    tss_entry.iomap_base = sizeof(TSSEntry);
+}
+
+void set_kernel_stack(uint32_t stack) {
+    tss_entry.esp0 = stack;
+}

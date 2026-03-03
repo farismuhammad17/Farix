@@ -67,7 +67,7 @@ void init_heap() {
 
     for (uint32_t i = 0; i < initial_pages; i++) {
         void* phys = pmm_alloc_page();
-        vmm_map_page(phys, (void*)((uint32_t) heap_start + i * PAGE_SIZE), PAGE_PRESENT | PAGE_RW);
+        vmm_map_page(kernel_directory, phys, (void*)((uint32_t) heap_start + i * PAGE_SIZE), PAGE_PRESENT | PAGE_RW);
     }
 
     heap_end = (void*)((uint32_t) heap_start + (initial_pages * PAGE_SIZE));
@@ -182,7 +182,7 @@ void kheap_expand(size_t size) {
 
     for (size_t i = 0; i < pages_to_alloc; i++) {
         void* phys = pmm_alloc_page();
-        vmm_map_page(phys, (void*)((uint32_t) heap_end + (i * PAGE_SIZE)), PAGE_PRESENT | PAGE_RW);
+        vmm_map_page(kernel_directory, phys, (void*)((uint32_t) heap_end + (i * PAGE_SIZE)), PAGE_PRESENT | PAGE_RW);
     }
 
     heap_end = (void*)((uint32_t) heap_end + (pages_to_alloc * PAGE_SIZE));

@@ -21,18 +21,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "memory/vmm.h"
 
-static uint32_t* kernel_directory = nullptr;
+uint32_t* kernel_directory = nullptr;
 
 void init_vmm() {
     // Asks PMM for a 4KB page to hold the Directory
     kernel_directory = (uint32_t*) pmm_alloc_page();
-    for (int i = 0; i < 1024; i++) {
+    for (int i = 0; i < PAGE_SIZE / 4; i++) {
         kernel_directory[i] = PAGE_RW;
     }
 
     // Create the first Page Table (to map the first 4MB)
     uint32_t* first_page_table = (uint32_t*) pmm_alloc_page();
-    for (uint32_t i = 0; i < 1024; i++) {
+    for (uint32_t i = 0; i < PAGE_SIZE / 4; i++) {
         uint32_t address    = i * PAGE_SIZE;
         first_page_table[i] = address | PAGE_PRESENT | PAGE_RW;
     }
@@ -42,20 +42,20 @@ void init_vmm() {
     vmm_switch_directory(kernel_directory);
 }
 
-void vmm_map_page(void* phys, void* virt, uint32_t flags) {
+void vmm_map_page(uint32_t* dir, void* phys, void* virt, uint32_t flags) {
     uint32_t virt_addr = (uint32_t) virt;
     uint32_t pd_index  = virt_addr >> 22;
     uint32_t pt_index  = (virt_addr >> 12) & 0x3FF;
 
-    if (!(kernel_directory[pd_index] & PAGE_PRESENT)) {
+    if (!(dir[pd_index] & PAGE_PRESENT)) {
         uint32_t* new_table = (uint32_t*) pmm_alloc_page();
-        for (int i = 0; i < 1024; i++) new_table[i] = 0;
+        for (int i = 0; i < PAGE_SIZE / 4; i++) new_table[i] = 0;
 
-        kernel_directory[pd_index] = (uint32_t) new_table | PAGE_PRESENT | PAGE_RW;
+        dir[pd_index] = (uint32_t) new_table | PAGE_PRESENT | PAGE_RW | PAGE_USER;
     }
 
-    uint32_t* table = (uint32_t*) (kernel_directory[pd_index] & 0xFFFFF000);
-    table[pt_index] = (uint32_t)  phys | flags | PAGE_PRESENT;
+    uint32_t* table = (uint32_t*) (dir[pd_index] & 0xFFFFF000);
+    table[pt_index] = (uint32_t)  phys | flags;
 
     // Tell the CPU to clear its cache for this address
     asm volatile("invlpg (%0)" : : "r"(virt));

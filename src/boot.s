@@ -40,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 stack_bottom:
 .skip 65536 /* 64 KiB of space */
 stack_top:
+.global stack_top
 
 /* The actual entry point where the CPU begins execution */
 

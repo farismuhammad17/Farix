@@ -1,12 +1,28 @@
 # Changelog
 
-## ANSI Escape codes - *2 Mar, 2026*
+## ELF loader - *3rd Mar, 2026*
+
+- **ELF**
+  - Added logic to parse ELF headers and load program segments into virtual memory.
+- **VMM**
+  - Implemented Ring 3 user mode.
+- **TSS**
+  - Configured Task State Segment with `esp0` pointing to `stack_top` for safe interrupt handling.
+- **GDT**
+  - Added `jump_to_user_mode` in `gdt_flush.asm` to perform the `iret` leap into Ring 3.
+- **Repository**
+  - `.gitattributes` to make the header files be seen as C++ files.
+  - `docs/journal.md` as a diary entry for implementations.
+  - `docs/setup.md` to help run the prototype version of the OS.
+  - Added the ordinal suffixes to dates in `CHANGELOG.md` wherever I forgot
+
+## ANSI Escape codes - *2nd Mar, 2026*
 
 - **Terminal**
   - ANSI support codes now work, though some syntax remain pending.
   - Replaced `char` usage for `echo_char` and similar function with `uint16_t` for future compatibility.
 
-## FAT32 Sector limitation removal - *2 Mar, 2026*
+## FAT32 Sector limitation removal - *2nd Mar, 2026*
 
 - **FAT32 File System**
   - Updated disk read routine to iterate through total sectors.
@@ -17,7 +33,7 @@
 - **Removed**
   - Empty `config.h` file I forgot to delete.
 
-## Terminal scrolling - *28 Feb, 2026*
+## Terminal scrolling - *28th Feb, 2026*
 
 - **Terminal**
   - Scrolls using the detected mouse scroll.
@@ -27,7 +43,7 @@
 - **Multithreading**
   - Implemented `kill_task`.
 
-## Mouse implementation - *28 Feb, 2026*
+## Mouse implementation - *28th Feb, 2026*
 
 - **Mouse**
   - Detects relative movement.
@@ -38,7 +54,7 @@
 - **Make file**
   - `run` and `run_nofs` are informed of the mouse.
 
-## Tasks command - *27 Feb, 2026*
+## Tasks command - *27th Feb, 2026*
 
 - **Keyboard**
   - Moved `KEY_UP` and `KEY_DOWN` definitions from `terminal.h` to `keyboard.h`.
@@ -50,7 +66,7 @@
   - `memstat` now prints caller addresses.
   - `help` command now indents properly.
 
-## Standard C Library - *26 Feb, 2026*
+## Standard C Library - *26th Feb, 2026*
 
 - Implemented `libc` through `newlib`.
 - **Make file**
@@ -74,14 +90,14 @@
   - Every project file to swap out for libc equivalents.
   - Custom string and map implementations.
 
-## Change Directory Shell Command - *24 Feb, 2026*
+## Change Directory Shell Command - *24th Feb, 2026*
 
 - **Shell**
   - `cd` command: Changes current directory (doesn't work perfectly with RAMDisk, will be fixed later).
 - **String**
   - `substr` method: Returns the sub-string of given string between two indices.
 
-## FAT32 file system - *23 Feb, 2026*
+## FAT32 file system - *23th Feb, 2026*
 
 - **ATA drivers**
   - Now supported to enable storing data to disk.
@@ -115,12 +131,12 @@
   - Implemented `memcpy`: Copies the memory blocks of one object to another.
   - `heap_expand` merges the segments.
 
-## Global Descriptor Table - *22 Feb, 2026*
+## Global Descriptor Table - *22th Feb, 2026*
 
 - **GDT**: Suspiciously works without refactoring anything else
 - **I/O word**: `inw` and `outw` in `io.h`
 
-## Ramdisk file system - *20 Feb, 2026*
+## Ramdisk file system - *20th Feb, 2026*
 
 - **Map data type**: Basic key-value pair data type.
 - **String methods**: Split and count methods.

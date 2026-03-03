@@ -17,14 +17,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include "cpu/tss.h"
+
 #include "cpu/gdt.h"
 
-GDTEntry   gdt[5];
+GDTEntry   gdt[6];
 GDTPointer gdt_ptr;
 
 void init_gdt() {
-    gdt_ptr.limit = (sizeof(GDTEntry) * 5) - 1;
-    gdt_ptr.base  = (uint32_t)&gdt;
+    gdt_ptr.limit = (sizeof(GDTEntry) * 6) - 1;
+    gdt_ptr.base  = (uint32_t) &gdt;
 
     // 0x00: Null segment
     gdt_set_entry(0, 0, 0, 0, 0);
@@ -53,7 +55,9 @@ void init_gdt() {
         base_access | GDT_ACCESS_RING3 | GDT_ACCESS_WRITABLE,
         base_gran | 0x0F);
 
+    init_tss(5, 0x10, 0); // TODO: Set properly later
     gdt_flush((uint32_t) &gdt_ptr);
+    load_tss(); // Defined in gdt_flush.asm
 }
 
 void gdt_set_entry(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran) {

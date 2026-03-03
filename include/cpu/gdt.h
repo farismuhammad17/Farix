@@ -52,7 +52,10 @@ struct GDTPointer {
     uint32_t base;
 } __attribute__((packed));
 
-extern "C" void gdt_flush(uint32_t gdt_ptr_addr);
+extern "C" {
+    void gdt_flush(uint32_t gdt_ptr_addr);
+    void load_tss();
+}
 
 void init_gdt();
 void gdt_set_entry(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran);
