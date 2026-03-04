@@ -71,8 +71,10 @@ cli
 .global default_handler_stub
 .global keyboard_handler_stub
 .global mouse_handler_stub
+.global syscall_handler_stub
 .extern keyboard_handler
 .extern mouse_handler
+.extern syscall_handler
 
 default_handler_stub:           # Shouldn't be seen unless it's an error, probably in memory
     movl $0x0F210F21, 0xB8000   # Puts '!' on screen
@@ -92,3 +94,25 @@ mouse_handler_stub:
     popa
     sti                         # Re-enable interrupts
     iret
+
+syscall_handler_stub:
+    pushl $0                    # Dummy error code to keep stack consistent
+    pushl $128                  # Interrupt number (0x80)
+    pusha                       # Save EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI
+
+    # Switch to Kernel Data Segment
+    # User Mode uses 0x23, but the Kernel needs 0x10
+    movw $0x10, %ax
+    movw %ax, %ds
+    movw %ax, %es
+    movw %ax, %fs
+    movw %ax, %gs
+
+    # Push the current stack pointer as an argument to syscall_handler(regs*)
+    pushl %esp
+    call syscall_handler
+    addl $4, %esp               # Clean up the pushed ESP
+
+    popa                        # Restore User's registers
+    addl $8, %esp               # Clean up the int number and error code
+    iret                        # Return to Ring 3

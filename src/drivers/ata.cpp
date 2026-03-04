@@ -43,18 +43,17 @@ void init_ata() {
 
 void ata_read_sector(uint32_t lba, uint8_t* buffer) {
     outb(0x1F6, (uint8_t)((lba >> 24) | 0xE0));
-
     for(int i = 0; i < 4; i++) inb(0x1F7);
 
     outb(0x1F2, 1);               // Sector count
-    outb(0x1F3, (uint8_t)lba);    // LBA Low
-    outb(0x1F4, (uint8_t)(lba >> 8));
-    outb(0x1F5, (uint8_t)(lba >> 16));
+    outb(0x1F3, (uint8_t) lba);    // LBA Low
+    outb(0x1F4, (uint8_t) (lba >> 8));
+    outb(0x1F5, (uint8_t) (lba >> 16));
     outb(0x1F7, 0x20);            // Command: READ
 
     ata_wait_ready(); // Now wait for data
 
-    uint16_t* ptr = (uint16_t*)buffer;
+    uint16_t* ptr = (uint16_t*) buffer;
     for (int i = 0; i < 256; i++) {
         ptr[i] = inw(0x1F0);
     }
@@ -77,9 +76,6 @@ void ata_write_sector(uint32_t lba, uint8_t* buffer) {
         outw(0x1F0, ptr[i]);
     }
 
-    // --- THE CRITICAL PART ---
-    // After writing, tell the drive to CACHE FLUSH (0xE7)
-    // or at least wait for BSY to clear.
     outb(0x1F7, 0xE7);
     while (inb(0x1F7) & 0x80);
 }

@@ -68,6 +68,6 @@ typedef struct {
 
 extern "C" void jump_to_user_mode(uint32_t entry, uint32_t stack);
 
-bool elf_load_file(std::string path);
+bool exec(std::string path);
 
 #endif

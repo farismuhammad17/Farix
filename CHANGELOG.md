@@ -1,6 +1,18 @@
 # Changelog
 
-## ELF loader - *3rd Mar, 2026*
+*Refer [journal](docs/journal.md) for implementation details.*
+
+## ELF Executor - *4th Mar, 2026*
+
+- **IDT**
+  - `syscall_handler_stub` to handle user level system calls.
+- **ELF**
+  - Renamed `elf_load_file` to `exec`.
+  - Refactors `exec` to not use `fs_read` twice.
+- **User mode**
+  - `farix.h` as a bridge between executables and the kernel.
+
+## ELF Loader - *3rd Mar, 2026*
 
 - **ELF**
   - Added logic to parse ELF headers and load program segments into virtual memory.

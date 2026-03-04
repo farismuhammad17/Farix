@@ -18,6 +18,8 @@ This is more of a journal of how this project was built. It helps to keep track 
 - [28 Feb: Terminal scrolling](#terminal-scrolling---28th-feb-2026)
 - [2 Mar: FAT32 Sector limitation removal](#fat32-sector-limitation-removal---2nd-mar-2026)
 - [2 Mar: ANSI Escape codes](#ansi-escape-codes---2nd-mar-2026)
+- [3 Mar: ELF Loader](#elf-loader---3rd-mar-2026)
+- [4 Mar: ELF Executor](#elf-executor---4th-mar-2026)
 
 ## Initial commit - *16th Feb, 2026*
 
@@ -37,7 +39,7 @@ I also just threw every file into a single folder and had no clean structure, an
 
 ## Shell - *18th Feb, 2026*
 
-The day before, I reorganized the code, but felt it was still going to get messy, so I structured every file to move into its own folder inside the `src` and `include` folders.
+The day before, I reorganized the code, but felt it was still going to get messy, so I structured every file to move into its own folder inside the [`src`](../src/) and [`include`](../include/) folders.
 
 I decided that I also wanted my own implementation of the string class, because I wanted to implement the shell, and I wanted a clean way to organize a set of characters. Normally, you'd get stuff like strings, maps, heap, etc. through the standard library, but the standard library is provided by the OS. Our problem is that we are making the OS, so there is no standard library to work with - we have to make everything.
 
@@ -174,6 +176,7 @@ I had completely forgotten to implement colors to the terminal, which is done ge
 Initially, my idea was to have this number that I actually left in the previous commit:
 
 ```cpp
+// terminal.h
 #define ANSI_COLOR_BASE 0xE000
 /*              | ANSI_COLOR_BASE | color
  | Reset   | 0  | 0xE000
@@ -203,17 +206,19 @@ The fix is fine as far as I can tell; the GDT, IDT, etc. were all perfectly fine
 As a result, I decided not to implement it. It seems the only places I *did* have to change was with the VMM, because `vmm_map_page` would map out a page in ring 0, when I really would only need it for ring 3. `init_vmm` maps out at ring 0, and that was perfectly fine, because that is the function the kernel uses. This fix was very trivial, and I even had the variable defined and just never used it:
 
 ```cpp
+// vmm.cpp
 // PAGE_USER was defined in vmm.h already
-kernel_directory[pd_index] = (uint32_t) new_table | PAGE_PRESENT | PAGE_RW | PAGE_USER;
+dir[pd_index] = (uint32_t) new_table | PAGE_PRESENT | PAGE_RW | PAGE_USER;
 ```
 
 I found I had to make this thing called the TSS, which I quickly learned from Chat GPT, because I couldn't be bothered to learn everything through books or websites. All it does is set up a nice stack for the new executing file to use, so that it is in user mode, and isn't using the memory and stuff of the kernel.
 
-I finally made `elf.h` and `elf.cpp`. I made a very basic function, `elf_load_file`, whose entire purpose is to just set up all the memory and stuff for the actual ELF to execute. I can technically let everything run at ring 0, but then I'm not really building an OS, and I would feel dissatisfied, so I tried to implement ring 3, and it hopefully works. If we don't set up a very nice place for the ELF to execute, then the ELF can execute inside the kernel, and access kernel stuff, and that makes it ring 0. In my eyes, an OS is like the bridge between software and hardware, so I **needed** the programs to run in ring 3.
+I finally made [`elf.h`](../include/fs/elf.h) and [`elf.cpp`](../src/fs/elf.cpp). I made a very basic function, `elf_load_file`, whose entire purpose is to just set up all the memory and stuff for the actual ELF to execute. I can technically let everything run at ring 0, but then I'm not really building an OS, and I would feel dissatisfied, so I tried to implement ring 3, and it hopefully works. If we don't set up a very nice place for the ELF to execute, then the ELF can execute inside the kernel, and access kernel stuff, and that makes it ring 0. In my eyes, an OS is like the bridge between software and hardware, so I **needed** the programs to run in ring 3.
 
 Of course, with the very first version of that function, I created a temporary C program, compiled it into an ELF file, and put the file (named `main.elf`) into the `disk.img`, then went to the kernel, and put:
 
 ```cpp
+// kernel.cpp
 elf_load_file("main.elf");
 ```
 
@@ -272,6 +277,7 @@ We actually don't care about anything here except the `CS` register, but looking
 I put `printf` everywhere to just print out the value of every variable, and on this specific print:
 
 ```cpp
+// elf.cpp
 printf("Entry: %x, Stack: %x\n", header.e_entry, user_stack_top);
 jump_to_user_mode(header.e_entry, user_stack_top);
 ```
@@ -285,6 +291,7 @@ Entry: 4000000, Stack: c0000000
 Which was fantastic, as that is exactly what I needed. This implied that the error must have been a page fault, and because there really was no error handling, it would silently fail and quitly slip back into the kernel's memory, which is ring 0. Now, curiously, the problem was not in any of the files, but rather in the `main.elf` file. The C program that is compiled to the ELF file was:
 
 ```c
+// test file: main.c
 void _start() {
     // A simple calculation to verify execution in GDB or via registers
     int a = 5;
@@ -297,11 +304,12 @@ void _start() {
 }
 ```
 
-I thougth this would work. The reason this didn't work is genuinely frustrating, and, I have to be honest, Gemini told me why it doesn't work, and there was no way I was going to figure this out. Essentially, this program *does* work, but not in the way we want it. When the compiler compiled this code, it saw that `a`, `b`, and `c` were all not used, so the compiler just deleted them from existence, and reduced our sample code to just a `jmp` instruction:
+I thought this would work. The reason this didn't work is genuinely frustrating, and, I have to be honest, Gemini told me why it doesn't work, and there was no way I was going to figure this out. Essentially, this program *does* work, but not in the way we want it. When the compiler compiled this code, it saw that `a`, `b`, and `c` were all not used, so the compiler just deleted them from existence, and reduced our sample code to just a `jmp` instruction:
 
 This does work, and the program properly executed, which is why we got the kernel to exist and not crash. The problem was that I had no way of seeing that it worked, because there was absolutely no feedback. Which is why I changed it out for this, to make sure we get feedback:
 
 ```c
+// test file: main.c
 void _start() {
     asm volatile("mov $0x1234, %eax");
     asm volatile("cli"); // This will trigger a General Protection Fault in Ring 3
@@ -315,7 +323,7 @@ Because this is supposed to be in ring 3, `cli` is forbidden for it to use, so t
 EAX=00001234
 ```
 
-That number came from the ELF file, which moved the value `1234` into the EAX register, which was further proof that it was working. This means that the CPU succesfully:-
+That number came from the ELF file, which moved the value `1234` into the EAX register, which was further proof that it was working. This means that the CPU successfully:-
 
 1. Switched to the new Page Directory.
 2. Loaded the ELF into memory.
@@ -327,3 +335,135 @@ I was too tired to continue on this anymore, so I left it, I'll add the rest of 
 Besides that short rant; I didn't like how the GitHub repository kept saying a portion of my code was in C, while there is absolutely zero C files. It's apparently because the header files count as C files, so I tried to fix it, I think it is ok now, but I have never used a `.gitattributes` file before.
 
 As I write this, it's 12:12 am, and I'm going to sleep.
+
+## ELF Executor - *4th Mar, 2026*
+
+Yesterday, I made all the stuff I would need for loading an ELF file and sort of executing it, but the file running is never able to make an interrupt back, so we never see its output. I prefer to just do research on a specific topic, make a plan, write it all down, and only then will I implement it. So, I have decided to leave these notes here:
+
+1. IDT: Somehow let the doors be opened for the ELF program to jump back into the kernel safely.
+
+As far as I can tell, I just need to register the `0x80` interrupt. I am not sure if this is going to be annoying, but I also need to set the "Descriptor Privilege Level" to 3 (for Ring 3).
+
+2. Assembly: A stub for the context switch.
+
+We need it so that when the ELF file says `int 0x80`, the CPU saves the stack and stuff, and move back into the kernel settings. Fortunately, this is just another simple stub: push all registers, set the registers to the kernel data, call a C++ function to handle stuff, restore everything, `iret`.
+
+3. Syscall: A C++ function to look at the registers to know what to do.
+
+It seems the standard practice is to use the `EAX` register as the ID of the syscall, and the rest of the similar registers, like `EBX`, `ECX`, and `EDX` are used as the arguments for the syscall.
+
+4. User library: The fun part that actually relays stuff to the ELF file
+
+My concern for this is that I realise the way you do this is using assembly, because the syscall uses the registers to decide what to do, so we have to do weird stuff like:
+
+```cpp
+asm volatile("mov $1, %%eax; mov %0, %%ebx; int $0x80" : : "r"(stuff));
+```
+
+I'm not sure if I like that.
+
+I start with the IDT because it seemed easy to start off with, and I found out that making it work in user mode and not kernel mode was as trivial as changing the value of the flag. So, I separated them:
+
+```cpp
+// idt.h
+#define IDT_GATE_KERNEL 0x8E  // 1000 1110: Present, Ring 0, Interrupt Gate
+#define IDT_GATE_USER   0xEE  // 1110 1110: Present, Ring 3, Interrupt Gate
+```
+
+Then, set the flag for all the old hardware stuff to the kernel's one, and to set the stub for our syscall:
+
+```cpp
+// idt.cpp
+idt_set_gate(128, (uint32_t) syscall_handler_stub, 0x08, IDT_GATE_USER);
+```
+
+Apparently, that was it for the IDT. I defined the `syscall_handler` and its stub in [`boot.s`](../src/boot.s), and all it does is store the values of the registers, push those to ESP, which is used as the arguments for the `syscall_handler`, and then restore the previous state.
+
+I then made a struct to store the values of the registers, because my files are filled with structs, so I might as well.
+
+```cpp
+// syscall.h
+struct registers_t {
+    uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax; // Pushed by pusha
+    uint32_t int_no, err_code;                             // Pushed manually in stub
+    uint32_t eip, cs, eflags, useresp, ss;                 // Pushed by CPU on interrupt
+};
+```
+
+This is just the values of the registers that was pushed. The logic for the syscall was straightforward (for now): if the EAX register is 1 (for writing), take the values at the other three registers, pass to write; if the EAX is 2 (for reading), just pass the other three registers into read; if the EAX is 3 (for exiting), just exit. Seems straightforward. Then, I changed our `main.c` file:
+
+```c
+void _start() {
+    const char* msg = "Hello from User Mode!\n";
+
+    asm volatile (
+        "int $0x80"
+        :
+        : "a"(1),                   // eax = 1 (SYS_WRITE)
+          "b"(1),                   // ebx = 1 (stdout)
+          "c"((unsigned int) msg),  // ecx = pointer to msg
+          "d"(22)                   // edx = length
+        : "memory"
+    );
+
+    asm volatile (
+        "int $0x80"
+        :
+        : "a"(3),            // eax = 3 (SYS_EXIT)
+          "b"(0)             // ebx = 0 (status)
+    );
+
+    while(1);
+}
+```
+
+I split the assembly stuff into two: the first one would let EAX be 1, thus it would be the equivalent of `printf(msg)`; the second assembly section would let EAX be 3, which is our `SYS_EXIT` code. Surprisingly, this worked, and there was so little I had to do, and I was really happy about it. I noticed my keyboard wasn't working anymore though, and I realised that I'm stupid, and called the `_exit` function, which was defined as:
+
+```cpp
+// syscalls.cpp
+void _exit(int status) { while(1); }
+```
+
+Therefore, the OS is just stuck forever doing nothing.
+
+I did my research part the previous night, and I wrote all of the code at 5 in the morning. I went to school, and now I am back home, had some errands, and right now, its 9 pm. I do not remember a word of what I did in the morning. I read back on the small notes I had left around, and I remember what we have to do now: A `farix.h` file, that is apparently better to be just a header file, that just bridges the gap between the kernel and the executing files.
+
+My plan was to make it compatible with an existing operating system, like Linux, but it seems that this is quite a difficult plan, because the way our C library works is just different to how Linux handles it. I have a solution to this - just make a `linux.h` file that sort of 'translates' everything for our OS to read and then execute the ELF file. This *does* mean we have to implement every tiny bit of every syscall to be perfectly linux compatible, so I have decided to just make the Farix library, and we'll implement Linux (and maybe Windows, if I feel ambitious enough) in a future day, because it seems to be easily extensible - just read the ELF, check the OS it's compiled for, run with that OSs header file that we design.
+
+For now, I wanted to make it so that everything worked in my OS. I defined this function:
+
+```cpp
+static inline int _farix_syscall(int eax, int ebx, int ecx, int edx) {
+    int ret;
+    asm volatile (
+        "int $0x80"
+        : "=a"(ret)
+        : "a"(eax), "b"(ebx), "c"(ecx), "d"(edx)
+        : "memory"
+    );
+    return ret;
+}
+```
+
+It's just to help with the actual code, and then we have a [`user_syscalls.c`](../src/libc/user_syscalls.c) file, which will handle all the system calls for the user. Crucially, it's not the same as the [`syscalls.cpp`](../src/libc/syscalls.cpp) file, built for the kernel. I also realised that using a C file instead of a C++ file would clean up the code, because the only reason I keep doing `extern "C"` in C++ files is to avoid the name mangling that comes with it. I also renamed the `elf_load_file` function to simply `exec` for ease of life, and `exec` explains it more.
+
+Right after that, I made the terrible error of trying to go after a feature more than what I just made. I noticed that when the ELF file was done with its function, I can't type back, which I mentioned earlier: the forever while loop won't let me go. To fix this, I decided let's put it in a thread/task - it didn't work, I'm not even sure, I tried my best to go almost everywhere to find why this was the case, but it's just race conditions. The ELF will work 50% of the time, and every other time, it would crash. I decided to undo all my changes and go back to what I made earlier.
+
+When I got back to where we were before all the file system changes, ATA driver changes, etc. and came all the way back to just an executing function, I tried to run it in the kernel - it failed. I had no clue why, because it was the exact same code, or perhaps I had forgotten something: perhaps a line I left in by accident, or a line I forgot to delete. This was so annoying, until I realised... the `disk.img` I had didn't have the ELF file in there, so it just never found the ELF file, thus didn't execute the file.
+
+I think I may have run `make clean` in the middle of the reversion, and didn't register in my head that I delete the `disk.img`, so I would have to put it back in. When I added the `printf` functions to tell me exactly what was going on, I found that it said:
+
+```
+ELF Error: File MAIN.ELF not found or empty
+```
+
+And when I finally ran `ls`, to my horror, it outputted nothing, so I mounted it onto my disk (I made a `debug.mk` file to do some extra helping for me):
+
+```
+mount:
+	hdiutil attach -imagekey diskimage-class=CRawDiskImage disk.img
+unmount:
+	hdiutil detach /Volumes/FARIX
+```
+
+I put the ELF file back in, and it worked perfectly. I am not going to change this until I commit this.

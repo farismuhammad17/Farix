@@ -28,23 +28,37 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 extern "C" uint32_t stack_top; // From boot.s
 uint32_t kernel_stack_top = (uint32_t) &stack_top;
 
-bool elf_load_file(std::string path) {
-    // Read everything into kernel memory first
-    elf_header_t header;
-    if (!fs_read(path, &header, sizeof(elf_header_t))) return false;
-
+bool exec(std::string path) {
     File* file_obj = fs_get(path);
-    uint8_t* file_buffer = (uint8_t*) kmalloc(file_obj->size);
-    fs_read(path, file_buffer, file_obj->size);
+    if (!file_obj || file_obj->size == 0) {
+        printf("ELF Error: File %s not found or empty\n", path.c_str());
+        return false;
+    }
 
-    // Get program headers from the buffer
-    elf_program_header_t* phdr = (elf_program_header_t*)(file_buffer + header.e_phoff);
+    uint8_t* file_buffer = (uint8_t*) kmalloc(file_obj->size);
+    if (!file_buffer) return false;
+
+    if (!fs_read(path, file_buffer, file_obj->size)) {
+        printf("ELF Error: Failed to read file data\n");
+        kfree(file_buffer);
+        return false;
+    }
+
+    elf_header_t* header = (elf_header_t*) file_buffer;
+
+    if (header->e_ident[0] != 0x7F || header->e_ident[1] != 'E') {
+        printf("ELF Error: Not a valid ELF executable\n");
+        kfree(file_buffer);
+        return false;
+    }
 
     uint32_t* user_pd = (uint32_t*) pmm_alloc_page();
     kmemset(user_pd, 0, PAGE_SIZE);
+
     for(int i = 0; i < 1024; i++) user_pd[i] = kernel_directory[i];
 
-    for (int i = 0; i < header.e_phnum; i++) {
+    elf_program_header_t* phdr = (elf_program_header_t*)(file_buffer + header->e_phoff);
+    for (int i = 0; i < header->e_phnum; i++) {
         if (phdr[i].p_type == PT_LOAD) {
             uint32_t pages = (phdr[i].p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
             for (uint32_t p = 0; p < pages; p++) {
@@ -55,13 +69,12 @@ bool elf_load_file(std::string path) {
         }
     }
 
-    // Map User Stack
     uint32_t user_stack_top = 0xC0000000;
     vmm_map_page(user_pd, pmm_alloc_page(), (void*)(user_stack_top - PAGE_SIZE), PAGE_PRESENT | PAGE_RW | PAGE_USER);
 
     vmm_switch_directory(user_pd);
 
-    for (int i = 0; i < header.e_phnum; i++) {
+    for (int i = 0; i < header->e_phnum; i++) {
         if (phdr[i].p_type == PT_LOAD) {
             kmemcpy((void*) phdr[i].p_vaddr, file_buffer + phdr[i].p_offset, phdr[i].p_filesz);
 
@@ -71,9 +84,10 @@ bool elf_load_file(std::string path) {
         }
     }
 
-    tss_entry.esp0 = (uint32_t) &stack_top;
+    kfree(file_buffer);
 
-    printf("Entry: %x, Stack: %x\n", header.e_entry, user_stack_top);
-    jump_to_user_mode(header.e_entry, user_stack_top);
+    tss_entry.esp0 = (uint32_t) &stack_top;
+    jump_to_user_mode(header->e_entry, user_stack_top);
+
     return true;
 }

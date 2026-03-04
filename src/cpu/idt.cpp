@@ -28,17 +28,16 @@ void init_idt() {
 
     for (int i = 0; i < 256; i++) {
         uint32_t base = (uint32_t) default_handler_stub;
-        idt_set_gate(i, base, 0x08, 0x8E);
+        idt_set_gate(i, base, 0x08, IDT_GATE_KERNEL);
     }
 
-    // Register Timer Handler at index 32 (IRQ 0)
-    idt_set_gate(32, (uint32_t) timer_handler_stub, 0x08, 0x8E);
+    // Hardware IRQs
+    idt_set_gate(32, (uint32_t) timer_handler_stub,    0x08, IDT_GATE_KERNEL);
+    idt_set_gate(33, (uint32_t) keyboard_handler_stub, 0x08, IDT_GATE_KERNEL);
+    idt_set_gate(44, (uint32_t) mouse_handler_stub,    0x08, IDT_GATE_KERNEL);
 
-    // Register Keyboard Handler at index 33
-    idt_set_gate(33, (uint32_t) keyboard_handler_stub, 0x08, 0x8E);
-
-    // Register Mouse Handler at index 44 (IRQ 12)
-    idt_set_gate(44, (uint32_t) mouse_handler_stub, 0x08, 0x8E);
+    // Syscall
+    idt_set_gate(128, (uint32_t) syscall_handler_stub, 0x08, IDT_GATE_USER);
 
     asm volatile("lidt %0" : : "m"(idtp));
 }
@@ -49,5 +48,5 @@ void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
 
     idt[num].sel     = sel;    // Usually 0x08 (Kernel Code Segment)
     idt[num].always0 = 0;      // Always 0
-    idt[num].flags   = flags;  // 0x8E (Present, Ring 0, Interrupt Gate)
+    idt[num].flags   = flags;
 }

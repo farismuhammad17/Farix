@@ -20,6 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef IDT_H
 #define IDT_H
 
+#define IDT_GATE_KERNEL 0x8E  // 1000 1110: Present, Ring 0, Interrupt Gate
+#define IDT_GATE_USER   0xEE  // 1110 1110: Present, Ring 3, Interrupt Gate
+
 #include <stdint.h>
 
 extern "C" {
@@ -27,6 +30,7 @@ extern "C" {
     void timer_handler_stub();
     void keyboard_handler_stub();
     void mouse_handler_stub();
+    void syscall_handler_stub();
 }
 
 struct idt_entry {
