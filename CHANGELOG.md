@@ -2,6 +2,11 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## Error handling - *6th Mar, 2026*
+
+- **IDT**
+  - Handles all possible error codes to print before crashing.
+
 ## ELF Executor - *4th Mar, 2026*
 
 - **IDT**

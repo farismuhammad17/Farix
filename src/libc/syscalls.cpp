@@ -25,9 +25,45 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/heap.h"
 #include "drivers/terminal.h"
 #include "drivers/keyboard.h"
+#include "process/task.h"
 #include "fs/vfs.h"
 
 #include "libc/syscalls.h"
+
+const char* exception_messages[] = {
+    "Division By Zero",             // 0
+    "Debug",                        // 1
+    "Non Maskable Interrupt",       // 2
+    "Breakpoint",                   // 3
+    "Into Detected Overflow",       // 4
+    "Out of Bounds",                // 5
+    "Invalid Opcode",               // 6
+    "No Coprocessor",               // 7
+    "Double Fault",                 // 8
+    "Coprocessor Segment Overrun",  // 9
+    "Bad TSS",                      // 10
+    "Segment Not Present",          // 11
+    "Stack Fault",                  // 12
+    "General Protection Fault",     // 13
+    "Page Fault",                   // 14
+    "Unknown Interrupt",            // 15
+    "Floating Point Error",         // 16
+    "Alignment Check",              // 17
+    "Machine Check",                // 18
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved"
+};
 
 extern "C" {
     // A table of strings representing the names of open files
@@ -37,7 +73,6 @@ extern "C" {
     int _fstat(int file, struct stat *st) { st->st_mode = S_IFCHR; return 0; }
     int _isatty(int file) { return 1; }
     int _lseek(int file, int ptr, int dir) { return 0; }
-    void _exit(int status) { while(1); }
     int _getpid() { return 1; }
     int _kill(int pid, int sig) { return -1; }
 
@@ -49,6 +84,13 @@ extern "C" {
             return (void*)-1; // Newlib's standard error signal
         }
         return res;
+    }
+
+    void _exit(int status) {
+        current_task->state = TASK_DEAD;
+        schedule();
+
+        while(1);
     }
 
     int _read(int file, char *ptr, int len) {
@@ -197,5 +239,36 @@ extern "C" {
                 printf("Unknown syscall: %d\n", regs->eax);
                 break;
         }
+    }
+
+    extern "C" void exception_handler(registers_t* regs) {
+        printf("\n--- !!! KERNEL PANIC !!! ---");
+
+        if (regs->int_no < 32) {
+            printf("\nException: %d (%s)", regs->int_no, exception_messages[regs->int_no]);
+        } else {
+            printf("\nUnknown Exception: %d", regs->int_no);
+        }
+
+        printf("\nEIP: %x  CS: %x  EFLAGS: %x", regs->eip, regs->cs, regs->eflags);
+        printf("\nError Code: %x", regs->err_code);
+
+        // Specifically for Page Faults
+        if (regs->int_no == 14) {
+            uint32_t faulting_address;
+            asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
+            printf("\nFaulting Address (CR2): %x", faulting_address);
+
+            printf("\nReason: %s, %s, %s",
+                (regs->err_code & 0x1) ? "Page-level protection" : "Non-present page",
+                (regs->err_code & 0x2) ? "Write" : "Read",
+                (regs->err_code & 0x4) ? "User mode" : "Kernel mode");
+        }
+
+        // Dump general purpose registers for deeper debugging
+        printf("\nEAX: %x  EBX: %x  ECX: %x  EDX: %x", regs->eax, regs->ebx, regs->ecx, regs->edx);
+        printf("\nEDI: %x  ESI: %x  EBP: %x  ESP: %x", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
+
+        asm volatile("cli; hlt");
     }
 }

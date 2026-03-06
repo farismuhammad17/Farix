@@ -20,6 +20,7 @@ This is more of a journal of how this project was built. It helps to keep track 
 - [2 Mar: ANSI Escape codes](#ansi-escape-codes---2nd-mar-2026)
 - [3 Mar: ELF Loader](#elf-loader---3rd-mar-2026)
 - [4 Mar: ELF Executor](#elf-executor---4th-mar-2026)
+- [6 Mar: Error handling](#error-handling---6th-mar-2026)
 
 ## Initial commit - *16th Feb, 2026*
 
@@ -467,3 +468,13 @@ unmount:
 ```
 
 I put the ELF file back in, and it worked perfectly. I am not going to change this until I commit this.
+
+## Error handling - *6th Mar, 2026*
+
+Didn't do anything yesterday, and I was absent at school. But, right before sleeping (at 1:47 am), I tried to make the ELF work in a thread, rather than just take over the entire OS and even the kernel and do its stuff till its done. Unfortunately, I wasn't able to figure it out, and I left it.
+
+The next day, I wake up at 4 am, and start trying to fix it, and, still, I have no clue what's even going on. It's really hard to pinpoint your problems whe you don't even know where it's going on. So, I decided we needed error handling, just to help it out. I may have forgotten some stuff and committed stuff from the unfinished threaded ELF code, but this should do, and I can't be bothered to check.
+
+Referring the Intel® 64 and IA-32 Architectures Software Developer’s Manual, we can find what each error code is for, and then I just assign each of those through the IDT. Of course, I didn't write all those repetitive lines... there's like 32, and I am not writing them all by hand, so I made a Python script to just do that really quickly, hopefully there's no mistakes.
+
+I just have a single function that does all the error handling based on the error code we got, and hopefully I made sure to make it easily extensible in the future too.
