@@ -21,14 +21,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SHELL_H
 
 #include <string>
+#include <stdarg.h>
 
 extern std::string shell_directory;
 extern std::string shell_buffer;
 extern bool        shell_buffer_ready;
 
+extern std::string last_cmd_output;
+extern char*       pipe_buffer;
+extern bool        is_piping;
+
 void init_shell();
 void shell_update();
 
 void shell_parse(const std::string& input);
+
+void sh_print(const char* format, ...);
 
 #endif

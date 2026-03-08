@@ -2,6 +2,26 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## Pipe Shell Operator - *8th Mar, 2026*
+
+> [!WARNING]  
+> This commit comes with a partial implementation of the ELF executor, and, though it won't crash the kernel, it also doesn't work.
+
+- **Shell**
+  - Pipe operator
+  - `grep` command
+  - `peek` command
+  - `exec` command
+- **Terminal**
+  - Increase maximum limit for storing lines from 500 to 1000.
+- **Syscalls**
+  - Renamed `registers_t` to `syscalls_registers_t`
+- **VMM**
+  - Implemented `vmm_unmap_page`
+  - Implemented `vmm_get_current_directory`
+- **Multitasking**
+  - Original task is named 'init' now.
+
 ## Error handling - *6th Mar, 2026*
 
 - **IDT**

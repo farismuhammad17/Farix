@@ -220,12 +220,23 @@ extern "C" {
         return dest;
     }
 
-    void syscall_handler(registers_t* regs) {
+    void syscall_handler(syscalls_registers_t* regs) {
         switch (regs->eax) {
-            case SYS_WRITE:
+            case SYS_WRITE: {
                 // ebx = file descriptor, ecx = buffer, edx = length
-                regs->eax = _write(regs->ebx, (char*) regs->ecx, regs->edx);
+                int len = regs->edx;
+                char* ptr = (char*)regs->ecx;
+                if (regs->ebx == 1 || regs->ebx == 2) { // stdout/stderr
+                    for (int i = 0; i < len; i++) {
+                        echo_char(ptr[i]);
+                    }
+                    regs->eax = len; // Return the number of bytes written
+                } else {
+                    // Handle file writing for other descriptors if needed
+                    regs->eax = -1;
+                }
                 break;
+            }
 
             case SYS_READ:
                 regs->eax = _read(regs->ebx, (char*) regs->ecx, regs->edx);
@@ -241,7 +252,7 @@ extern "C" {
         }
     }
 
-    extern "C" void exception_handler(registers_t* regs) {
+    void exception_handler(syscalls_registers_t* regs) {
         printf("\n--- !!! KERNEL PANIC !!! ---");
 
         if (regs->int_no < 32) {

@@ -21,6 +21,7 @@ This is more of a journal of how this project was built. It helps to keep track 
 - [3 Mar: ELF Loader](#elf-loader---3rd-mar-2026)
 - [4 Mar: ELF Executor](#elf-executor---4th-mar-2026)
 - [6 Mar: Error handling](#error-handling---6th-mar-2026)
+- [8 Mar: Pipe Shell Operator](#pipe-shell-operator---8th-mar-2026)
 
 ## Initial commit - *16th Feb, 2026*
 
@@ -478,3 +479,238 @@ The next day, I wake up at 4 am, and start trying to fix it, and, still, I have 
 Referring the Intel® 64 and IA-32 Architectures Software Developer’s Manual, we can find what each error code is for, and then I just assign each of those through the IDT. Of course, I didn't write all those repetitive lines... there's like 32, and I am not writing them all by hand, so I made a Python script to just do that really quickly, hopefully there's no mistakes.
 
 I just have a single function that does all the error handling based on the error code we got, and hopefully I made sure to make it easily extensible in the future too.
+
+## Pipe Shell Operator - *8th Mar, 2026*
+
+*7th Mar, 2026*
+
+So, I have still been working on why my ELF file seems to execute, but also fail. I moved around some stuff, I even did the unthinkable - ask AI, and I can't get it working. I seemed to have gotten to the point that the ELF file now no longer crashes if it's a task, and I can run `tasks` and see it existing, but I have absolutely no idea why it doesn't execute. It just exists, but doesn't do anything, doesn't run the `_start` inside of it, and I have absolutely no clue why. I have been more into writing the kernel to tell me error and making commands to help me debug this. I wrote this command:
+
+```cpp
+// src/shell/table/utils.cpp
+void cmd_peek(const std::string& args) {
+    // Disable interrupts to ensure atomicity
+    asm volatile("cli");
+
+    task* t = current_task;
+    for (int i = 0; i < total_tasks; i++) {
+        if(t->id == std::stoi(args)) {
+            registers_t* regs = (registers_t*) t->stack_pointer;
+
+            printf("--- Task Inspection: %s (PID: %d) ---\n", t->name.c_str(), t->id);
+            printf("Status:    %d\n", t->state);
+            printf("--- Stack dump ---\n");
+            printf("EIP: %08x   CS:  %08x   EFLAGS: %08x\n", regs->eip, regs->cs, regs->eflags);
+            printf("EAX: %08x   EBX: %08x   ECX:    %08x\n", regs->eax, regs->ebx, regs->ecx);
+            printf("EDX: %08x   ESI: %08x   EDI:    %08x\n", regs->edx, regs->esi, regs->edi);
+            printf("EBP: %08x   ESP: %08x   SS:     %08x\n", regs->ebp, t->stack_pointer, regs->ss);
+
+            return;
+        }
+        t = t->next;
+    }
+
+    // Re-enable interrupts
+    asm volatile("sti");
+
+    printf("Task not found\n");
+}
+```
+
+This works inside the shell, and it would tell me the values of each register of a process. When I ran the ELF file I had, and then checked the stack, I saw this:
+
+![ELF stack dump](docs_assets/6_mar_2026_elf_stack_dump.png)
+
+Somewhere in the middle, I also realised that the `switch_task` assembly does `ret` at the end, and not `iret`. I don't even remember when I changed that, but that means the stack had redundant stuff when I create a new task. I removed those, and I had the exact same output still.
+
+I'm close to giving up on doing this today. It's literally 1:19 am right now, I'll continue this tomorrow.
+
+---
+
+*7th Mar, 2026*
+
+I notice I'm barely journaling anything anymore, because this thing is driving me crazy. If I were to make the ELF executor tell me exactly to which memory it was going using this in the `exec` function:
+
+```cpp
+uint32_t* check = (uint32_t*) header->e_entry; // TODO REMOVE
+printf("Memory at Entry [%x]: %x\n", header->e_entry, *check);
+```
+
+I get this in my terminal:
+
+```
+Memory at Entry [40000000]: 0
+```
+
+Why is it even 0?? That's the kernel's space, and I have no clue why. I have been tinkering around with the VMM, hell, even the PMM that I just barely understood while making. It was a miracle the PMM even works, and I don't get it anymore. So, I've decided there's only one way - we'll move literally block by block of the code, and try to back track everything that is going on. Some stuff will be skipped over like the task scheduler constantly switching around, we'll hope that won't be messing us up too much. I've also noticed it's almost always that a problem can be solved when you try to explain it to someone else. So, here is my explanation of the ELF `exec` function (that is currently the one I am using as I write this, will probably be changed by the time I commit it):
+
+```cpp
+bool exec(std::string path) {
+    File* file_obj = fs_get(path);
+    if (!file_obj || file_obj->size == 0) {
+        printf("ELF Error: File %s not found or empty\n", path.c_str());
+        return false;
+    }
+```
+
+The `exec` function takes in the absolute path to some ELF file. It then checks if that file exists, and if the file has contents inside of it. This is to make sure we have something to actually run on.
+
+```cpp
+uint8_t* file_buffer = (uint8_t*) kmalloc(file_obj->size);
+if (!file_buffer) return false;
+
+if (!fs_read(path, file_buffer, file_obj->size)) {
+    printf("ELF Error: Failed to read file data\n");
+    kfree(file_buffer);
+    return false;
+}
+```
+
+In the heap, we allocate a space that of the file, and read through it, and write the data to the buffer. If the reading fails, we throw an error, and free the heap.
+
+```cpp
+elf_header_t* header = (elf_header_t*) file_buffer;
+
+if (header->e_ident[0] != 0x7F || header->e_ident[1] != 'E' || header->e_ident[2] != 'L' || header->e_ident[3] != 'F') {
+    printf("ELF Error: Not a valid ELF executable\n");
+    kfree(file_buffer);
+    return false;
+}
+```
+
+An ELF file has a specific header format: it MUST start with `0x7F`, and then be followed by 'ELF'. The previous version only checked till 'E', but I made it check everything, just to make sure the ELF file I am testing with isn't corrupt and messing up everything. Unfortunately, this was not the problem.
+
+```cpp
+uint32_t* user_pd = (uint32_t*) pmm_alloc_page();
+kmemset(user_pd, 0, PAGE_SIZE);
+
+for(int i = 0; i < 1024; i++) user_pd[i] = kernel_directory[i];
+user_pd[1023] = (uint32_t) user_pd | PAGE_PRESENT | PAGE_RW;
+```
+
+We allocate a page of size `PAGE_SIZE`, which we define to be 4096 bytes, and then set every bit in there to 0, then we make each be that of the kernel, and those last two lines are equivalent to that of the kernel.
+
+```cpp
+vmm_switch_directory(user_pd);
+
+elf_program_header_t* phdr = (elf_program_header_t*)(file_buffer + header->e_phoff);
+```
+
+We switch over into the user's land, and then put the whole file into a place in the memory.
+
+```cpp
+for (int i = 0; i < header->e_phnum; i++) {
+    if (phdr[i].p_type == PT_LOAD) {
+        uint32_t pages = (phdr[i].p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
+        for (uint32_t p = 0; p < pages; p++) {
+            void* phys = pmm_alloc_page();
+            void* virt = (void*)(phdr[i].p_vaddr + (p * PAGE_SIZE));
+
+            vmm_map_page(user_pd, phys, virt, PAGE_PRESENT | PAGE_RW | PAGE_USER);
+
+            uint32_t offset = p * PAGE_SIZE;
+            uint32_t size_to_copy = (phdr[i].p_filesz > offset) ? (phdr[i].p_filesz - offset) : 0;
+            if (size_to_copy > PAGE_SIZE) size_to_copy = PAGE_SIZE;
+
+            if (size_to_copy > 0) {
+                kmemcpy(virt, file_buffer + phdr[i].p_offset + offset, size_to_copy);
+            }
+        }
+    }
+}
+```
+
+We iterate through each segment of the ELF (.text, .data, etc.), then check if it is of the type we're trying to load, then find the number of `PAGE_SIZE` pages we'll need (`p_memsz` is the total size), then iterate through those pages. In each page: we grab a piece of the RAM from the PMM (`phys`), find the virtual address where we want the ELF to be at (`virt`), then the `vmm_map_page` tells the CPU to send the program to the the physical RAM at `phys` whenever it asks for `virt`. `offset` tracks how far into the current segment we have copied. `size_to_copy` is how much of the data is actually in the file for this page. Then we make sure that we don't copy more than one page worth of data at a time, and if the size to copy isn't zero, then the `kmemcpy` will move the bytes of the ELF file into memory, at `virt`.
+
+At that point, after this for-loop, I have our debug:
+
+```cpp
+uint32_t* check = (uint32_t*) header->e_entry; // TODO REMOVE
+printf("Memory at Entry [%x]: %x\n", header->e_entry, *check);
+```
+
+Now, what we really need is is for it to say `83e58955` or `5589e583` for the `printf` from the ELF file. We get this because we can run this in the terminal:
+
+```bash
+objdump -d main.elf | grep -A 5 "<_start>:" 
+```
+
+And, for my test ELF file, I get this:
+
+```
+40000000 <_start>:
+40000000: 55                           	pushl	%ebp
+40000001: 89 e5                        	movl	%esp, %ebp
+40000003: 83 ec 08                     	subl	$8, %esp
+40000006: 83 ec 0c                     	subl	$12, %esp
+40000009: 68 40 87 00 40               	pushl	$1073776448             # imm = 0x40008740
+```
+
+Whatever we get, it surely should NOT be 0. I did some confirmatory tests (printing stuff), and the file reading function we're using is absolutely perfect.
+
+---
+
+*8th Mar, 2026*
+
+I am not even going to lie - I woke up at 4 am, tried to fix it, and realising that I genuinely am losing clue of what's even happening, I decided I needed help. I can't tell if the problem is at the VMM, PMM, System calls, the ELF executor, or some other thing that I have no clue about is secretly causing problems. This all is so annoying.
+
+I installed the Gemini CLI just to know where I'm going wrong, and I used it, and after like 2 hours of talking to it, neither of us know what's going on. Though it suggested numerous changes, many of which I had to reject, because it would break every other thing, and won't fix the ELF executor. Here is a final list of exhausted paths.
+
+1. I made the peek function a bit better to make sure the task itself wasn't that wrong, and give us every bit of information about a task.
+
+2. I wanted to make sure there was no weird memory problems, but `memstat` of all things spams hundreds of lines, so I bumped the maximum lines we store to a thousand, and I saw that there were no weird memory corruptions detected.
+
+3. The System Handler stub in the assembly was changed to fix the order that it pushes and pops stuff, because the Gemini CLI said I wasn't going in the right order, and I suppose I wasn't, but regardless, this didn't solve our problems, and it didn't cause a problem earlier either, so I didn't think it was an error to do it like that.
+
+4. Randomly, certain commands would completely pause the entire kernel, and I realised removing the `cli` and `sti` statements fixed it. I have no clue why, and I'm too sleep deprived to know why.
+
+5. I renamed `registers_t` in the syscalls files to `syscalls_registers_t` to be more precise, because maybe there was some name collision with something I may have forgotten, but there was nothing I forgot. I could've swore I use it before, so I used a python script to find where it was, and found it was in [`tas.h`](../include/process/task.h), but it was `task_registers_t` instead, so there was no name problems.
+
+```py
+import sys
+from pathlib import Path
+
+root = Path.cwd()
+
+extns = ("h", "cpp", "s", "asm")
+
+for ext in extns:
+    for file in root.rglob(f"*.{ext}"):
+        with open(file) as f:
+            if " ".join(sys.argv[1:]) in f.read():
+                print(file)
+```
+
+6. As per the suggestion of Gemini, we got a `vmm_unmap_page` and `vmm_get_current_directory` to help with executing the ELF, but it seems they didn't help much. I had to make much changes to whatever Gemini suggested, because AI sucks, and it crashes the kernel whenever it tries to ever make something.
+
+7. Perhaps the ELF file itself was flawed, maybe `printf` didn't work or something, so I change it to a much more primitive code with just assembly stuff, and it didn't work.
+
+```c
+#include <stddef.h>
+#include "farix.h"
+
+__attribute__((section(".text.prologue")))
+void _start() {
+    const char* msg1 = "This is message 1\n";
+    _farix_syscall(1, 1, (int) msg1, 27);
+
+    asm volatile("int $3");
+
+    const char* msg2 = "Still alive after int 3? If not, :(\n";
+    _farix_syscall(1, 1, (int) msg2, 30);
+
+    _farix_syscall(3, 0, 0, 0);
+
+    while(1);
+}
+```
+
+8. Maybe the ELF file was invalid, so I extended that checker to look the whole starting part to make sure it genuinely was 'ELF' - it was.
+
+9. I tried making the ELF directly create a task itself and add itself to the linked list and that failed. In fact, I tried to abstract off everything inside the EFL executing function, and now it's a literal clutter of stuff. I am losing track of what each stuff does now, and it is *not* helping at all.
+
+Anyways, I am insanely tired of this thing, I have no idea how to fix it, so I temporarily admit defeat, and I am going to just leave it. I'll be back to it one day.
+
+To take my mind off if it, and make some genuine progress, I decided to build a small implementation for the pipe operator for the shell, and to make it actually useful, I made the `grep` command. Now the shell feels more alive, and I like it more (if only the ELF could run).
+
+Regarding the ELF, I think I know what's the problem - it's not executing the user syscall, but its executing the kernel syscall for somereason, even though the ELF was compiled with the user syscalls file, and I'm not sure why. Regardless, I don't even care, I am going to commit everything anyway, as, technically, the kernel works. Just the ELF doesn't, and I cannot be bothered to stall committing anymore (it's hurting the motivation to continue). I might just be hitting a wall of not understanding the stuff anymore; I just read, write notes, implement, and forget it, which seems to not be a good thing - I have to keep going back to my notes or code.

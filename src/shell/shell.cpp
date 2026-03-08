@@ -18,7 +18,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
 #include <string>
+#include <vector>
 
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
@@ -29,6 +32,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 std::string shell_directory;
 std::string shell_buffer;
 bool        shell_buffer_ready = false;
+
+std::string last_cmd_output = "";
+char*       pipe_buffer     = nullptr;
+bool        is_piping       = false;
+
+static auto trim = [](std::string& s) { // Remove whitespaces from both ends
+    size_t first = s.find_first_not_of(' ');
+    if (std::string::npos == first) return s;
+    size_t last = s.find_last_not_of(' ');
+    s = s.substr(first, (last - first + 1));
+    return s;
+};
 
 void init_shell() {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -80,27 +95,74 @@ void shell_update() {
 void shell_parse(const std::string& input) {
     if (input.empty()) return;
 
-    std::string cmd_name;
-    std::string args;
+    // Allocate the buffer once if it's null (8KB)
+    if (!pipe_buffer) pipe_buffer = (char*) malloc(8192);
 
-    size_t space_pos = input.find(' ');
+    size_t pipe_pos = input.find('|');
 
-    if (space_pos != std::string::npos) {
-        // We found a space: split into cmd and args
-        cmd_name = input.substr(0, space_pos);
-        args     = input.substr(space_pos + 1);
+    std::vector<std::string> segments;
+    if (pipe_pos != std::string::npos) {
+        segments.push_back(input.substr(0, pipe_pos));
+        segments.push_back(input.substr(pipe_pos + 1));
     } else {
-        // No space: the whole input is the command
-        cmd_name = input;
-        args     = "";
+        segments.push_back(input);
     }
 
-    for (int i = 0; command_table[i].name != nullptr; i++) {
-        if (cmd_name == command_table[i].name) {
-            command_table[i].function(args);
+    last_cmd_output = ""; // Reset for the new line
+
+    for (size_t i = 0; i < segments.size(); i++) {
+        std::string segment = segments[i];
+        trim(segment);
+
+        is_piping = (i < segments.size() - 1);
+        pipe_buffer[0] = '\0'; // Clear the C-string buffer
+
+        std::string cmd_name, args;
+        size_t space_pos = segment.find(' ', segment.find_first_not_of(' ')); // Skip leading spaces
+
+        if (space_pos != std::string::npos) {
+            cmd_name = segment.substr(0, space_pos);
+            args     = segment.substr(space_pos + 1);
+        } else {
+            cmd_name = segment;
+            args     = "";
+        }
+
+        // Execute command
+        bool found = false;
+        for (int j = 0; command_table[j].name != nullptr; j++) {
+            if (cmd_name == command_table[j].name) {
+                command_table[j].function(args);
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            printf("Command not found: %s\n", cmd_name.c_str());
+            is_piping = false;
             return;
         }
+
+        last_cmd_output = pipe_buffer;
     }
 
-    printf("Command not found: %s\n", cmd_name.c_str());
+    is_piping = false; // Safety reset
+}
+
+void sh_print(const char* format, ...) {
+    char local_buf[1024]; // Temporary buffer for this specific print
+
+    va_list args;
+    va_start(args, format);
+
+    // This function evaluates the %s, %d, etc., and puts it into local_buf
+    vsnprintf(local_buf, sizeof(local_buf), format, args);
+    va_end(args);
+
+    if (is_piping) { // Append local_buf to our global pipe_buffer instead of printing
+        strcat(pipe_buffer, local_buf);
+    } else { // No pipe
+        printf("%s", local_buf);
+    }
 }

@@ -19,13 +19,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <string>
 
+#include "memory/vmm.h"
 #include "memory/heap.h"
+#include "cpu/tss.h"
 
 #include "process/task.h"
 
+extern "C" uint32_t stack_top;
+
 task* current_task = nullptr;
 uint32_t next_pid  = 0;
-
 size_t total_tasks = 0;
 
 void task_trampoline() {
@@ -48,6 +51,8 @@ void init_multitasking() {
     main_task->id    = next_pid++;
     main_task->state = TASK_READY;
     main_task->next  = main_task;     // Point to itself for now
+    main_task->name  = "init";
+    main_task->page_directory = nullptr;
 
     current_task = main_task;
 
@@ -60,19 +65,16 @@ task* create_task(void (*entry_point)(), std::string name) {
     new_task->id         = next_pid++;
     new_task->entry_func = entry_point;
     new_task->name       = name;
+    new_task->state      = TASK_READY;
+    new_task->page_directory = nullptr;
 
     uint32_t* stack = (uint32_t*) kmalloc(4096);
     uint32_t* esp = stack + 1024; // High address
 
-    // The IRET Frame (Pushed in the order IRET pops them)
-    *(--esp) = 0x0202;                      // EFLAGS (The 'sti' is inside here!)
-    *(--esp) = 0x08;                        // CS (Kernel Code Segment)
     *(--esp) = (uint32_t) task_trampoline;  // EIP (Where the task starts)
 
     // The PUSHA placeholders (8 registers)
-    for (int i = 0; i < 8; i++) {
-        *(--esp) = 0;
-    }
+    for (int i = 0; i < 8; i++) *(--esp) = 0;
 
     new_task->stack_pointer = (uint32_t) esp;
     new_task->stack_origin  = stack;
@@ -123,6 +125,17 @@ void schedule() {
 
     task* next = last->next;
     current_task = next;
+
+    if (next->page_directory != nullptr) {
+        vmm_switch_directory(next->page_directory);
+    } else {
+        vmm_switch_directory(kernel_directory);
+    }
+
+    if (next->stack_origin) {
+        tss_entry.esp0 = (uint32_t) next->stack_origin + 4096;
+    }
+
     switch_task(&last->stack_pointer, next->stack_pointer);
 }
 

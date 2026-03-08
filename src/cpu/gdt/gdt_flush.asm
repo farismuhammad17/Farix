@@ -43,28 +43,3 @@ load_tss:
     mov ax, 0x2B      ; Index 5 in GDT (5 * 8 = 40, plus 3 for RPL)
     ltr ax            ; Load Task Register
     ret
-
-global jump_to_user_mode
-jump_to_user_mode:
-    ; Argument 1: [esp + 4] -> entry_point
-    ; Argument 2: [esp + 8] -> user_stack
-
-    mov ebx, [esp + 4] ; Save entry point
-    mov ecx, [esp + 8] ; Save stack pointer
-
-    ; Set up segment registers for User Data (Selector 0x20 | 3 = 0x23)
-    mov ax, 0x23
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-
-    ; We create a fake interrupt frame for IRET
-    ; IRET expects: SS, ESP, EFLAGS, CS, EIP (in that order)
-    push 0x23           ; SS (User Data)
-    push ecx            ; ESP (User Stack)
-    push 0x202          ; EFLAGS (Standard value, Interrupts enabled)
-    push 0x1B           ; CS (User Code: 0x18 | 3)
-    push ebx            ; EIP (Entry Point)
-
-    iret                ; Jump to Ring 3

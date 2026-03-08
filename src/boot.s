@@ -96,25 +96,53 @@ mouse_handler_stub:
     iret
 
 syscall_handler_stub:
-    pushl $0                    # Dummy error code to keep stack consistent
-    pushl $128                  # Interrupt number (0x80)
-    pusha                       # Save EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI
+    pushl %eax
+    pushl %ecx
+    pushl %edx
+    pushl %ebx
+    pushl %esp                  # esp_dummy - current kernel stack pointer
+    pushl %ebp
+    pushl %esi
+    pushl %edi
 
-    # Switch to Kernel Data Segment
-    # User Mode uses 0x23, but the Kernel needs 0x10
+    pushl $128                  # int_no (0x80)
+    pushl $0                    # err_code (syscalls don't have an error code from CPU, so 0)
+
+    pushl %ds                   # ds - value of DS when syscall was called (user's DS)
+
+    # Switch to Kernel Data Segment (0x10)
     movw $0x10, %ax
     movw %ax, %ds
     movw %ax, %es
     movw %ax, %fs
     movw %ax, %gs
 
-    # Push the current stack pointer as an argument to syscall_handler(regs*)
-    pushl %esp
+    # Push the current ESP as the argument to syscall_handler(syscalls_registers_t* regs)
+    pushl %esp                  # ESP now points to the 'ds' field of the struct
     call syscall_handler
-    addl $4, %esp               # Clean up the pushed ESP
+    addl $4, %esp               # Clean up the pushed argument
 
-    popa                        # Restore User's registers
-    addl $8, %esp               # Clean up the int number and error code
+    # Restore segment registers for User Mode (0x23) before returning to user space
+    movw $0x23, %ax
+    movw %ax, %ds
+    movw %ax, %es
+    movw %ax, %fs
+    movw %ax, %gs
+
+    # Pop everything in reverse order of pushing (from stub)
+    popl %eax                   # Pop ds
+    popl %edi                   # Pop edi
+    popl %esi                   # Pop esi
+    popl %ebp                   # Pop ebp
+    popl %esp                   # Pop esp_dummy
+    popl %ebx                   # Pop ebx
+    popl %edx                   # Pop edx
+    popl %ecx                   # Pop ecx
+    popl %eax                   # Pop eax
+
+    # Clean up int_no and err_code
+    addl $8, %esp
+
     iret                        # Return to Ring 3
 
 .macro ISR_NOERRCODE num

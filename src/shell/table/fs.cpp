@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 
 #include "fs/vfs.h"
+#include "fs/elf.h"
+#include "process/task.h"
 #include "memory/heap.h"
 #include "drivers/terminal.h"
 #include "shell/shell.h"
@@ -85,7 +87,7 @@ void cmd_cd(const std::string& args) {
 
             File* f = fs_get(temp_path);
             if (!f || !f->is_directory) {
-                printf("cd: no such directory: %s\n", parts[i].c_str());
+                sh_print("cd: no such directory: %s\n", parts[i].c_str());
                 return;
             }
         }
@@ -96,7 +98,7 @@ void cmd_cd(const std::string& args) {
 
 void cmd_cat(const std::string& args) {
     if (args.empty()) {
-        printf("Usage: cat <filename>\n");
+        sh_print("Usage: cat <filename>\n");
         return;
     }
 
@@ -104,7 +106,7 @@ void cmd_cat(const std::string& args) {
     File* f = fs_get(filename);
 
     if (!f) {
-        printf("cat: %s: No such file\n", args.c_str());
+        sh_print("cat: %s: No such file\n", args.c_str());
         return;
     }
 
@@ -112,14 +114,14 @@ void cmd_cat(const std::string& args) {
 
     char* buffer = (char*) kmalloc(f->size + 1);
     if (!buffer) {
-        printf("cat: out of memory\n");
+        sh_print("cat: out of memory\n");
         return;
     }
 
     kmemset(buffer, 0, f->size + 1);
 
     if (fs_read(filename, buffer, f->size)) {
-        printf("%s\n", buffer);
+        sh_print("%s\n", buffer);
     }
 
     kfree(buffer);
@@ -137,7 +139,7 @@ void cmd_write(const std::string& args) {
     std::string path = full_path_to(filename);
 
     if (!fs_write(path, content.c_str(), content.length())) {
-        printf("Error: Could not write to file %s\n", filename.c_str());
+        sh_print("Error: Could not write to file %s\n", filename.c_str());
     }
 }
 
@@ -166,9 +168,13 @@ void cmd_ls(const std::string& args) {
     FileNode* temp = nullptr;
 
     while (head) {
-        printf("%s\n", head->file.name.c_str());
+        sh_print("%s\n", head->file.name.c_str());
         temp = head->next;
         kfree(head);
         head = temp;
     }
+}
+
+void cmd_exec(const std::string& args) {
+    exec(full_path_to(args));
 }

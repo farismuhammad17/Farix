@@ -26,6 +26,8 @@ ShellCommand command_table[] = {
     {"memstat", cmd_memstat, "Memory statistics"},
     {"tasks", cmd_tasks, "List of running tasks"},
     {"kill", cmd_kill, "Kill a task given the process ID"},
+    {"peek", cmd_peek, "Inspect a task"},
+    {"grep", cmd_grep, "Searches text for matching patterns"},
     {"cd", cmd_cd, "Change directory"},
     {"cat", cmd_cat, "Read file"},
     {"write", cmd_write, "Write to a file"},
@@ -33,6 +35,7 @@ ShellCommand command_table[] = {
     {"mkdir", cmd_mkdir, "Create new folder"},
     {"rm", cmd_rm, "Delete file"},
     {"ls", cmd_ls, "List directory contents"},
+    {"exec", cmd_exec, "Execute ELF file"},
 
     {nullptr, nullptr, nullptr} // to mark the end
 };

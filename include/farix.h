@@ -32,6 +32,6 @@ static inline int _farix_syscall(int eax, int ebx, int ecx, int edx) {
 }
 
 void _exit(int status);
-int _write(int file, char *ptr, int len);
+int  _write(int file, char *ptr, int len);
 
 #endif

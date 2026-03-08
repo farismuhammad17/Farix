@@ -28,12 +28,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define PAGE_USER     0x4   // 100 in binary - 0 = Kernel only, 1 = Everyone
 
 #define ENTRIES_PER_TABLE 1024
+#define VMM_TEMP_PAGE     0xE0000000
+#define USER_STACK_TOP    0xC0000000
 
 extern uint32_t* kernel_directory;
 
 void init_vmm();
-
 void vmm_map_page(uint32_t* dir, void* phys, void* virt, uint32_t flags);
 void vmm_switch_directory(uint32_t* directory);
+
+void vmm_unmap_page(uint32_t* dir, void* virt);
+uint32_t* vmm_get_current_directory();
 
 #endif

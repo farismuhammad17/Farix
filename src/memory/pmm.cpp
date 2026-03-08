@@ -47,17 +47,15 @@ static bool pmm_test_bit(uint32_t page_number) {
 }
 
 void init_pmm(multiboot_info* mbi) {
-    if (!(mbi->flags & (1 << 6))) {
-        return;
-    }
+    if (!(mbi->flags & (1 << 6))) return;
 
+    // Start by marking everything as used (1)
     for (int i = 0; i < BITMAP_SIZE; i++) {
         pmm_bitmap[i] = 0xFFFFFFFF;
     }
 
+    // Clear bits for available memory according to Multiboot
     multiboot_mmap_entry* mmap = (multiboot_mmap_entry*) mbi->mmap_addr;
-    // uint32_t mmap_end = mbi->mmap_addr + mbi->mmap_length;
-
     while((uint32_t) mmap < mbi->mmap_addr + mbi->mmap_length) {
         if (mmap->type == 1) {
             uint32_t start_page  = (uint32_t)mmap->addr / PAGE_SIZE;
@@ -67,16 +65,15 @@ void init_pmm(multiboot_info* mbi) {
                 pmm_clear_bit(start_page + i);
             }
         }
-
         mmap = (multiboot_mmap_entry*)((uint32_t)mmap + mmap->size + 4);
     }
 
-    for (uint32_t i = 0; i < 256; i++) pmm_set_bit(i);
+    for (uint32_t i = 0; i < 256; i++)  pmm_set_bit(i);
+    for (uint32_t i = 0; i < 1024; i++) pmm_set_bit(i);
 
-    uint32_t kernel_start_page = (uint32_t) &_kernel_start / PAGE_SIZE;
-    uint32_t kernel_end_page   = (uint32_t) &_kernel_end   / PAGE_SIZE;
-
-    for (uint32_t i = kernel_start_page; i <= kernel_end_page; i++) {
+    uint32_t bitmap_start = (uint32_t)pmm_bitmap / PAGE_SIZE;
+    uint32_t bitmap_end = ((uint32_t)pmm_bitmap + sizeof(pmm_bitmap)) / PAGE_SIZE;
+    for (uint32_t i = bitmap_start; i <= bitmap_end; i++) {
         pmm_set_bit(i);
     }
 }

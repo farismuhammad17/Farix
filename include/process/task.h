@@ -39,14 +39,23 @@ struct task {
     task* next;                 // Linked list for the scheduler
     uint32_t id;                // Thread ID
     uint32_t stack_pointer;     // Current ESP
+    uint32_t* page_directory;   // 0 -> kernel_directory
     uint32_t* stack_base;       // Memory allocated for the stack
     uint32_t state;             // Running, Ready, etc.
     uint32_t* stack_origin;
+    uint32_t elf_entry_point;
     void (*entry_func)();
     std::string name;
 };
 
+struct task_registers_t {
+    uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax;
+    uint32_t eip;
+};
+
 extern task* current_task;
+extern uint32_t next_pid;
+extern size_t total_tasks;
 
 void init_multitasking();
 
