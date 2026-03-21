@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYS_WRITE 1
 #define SYS_READ  2
 #define SYS_EXIT  3
+#define SYS_SBRK 45
 
 #include <stdint.h>
 

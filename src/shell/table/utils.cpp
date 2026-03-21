@@ -26,6 +26,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "shell/commands.h"
 
+#include "test.h" // TODO REMOVE
+
 void cmd_help(const std::string& args) {
     for (size_t i = 0; command_table[i].name != nullptr; i++) {
         sh_print("%-*s %s\n",
@@ -143,4 +145,10 @@ void cmd_grep(const std::string& args) {
     if (!last_line.empty() && last_line.find(args) != std::string::npos) {
         sh_print("%s\n", last_line.c_str());
     }
+}
+
+void cmd_test(const std::string& args) { // TODO REMOVE
+    printf("test_pt_virt: %d\n", test_pt_virt);
+    printf("test_pt_first_entry: %d\n", test_pt_first_entry);
+    printf("test_value_int: %d\n", test_value_int);
 }

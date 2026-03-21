@@ -34,6 +34,8 @@ size_t total_tasks = 0;
 void task_trampoline() {
     asm volatile("sti");
 
+    vmm_switch_directory(kernel_directory);
+
     if (current_task && current_task->entry_func) {
         current_task->entry_func();
     }
@@ -47,7 +49,9 @@ void task_trampoline() {
 
 void init_multitasking() {
     // Create the first task (the one we are currently in)
-    task* main_task  = new task();
+    task* main_task = (task*) kmalloc(sizeof(task));
+    kmemset(main_task, 0, sizeof(task));
+
     main_task->id    = next_pid++;
     main_task->state = TASK_READY;
     main_task->next  = main_task;     // Point to itself for now
@@ -60,13 +64,15 @@ void init_multitasking() {
 }
 
 task* create_task(void (*entry_point)(), std::string name) {
-    task* new_task = new task();
+    task* new_task = (task*) kmalloc(sizeof(task));
+    kmemset(new_task, 0, sizeof(task));
 
-    new_task->id         = next_pid++;
-    new_task->entry_func = entry_point;
-    new_task->name       = name;
-    new_task->state      = TASK_READY;
+    new_task->id             = next_pid++;
+    new_task->entry_func     = entry_point;
+    new_task->name           = name;
+    new_task->state          = TASK_READY;
     new_task->page_directory = nullptr;
+    new_task->heap_break     = 0;
 
     uint32_t* stack = (uint32_t*) kmalloc(4096);
     uint32_t* esp = stack + 1024; // High address
@@ -125,12 +131,6 @@ void schedule() {
 
     task* next = last->next;
     current_task = next;
-
-    if (next->page_directory != nullptr) {
-        vmm_switch_directory(next->page_directory);
-    } else {
-        vmm_switch_directory(kernel_directory);
-    }
 
     if (next->stack_origin) {
         tss_entry.esp0 = (uint32_t) next->stack_origin + 4096;

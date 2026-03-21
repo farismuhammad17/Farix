@@ -66,8 +66,6 @@ typedef struct {
     uint32_t p_align;
 } __attribute__((packed)) elf_program_header_t;
 
-extern "C" void jump_to_user_mode(uint32_t entry, uint32_t stack);
-
 bool exec(std::string path);
 
 #endif

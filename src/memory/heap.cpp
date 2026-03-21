@@ -28,6 +28,8 @@ static void*        heap_start    = (void*) 0x1000000;
 static void*        heap_end      = nullptr;
 static HeapSegment* first_segment = nullptr;
 
+static uint32_t user_heap_break = 0x40000000;
+
 bool check_heap() {
     HeapSegment* current = first_segment;
     while (current != nullptr) {
@@ -67,13 +69,13 @@ void init_heap() {
 
     for (uint32_t i = 0; i < initial_pages; i++) {
         void* phys = pmm_alloc_page();
-        vmm_map_page(kernel_directory, phys, (void*)((uint32_t) heap_start + i * PAGE_SIZE), PAGE_PRESENT | PAGE_RW);
+        vmm_map_page(kernel_directory, phys, (void*)((uint32_t) heap_start + (i << LOG2_PAGE_SIZE)), PAGE_PRESENT | PAGE_RW);
     }
 
-    heap_end = (void*)((uint32_t) heap_start + (initial_pages * PAGE_SIZE));
+    heap_end = (void*)((uint32_t) heap_start + (initial_pages << LOG2_PAGE_SIZE));
 
     first_segment = (HeapSegment*) heap_start;
-    first_segment->size    = (initial_pages * PAGE_SIZE) - sizeof(HeapSegment);
+    first_segment->size    = (initial_pages << LOG2_PAGE_SIZE) - sizeof(HeapSegment);
     first_segment->next    = nullptr;
     first_segment->prev    = nullptr;
     first_segment->is_free = true;
@@ -82,15 +84,14 @@ void init_heap() {
 }
 
 void* kmalloc(size_t size) {
-    if (!check_heap()) {
-        printf("malloc: Heap corrupted for size %u\n", size);
-        while(1);
-    }
+    // Use only for debugging
+    // if (!check_heap()) {
+    //     printf("malloc: Heap corrupted for size %u\n", size);
+    //     while(1);
+    // }
 
     // Align size to 4 bytes
-    if (size % 4 != 0) {
-        size = (size & ~0x3) + 4;
-    }
+    size = (size + 3) & ~3;
 
     HeapSegment* current = first_segment;
 
@@ -99,7 +100,7 @@ void* kmalloc(size_t size) {
             // We need enough space for the requested size + a new header + at least 4 bytes of data
             if (current->size > size + sizeof(HeapSegment) + 4) {
                 size_t total_offset = sizeof(HeapSegment) + size;
-                if (total_offset % 4 != 0) total_offset = (total_offset & ~0x3) + 4;
+                total_offset = (total_offset + 3) & ~3;
                 HeapSegment* next_seg = (HeapSegment*) ((uint32_t) current + total_offset);
 
                 next_seg->size = current->size - total_offset;
@@ -132,10 +133,11 @@ void* kmalloc(size_t size) {
 }
 
 void kfree(void* ptr) {
-    if (!check_heap()) {
-        printf("free: Heap corrupted of %p\n", ptr);
-        while(1);
-    }
+    // Use only for debugging
+    // if (!check_heap()) {
+    //     printf("free: Heap corrupted of %p\n", ptr);
+    //     while(1);
+    // }
 
     if (ptr == nullptr) return;
     HeapSegment* current = (HeapSegment*) ((uint32_t) ptr - sizeof(HeapSegment));
@@ -164,9 +166,14 @@ void kfree(void* ptr) {
 }
 
 void kmemcpy(void* dest, const void* source, size_t n) {
-    uint8_t* dst = (uint8_t*) dest;
-    uint8_t* src = (uint8_t*) source;
-    for (size_t i = 0; i < n; i++) dst[i] = src[i];
+    volatile uint8_t* dst = (volatile uint8_t*) dest;
+    const uint8_t* src = (const uint8_t*) source;
+    for (size_t i = 0; i < n; i++) {
+        dst[i] = src[i];
+    }
+
+    // Ensure writes are finished
+    asm volatile("" : : : "memory");
 }
 
 void kmemset(void* s, int c, size_t n) {
@@ -176,18 +183,18 @@ void kmemset(void* s, int c, size_t n) {
 
 void kheap_expand(size_t size) {
     size_t total_needed = size + sizeof(HeapSegment);
-    size_t pages_to_alloc = (total_needed + PAGE_SIZE - 1) / PAGE_SIZE;
+    size_t pages_to_alloc = (total_needed + PAGE_SIZE - 1) >> LOG2_PAGE_SIZE;
 
     HeapSegment* new_seg = (HeapSegment*) heap_end;
 
     for (size_t i = 0; i < pages_to_alloc; i++) {
         void* phys = pmm_alloc_page();
-        vmm_map_page(kernel_directory, phys, (void*)((uint32_t) heap_end + (i * PAGE_SIZE)), PAGE_PRESENT | PAGE_RW);
+        vmm_map_page(kernel_directory, phys, (void*)((uint32_t) heap_end + (i << LOG2_PAGE_SIZE)), PAGE_PRESENT | PAGE_RW);
     }
 
-    heap_end = (void*)((uint32_t) heap_end + (pages_to_alloc * PAGE_SIZE));
+    heap_end = (void*)((uint32_t) heap_end + (pages_to_alloc << LOG2_PAGE_SIZE));
 
-    new_seg->size = (pages_to_alloc * PAGE_SIZE) - sizeof(HeapSegment);
+    new_seg->size = (pages_to_alloc << LOG2_PAGE_SIZE) - sizeof(HeapSegment);
     new_seg->is_free = true;
     new_seg->magic = HEAP_MAGIC;
 

@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string>
 #include <errno.h>
 
+#include "memory/pmm.h"
+#include "memory/vmm.h"
 #include "memory/heap.h"
 #include "drivers/terminal.h"
 #include "drivers/keyboard.h"
@@ -77,13 +79,28 @@ extern "C" {
     int _kill(int pid, int sig) { return -1; }
 
     void* _sbrk(int incr) {
-        if (incr == 0) return (void*)0;
-
-        void* res = kmalloc(incr);
-        if (res == nullptr) {
-            return (void*)-1; // Newlib's standard error signal
+        if (current_task->page_directory == nullptr) {
+            return kmalloc(incr);
         }
-        return res;
+
+        uint32_t old_break = current_task->heap_break;
+        uint32_t new_break = old_break + incr;
+
+        if (incr > 0) {
+            uint32_t start_page = (old_break + PAGE_SIZE - 1) & ~0xFFF;
+            uint32_t end_page   = (new_break + PAGE_SIZE - 1) & ~0xFFF;
+
+            for (uint32_t v = start_page; v < end_page; v += 4096) {
+                void* phys = pmm_alloc_page();
+                vmm_map_page(vmm_get_current_directory(), phys, (void*)v,
+                             PAGE_PRESENT | PAGE_RW | PAGE_USER);
+
+                kmemset(PHYSICAL_TO_VIRTUAL(phys), 0, 4096);
+            }
+        }
+
+        current_task->heap_break = new_break;
+        return (void*) old_break;
     }
 
     void _exit(int status) {
@@ -198,8 +215,9 @@ extern "C" {
     int kill(int pid, int sig) { return _kill(pid, sig); }
     int getpid() { return _getpid(); }
 
-    void* malloc(size_t size) { return kmalloc(size); }
-    void free(void* ptr) { kfree(ptr); }
+    void _free_r(struct _reent *r, void *ptr) {
+        kfree(ptr);
+    }
 
     void* memcpy(void* dest, const void* src, size_t n) {
         kmemcpy(dest, src, n);
@@ -246,6 +264,10 @@ extern "C" {
                 _exit(regs->ebx);
                 break;
 
+            case SYS_SBRK:
+                regs->eax = (uint32_t) _sbrk(regs->ebx);
+                break;
+
             default:
                 printf("Unknown syscall: %d\n", regs->eax);
                 break;
@@ -277,6 +299,7 @@ extern "C" {
         }
 
         // Dump general purpose registers for deeper debugging
+        printf("\n--- Register values ---");
         printf("\nEAX: %x  EBX: %x  ECX: %x  EDX: %x", regs->eax, regs->ebx, regs->ecx, regs->edx);
         printf("\nEDI: %x  ESI: %x  EBP: %x  ESP: %x", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
 

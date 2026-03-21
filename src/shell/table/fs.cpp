@@ -130,11 +130,18 @@ void cmd_cat(const std::string& args) {
 }
 
 void cmd_write(const std::string& args) {
+    std::string content;
+
     size_t first_space = args.find(' ');
-    if (first_space == std::string::npos) return;
+    if (first_space == std::string::npos && last_cmd_output.empty()) return;
 
     std::string filename = args.substr(0, first_space);
-    std::string content = args.substr(first_space + 1);
+
+    if (last_cmd_output.empty()) {
+        content = args.substr(first_space + 1);
+    } else {
+        content = last_cmd_output;
+    }
 
     std::string path = full_path_to(filename);
 

@@ -27,26 +27,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "fs/elf.h"
 
 extern "C" uint32_t stack_top; // From boot.s
+extern "C" void elf_user_trampoline_stub(uint32_t entry, uint32_t stack);
 
 void elf_user_trampoline() {
     task* t = current_task;
-    uint32_t entry_point = (uint32_t)t->entry_func;
-    uint32_t user_stack = (uint32_t)t->stack_base;
 
-    asm volatile(
-        "mov $0x23, %%ax\n"     // User data segment selector
-        "mov %%ax, %%ds\n"
-        "mov %%ax, %%es\n"
-        "mov %%ax, %%fs\n"
-        "mov %%ax, %%gs\n"
-        "pushl $0x23\n"         // SS
-        "pushl %1\n"            // ESP
-        "pushl $0x202\n"        // EFLAGS (interrupts enabled)
-        "pushl $0x1B\n"         // CS
-        "pushl %0\n"            // EIP
-        "iret\n"
-        : : "r"(entry_point), "r"(user_stack) : "memory"
-    );
+    vmm_switch_directory(t->page_directory);
+    set_kernel_stack((uint32_t) t->stack_origin + 4096);
+
+    uint32_t entry_point = (uint32_t) t->entry_func;
+    uint32_t user_stack  = (uint32_t) t->stack_base;
+
+    elf_user_trampoline_stub(entry_point, user_stack);
+
+    while(1); // Should never reach here
 }
 
 bool exec(std::string path) {
@@ -69,85 +63,88 @@ bool exec(std::string path) {
     }
 
     elf_header_t* header = (elf_header_t*) file_buffer;
-    if (header->e_ident[0] != 0x7F || header->e_ident[1] != 'E' || header->e_ident[2] != 'L' || header->e_ident[3] != 'F') {
+
+    if (header->e_ident[0] != ELFMAG0 || // An ELF file always starts with 0x7F, then 'E', 'L', and 'F'
+        header->e_ident[1] != ELFMAG1 ||
+        header->e_ident[2] != ELFMAG2 ||
+        header->e_ident[3] != ELFMAG3)
+    {
         printf("ELF Error: Not a valid ELF executable\n");
         kfree(file_buffer);
         return false;
     }
 
+    uint32_t* current_pd_phys = vmm_get_current_directory();
     uint32_t* user_pd_phys = (uint32_t*) pmm_alloc_page();
+
     if (!user_pd_phys) {
         printf("ELF Error: Failed to allocate page directory\n");
         kfree(file_buffer);
         return false;
     }
 
-    uint32_t* original_pd = vmm_get_current_directory();
-    vmm_map_page(original_pd, user_pd_phys, (void*)VMM_TEMP_PAGE, PAGE_PRESENT | PAGE_RW);
-    uint32_t* user_pd_virt_handle = (uint32_t*) VMM_TEMP_PAGE;
+    uint32_t* current_pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(current_pd_phys);
+    uint32_t* user_pd_virt_handle = (uint32_t*) PHYSICAL_TO_VIRTUAL(user_pd_phys);
 
-    for(int i = 0; i < 1024; i++) user_pd_virt_handle[i] = 0;
-
-    vmm_map_page(original_pd, kernel_directory, (void*)(VMM_TEMP_PAGE + PAGE_SIZE), PAGE_PRESENT | PAGE_RW);
-    uint32_t* kernel_pd_virt_handle = (uint32_t*)(VMM_TEMP_PAGE + PAGE_SIZE);
-
-    user_pd_virt_handle[0] = kernel_pd_virt_handle[0];
-    for(int i = 768; i < 1024; i++) {
-        user_pd_virt_handle[i] = kernel_pd_virt_handle[i];
-    }
-    vmm_unmap_page(original_pd, (void*)(VMM_TEMP_PAGE + PAGE_SIZE));
-
-    user_pd_virt_handle[1023] = (uint32_t)user_pd_phys | PAGE_PRESENT | PAGE_RW | PAGE_USER;
-
-    vmm_unmap_page(original_pd, (void*) VMM_TEMP_PAGE);
-    vmm_switch_directory(user_pd_phys);
+    for (int i = 0; i < 768; i++)    user_pd_virt_handle[i] = 0;
+    for (int i = 768; i < 1024; i++) user_pd_virt_handle[i] = current_pd_virt[i];
 
     elf_program_header_t* phdr = (elf_program_header_t*)(file_buffer + header->e_phoff);
+
+    uint32_t highest_vaddr = 0;
+    vmm_switch_directory(user_pd_phys);
+
     for (int i = 0; i < header->e_phnum; i++) {
         if (phdr[i].p_type == PT_LOAD) {
-            for (uint32_t p = 0; p < phdr[i].p_memsz; p += PAGE_SIZE) {
+            uint32_t start_vaddr = phdr[i].p_vaddr & ~0xFFF;
+            uint32_t end_vaddr   = (phdr[i].p_vaddr + phdr[i].p_memsz + 0xFFF) & ~0xFFF;
+
+            if (end_vaddr > highest_vaddr) {
+                highest_vaddr = end_vaddr;
+            }
+
+            for (uint32_t v = start_vaddr; v < end_vaddr; v += PAGE_SIZE) {
                 void* phys = pmm_alloc_page();
-                void* virt = (void*)(phdr[i].p_vaddr + p);
-                vmm_map_page(user_pd_phys, phys, virt, PAGE_PRESENT | PAGE_RW | PAGE_USER);
 
-                uint8_t* virt_ptr = (uint8_t*)virt;
-                for (int j = 0; j < PAGE_SIZE; j++) virt_ptr[j] = 0;
+                vmm_map_page(user_pd_phys, phys, (void*) v, PAGE_PRESENT | PAGE_RW | PAGE_USER);
+                kmemset((void*) PHYSICAL_TO_VIRTUAL(phys), 0, PAGE_SIZE);
+            }
 
-                uint32_t file_offset = phdr[i].p_offset + p;
-                uint32_t size_to_copy = (phdr[i].p_filesz > p) ? (phdr[i].p_filesz - p) : 0;
-                if (size_to_copy > PAGE_SIZE) size_to_copy = PAGE_SIZE;
-
-                if (size_to_copy > 0) {
-                    kmemcpy(virt, file_buffer + file_offset, size_to_copy);
-                }
+            if (phdr[i].p_filesz > 0) {
+                kmemcpy((void*) phdr[i].p_vaddr, (void*)(file_buffer + phdr[i].p_offset), phdr[i].p_filesz);
             }
         }
     }
 
-    void* stack_phys = pmm_alloc_page();
-    void* user_stack_base_virt = (void*)(USER_STACK_TOP - PAGE_SIZE);
-    vmm_map_page(user_pd_phys, stack_phys, user_stack_base_virt, PAGE_PRESENT | PAGE_RW | PAGE_USER);
+    vmm_switch_directory(current_pd_phys);
 
-    vmm_switch_directory(original_pd);
-
-    uint32_t entry_point = header->e_entry;
     kfree(file_buffer);
 
-    tss_entry.esp0 = (uint32_t) &stack_top;
+    void*    stack_phys = pmm_alloc_page();
+    uint32_t stack_virt_addr = USER_STACK_TOP - PAGE_SIZE;
 
-    task* elf_task = new task();
+    vmm_map_page(user_pd_phys, stack_phys, (void*) stack_virt_addr, PAGE_PRESENT | PAGE_RW | PAGE_USER);
+
+    uint32_t* stack_ptr = (uint32_t*) PHYSICAL_TO_VIRTUAL(stack_phys);
+    for (int i = 0; i < 1024; i++) stack_ptr[i] = 0;
+
+    uint32_t entry_point = header->e_entry;
+
+    task* elf_task = (task*) kmalloc(sizeof(task));
+    kmemset(elf_task, 0, sizeof(task));
+
     elf_task->id             = next_pid++;
     elf_task->page_directory = user_pd_phys;
+    elf_task->heap_break     = highest_vaddr;
     elf_task->state          = TASK_READY;
     elf_task->name           = path;
-    elf_task->entry_func     = (void(*)())entry_point;
+    elf_task->entry_func     = (void(*)()) entry_point;
     elf_task->stack_base     = (uint32_t*) USER_STACK_TOP;
 
     uint32_t* stack = (uint32_t*) kmalloc(4096);
     uint32_t* esp   = stack + 1024;
 
     *(--esp) = (uint32_t) elf_user_trampoline;
-
     for (int i = 0; i < 8; i++) *(--esp) = 0;
 
     elf_task->stack_pointer = (uint32_t) esp;

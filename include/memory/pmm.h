@@ -25,7 +25,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "architecture/multiboot.h"
 
-#define PAGE_SIZE   4096
+#define PAGE_SIZE    4096
+#define LOG2_PAGE_SIZE 12   // log_2(PAGE_SIZE)
 #define BITMAP_SIZE 32768   // 32768 integers * 32 bits * 4096 bytes = 4GB of RAM management.
 
 void init_pmm(multiboot_info* mbi);

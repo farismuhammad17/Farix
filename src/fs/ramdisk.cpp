@@ -39,7 +39,10 @@ FileOperations ramdisk_ops = {
 };
 
 void init_ramdisk() {
-    files = new std::map<std::string, File*>();
+    void* mem = kmalloc(sizeof(std::map<std::string, File*>));
+    kmemset(mem, 0, sizeof(std::map<std::string, File*>));
+
+    files = new (mem) std::map<std::string, File*>();
 }
 
 bool ramdisk_read(std::string& name, void* buffer, size_t size) {
@@ -72,7 +75,9 @@ bool ramdisk_write(std::string& name, const void* buffer, size_t size) {
 bool ramdisk_create(std::string& name) {
     if (files->find(name) != files->end()) return false; // File already exists
 
-    File* new_file = new File();
+    File* new_file = (File*) kmalloc(sizeof(File));
+    kmemset(new_file, 0, sizeof(File));
+
     new_file->name = name;
     new_file->data = nullptr; // Empty file
     new_file->size = 0;
@@ -85,7 +90,9 @@ bool ramdisk_create(std::string& name) {
 bool ramdisk_mkdir(std::string& name) {
     if (files->find(name) != files->end()) return false;
 
-    File* new_dir = new File();
+    File* new_dir = (File*) kmalloc(sizeof(File));
+    kmemset(new_dir, 0, sizeof(File));
+
     new_dir->name = name;
     new_dir->data = nullptr;
     new_dir->size = 0;
@@ -136,7 +143,9 @@ FileNode* ramdisk_getall(std::string& path) {
             if (relative.find('/') == std::string::npos) {
                 if (relative.empty()) continue;
 
-                FileNode* newNode = new FileNode();
+                FileNode* newNode = (FileNode*) kmalloc(sizeof(FileNode));
+                kmemset(newNode, 0, sizeof(FileNode));
+
                 if (!newNode) return head;
 
                 newNode->file.size = file_ptr->size;

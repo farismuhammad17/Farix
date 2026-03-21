@@ -582,7 +582,9 @@ File* fat32_get(std::string& name) {
 search_done:
     if (!entry_found) return nullptr;
 
-    File* f = new File();
+    File* f = (File*) kmalloc(sizeof(File));
+    kmemset(f, 0, sizeof(File));
+
     f->name = name;
     f->is_directory = (found_entry.attributes & 0x10);
     f->size = found_entry.size;
@@ -651,8 +653,12 @@ FileNode* fat32_getall(std::string& path) {
                 // Skip "." and ".." to keep 'ls' clean, or include them if you prefer
                 if (entries[i].name[0] == '.') continue;
 
-                FileNode* newNode = new FileNode();
+                FileNode* newNode = (FileNode*) kmalloc(sizeof(FileNode));
+                kmemset(newNode, 0, sizeof(FileNode));
+
                 if (!newNode) return head;
+
+                new (&newNode->file) File();
 
                 newNode->file.size = entries[i].size;
                 newNode->file.is_directory = (entries[i].attributes & 0x10);

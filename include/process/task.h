@@ -40,6 +40,7 @@ struct task {
     uint32_t id;                // Thread ID
     uint32_t stack_pointer;     // Current ESP
     uint32_t* page_directory;   // 0 -> kernel_directory
+    uint32_t heap_break;        // Limit for malloc
     uint32_t* stack_base;       // Memory allocated for the stack
     uint32_t state;             // Running, Ready, etc.
     uint32_t* stack_origin;

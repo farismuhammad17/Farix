@@ -50,4 +50,6 @@ void cmd_rm(const std::string& args);
 void cmd_ls(const std::string& args);
 void cmd_exec(const std::string& args);
 
+void cmd_test(const std::string& args); // TODO REMOVE
+
 #endif

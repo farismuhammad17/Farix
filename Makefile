@@ -51,15 +51,15 @@ LDFLAGS = -T $(LINKER) -ffreestanding -O2 -nostdlib
 CPP_SOURCES := $(shell find src -name '*.cpp')
 ASM_SOURCES := $(shell find src -name '*.asm')
 
-CRTI_OBJ = build/architecture/boot/crti.o
-CRTN_OBJ = build/architecture/boot/crtn.o
+CRTI_OBJ = build/asm/boot/crti.o
+CRTN_OBJ = build/asm/boot/crtn.o
 BOOT_OBJECT = build/boot.o
 
 CRTBEGIN := $(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND := $(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
 
 CPP_OBJECTS := $(patsubst src/%.cpp, build/%.o, $(CPP_SOURCES))
-OTHER_ASM_SOURCES := $(filter-out src/architecture/boot/crti.asm src/architecture/boot/crtn.asm, $(ASM_SOURCES))
+OTHER_ASM_SOURCES := $(filter-out src/asm/boot/crti.asm src/asm/boot/crtn.asm, $(ASM_SOURCES))
 OTHER_ASM_OBJECTS := $(patsubst src/%.asm, build/%.o, $(OTHER_ASM_SOURCES))
 
 # --- TARGETS ---
@@ -117,10 +117,10 @@ clean:
 	rm -rf build farix.bin disk.img
 
 run: farix.bin disk.img
-	qemu-system-i386 -kernel farix.bin -drive format=raw,file=disk.img,index=0,media=disk -device virtio-mouse-pci -full-screen
-
-run_nofs: farix.bin disk.img
 	qemu-system-i386 -kernel farix.bin -drive format=raw,file=disk.img,index=0,media=disk -device virtio-mouse-pci
+
+run_fs: farix.bin disk.img
+	qemu-system-i386 -kernel farix.bin -drive format=raw,file=disk.img,index=0,media=disk -device virtio-mouse-pci -full-screen
 
 disk.img:
 	qemu-img create -f raw disk.img 64M

@@ -37,5 +37,7 @@ ShellCommand command_table[] = {
     {"ls", cmd_ls, "List directory contents"},
     {"exec", cmd_exec, "Execute ELF file"},
 
+    {"test", cmd_test, "Test"}, // TODO REMOVE
+
     {nullptr, nullptr, nullptr} // to mark the end
 };

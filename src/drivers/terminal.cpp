@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string.h>
 
 #include "architecture/io.h"
+#include "memory/heap.h"
 #include "process/task.h"
 #include "drivers/keyboard.h"
 #include "drivers/mouse.h"
@@ -125,7 +126,8 @@ void new_line() {
 }
 
 void save_line_to_history(uint16_t* line_data) {
-    TerminalLine* newNode = new TerminalLine();
+    TerminalLine* newNode = (TerminalLine*) kmalloc(sizeof(TerminalLine));
+    kmemset(newNode, 0, sizeof(TerminalLine));
 
     for(int i = 0; i < WIDTH; i++) {
         newNode->data[i] = line_data[i];
@@ -179,7 +181,8 @@ void scroll_down() {
 }
 
 void save_cmd_to_history(const char* command) {
-    TerminalCmd* newNode = new TerminalCmd();
+    TerminalCmd* newNode = (TerminalCmd*) kmalloc(sizeof(TerminalCmd));
+    kmemset(newNode, 0, sizeof(TerminalCmd));
 
     newNode->command = strdup(command);
     newNode->next    = nullptr;

@@ -27,17 +27,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define PAGE_RW       0x2   // 10 in binary  - 0 = Read-only,   1 = Read/Write
 #define PAGE_USER     0x4   // 100 in binary - 0 = Kernel only, 1 = Everyone
 
-#define ENTRIES_PER_TABLE 1024
-#define VMM_TEMP_PAGE     0xE0000000
-#define USER_STACK_TOP    0xC0000000
+#define PAGE_OFFSET    0xC0000000 // 3 GB
+#define USER_STACK_TOP 0xC0000000
+
+#define VIRTUAL_TO_PHYSICAL(addr) ((uintptr_t)(addr) - PAGE_OFFSET)
+#define PHYSICAL_TO_VIRTUAL(addr) ((void*)((uintptr_t)(addr) + PAGE_OFFSET))
 
 extern uint32_t* kernel_directory;
 
 void init_vmm();
-void vmm_map_page(uint32_t* dir, void* phys, void* virt, uint32_t flags);
-void vmm_switch_directory(uint32_t* directory);
+void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags);
+void vmm_unmap_page(void* virt);
 
-void vmm_unmap_page(uint32_t* dir, void* virt);
+void vmm_switch_directory(uint32_t* directory);
 uint32_t* vmm_get_current_directory();
 
 #endif
