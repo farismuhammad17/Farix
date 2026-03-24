@@ -17,7 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdio.h>
+#include <stdio.h> // TODO: Remove if no requirement of echoing scan codes
+#include <stdbool.h>
 
 #include "architecture/io.h"
 
@@ -40,7 +41,7 @@ unsigned char kbd[128] = {
 };
 
 // For DEBUG: Print the raw hex value to terminal
-constexpr bool echo_scancodes = false;
+const bool echo_scancodes = false;
 
 static bool is_extended = false;
 
@@ -72,7 +73,7 @@ void init_keyboard() {
     keyboard_ready = true;
 }
 
-extern "C" void keyboard_handler() {
+extern void keyboard_handler() {
     uint8_t status = inb(0x64);
     if (!(status & 0x01) || (status & 0x20) || !keyboard_ready) { // Data is not ready ready OR it is mouse data OR the keyboard is not ready.
         outb(0x20, 0x20);

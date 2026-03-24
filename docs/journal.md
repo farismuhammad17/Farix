@@ -664,7 +664,7 @@ I installed the Gemini CLI just to know where I'm going wrong, and I used it, an
 
 4. Randomly, certain commands would completely pause the entire kernel, and I realised removing the `cli` and `sti` statements fixed it. I have no clue why, and I'm too sleep deprived to know why.
 
-5. I renamed `registers_t` in the syscalls files to `syscalls_registers_t` to be more precise, because maybe there was some name collision with something I may have forgotten, but there was nothing I forgot. I could've swore I use it before, so I used a python script to find where it was, and found it was in [`tas.h`](../include/process/task.h), but it was `task_registers_t` instead, so there was no name problems.
+5. I renamed `registers_t` in the syscalls files to `syscalls_registers_t` to be more precise, because maybe there was some name collision with something I may have forgotten, but there was nothing I forgot. I could've swore I use it before, so I used a python script to find where it was, and found it was in [`task.h`](../include/process/task.h), but it was `task_registers_t` instead, so there was no name problems.
 
 ```py
 import sys

@@ -25,34 +25,33 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-extern "C" {
-    void default_handler_stub();
-    void timer_handler_stub();
-    void keyboard_handler_stub();
-    void mouse_handler_stub();
-    void syscall_handler_stub();
-    void isr0();  void isr1();  void isr2();  void isr3();
-    void isr4();  void isr5();  void isr6();  void isr7();
-    void isr8();  void isr9();  void isr10(); void isr11();
-    void isr12(); void isr13(); void isr14(); void isr15();
-    void isr16(); void isr17(); void isr18(); void isr19();
-    void isr20(); void isr21(); void isr22(); void isr23();
-    void isr24(); void isr25(); void isr26(); void isr27();
-    void isr28(); void isr29(); void isr30(); void isr31();
-}
+// Defined in boot.s
+void default_handler_stub();
+void timer_handler_stub();
+void keyboard_handler_stub();
+void mouse_handler_stub();
+void syscall_handler_stub();
+void isr0();  void isr1();  void isr2();  void isr3();
+void isr4();  void isr5();  void isr6();  void isr7();
+void isr8();  void isr9();  void isr10(); void isr11();
+void isr12(); void isr13(); void isr14(); void isr15();
+void isr16(); void isr17(); void isr18(); void isr19();
+void isr20(); void isr21(); void isr22(); void isr23();
+void isr24(); void isr25(); void isr26(); void isr27();
+void isr28(); void isr29(); void isr30(); void isr31();
 
-struct idt_entry {
+typedef struct idt_entry {
     uint16_t base_low;    // Lower 16 bits of the handler address
     uint16_t sel;         // Kernel Segment Selector (0x08)
     uint8_t  always0;     // This byte must be 0
     uint8_t  flags;       // That "Permission Slip" byte (0x8E)
     uint16_t base_high;   // Upper 16 bits of the handler address
-} __attribute__((packed));
+} __attribute__((packed)) idt_entry;
 
-struct idt_ptr {
+typedef struct idt_ptr {
     uint16_t limit; // 2 bytes
     uint32_t base;  // 4 bytes
-} __attribute__((packed));
+} __attribute__((packed)) idt_ptr;
 
 void init_idt();
 

@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define ELF_H
 
 #include <stdint.h>
-#include <string>
 
 // ELF Identifiers
 #define ELFMAG0 0x7F
@@ -66,6 +65,6 @@ typedef struct {
     uint32_t p_align;
 } __attribute__((packed)) elf_program_header_t;
 
-bool exec(std::string path);
+bool exec(const char* path);
 
 #endif

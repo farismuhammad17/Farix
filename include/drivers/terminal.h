@@ -20,8 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef TERMINAL_H
 #define TERMINAL_H
 
-#include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+#define VGA_MEMORY (uint16_t*) 0xB8000
 
 #define WIDTH  80
 #define HEIGHT 25
@@ -33,44 +36,43 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define MAX_TERMINAL_LINE_HISTORY_LEN 1000
 #define MAX_TERMINAL_CMD_HISTORY_LEN  50
+#define MAX_SPECIAL_CHAR_LEN          32
 
 extern size_t    cursor_x;
 extern size_t    cursor_y;
 extern uint8_t   terminal_color;
 extern uint16_t* terminal_buffer;
 
-enum vga_color {
-	VGA_COLOR_BLACK         = 0,
-	VGA_COLOR_BLUE          = 1,
-	VGA_COLOR_GREEN         = 2,
-	VGA_COLOR_CYAN          = 3,
-	VGA_COLOR_RED           = 4,
-	VGA_COLOR_MAGENTA       = 5,
-	VGA_COLOR_BROWN         = 6,
-	VGA_COLOR_LIGHT_GREY    = 7,
-	VGA_COLOR_DARK_GREY     = 8,
-	VGA_COLOR_LIGHT_BLUE    = 9,
-	VGA_COLOR_LIGHT_GREEN   = 10,
-	VGA_COLOR_LIGHT_CYAN    = 11,
-	VGA_COLOR_LIGHT_RED     = 12,
-	VGA_COLOR_LIGHT_MAGENTA = 13,
-	VGA_COLOR_LIGHT_BROWN   = 14,
-	VGA_COLOR_WHITE         = 15,
-};
+#define VGA_COLOR_BLACK         0
+#define VGA_COLOR_BLUE          1
+#define VGA_COLOR_GREEN         2
+#define VGA_COLOR_CYAN          3
+#define VGA_COLOR_RED           4
+#define VGA_COLOR_MAGENTA       5
+#define VGA_COLOR_BROWN         6
+#define VGA_COLOR_LIGHT_GREY    7
+#define VGA_COLOR_DARK_GREY     8
+#define VGA_COLOR_LIGHT_BLUE    9
+#define VGA_COLOR_LIGHT_GREEN   10
+#define VGA_COLOR_LIGHT_CYAN    11
+#define VGA_COLOR_LIGHT_RED     12
+#define VGA_COLOR_LIGHT_MAGENTA 13
+#define VGA_COLOR_LIGHT_BROWN   14
+#define VGA_COLOR_WHITE         15
 
-struct TerminalCmd {
+typedef struct TerminalCmd {
     const char*  command;
-    TerminalCmd* next;
-    TerminalCmd* prev;
-};
+    struct TerminalCmd* next;
+    struct TerminalCmd* prev;
+} TerminalCmd;
 
-struct TerminalLine {
+typedef struct TerminalLine {
     uint16_t data[WIDTH]; // Store the characters AND the colors
-    TerminalLine* next;
-    TerminalLine* prev;
-};
+    struct TerminalLine* next;
+    struct TerminalLine* prev;
+} TerminalLine;
 
-inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg) {
+inline uint8_t vga_entry_color(int fg, int bg) {
 	return fg | bg << 4;
 }
 inline uint16_t vga_entry(unsigned char uc, uint8_t color) {

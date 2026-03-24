@@ -17,45 +17,49 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "fs/vfs.h"
 
-FileOperations* current_fs_ops = nullptr;
+static FileOperations* current_fs_ops = NULL;
 
 void vfs_mount(FileOperations* ops) {
     current_fs_ops = ops;
 }
 
-bool fs_read(std::string& name, void* buffer, size_t size) {
+int fs_read(const char* name, void* buffer, size_t size) {
     if (!current_fs_ops || !current_fs_ops->read) return false;
     return current_fs_ops->read(name, buffer, size);
 }
 
-bool fs_write(std::string& name, const void* buffer, size_t size) {
+int fs_write(const char* name, const void* buffer, size_t size) {
     if (!current_fs_ops || !current_fs_ops->write) return false;
     return current_fs_ops->write(name, buffer, size);
 }
 
-bool fs_create(std::string& name) {
+bool fs_create(const char* name) {
     if (!current_fs_ops || !current_fs_ops->create) return false;
     return current_fs_ops->create(name);
 }
 
-bool fs_mkdir(std::string& name) {
+bool fs_mkdir(const char* name) {
     if (!current_fs_ops || !current_fs_ops->mkdir) return false;
     return current_fs_ops->mkdir(name);
 }
 
-bool fs_remove(std::string& name) {
+bool fs_remove(const char* name) {
     if (!current_fs_ops || !current_fs_ops->remove) return false;
     return current_fs_ops->remove(name);
 }
 
-File* fs_get(std::string& name) {
-    if (!current_fs_ops || !current_fs_ops->get) return nullptr;
+File* fs_get(const char* name) {
+    if (!current_fs_ops || !current_fs_ops->get) return NULL;
     return current_fs_ops->get(name);
 }
 
-FileNode* fs_getall(std::string& path) {
-    if (!current_fs_ops || !current_fs_ops->getall) return nullptr;
+FileNode* fs_getall(const char* path) {
+    if (!current_fs_ops || !current_fs_ops->getall) return NULL;
     return current_fs_ops->getall(path);
 }

@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-struct TSSEntry {
+typedef struct TSSEntry {
     uint32_t prev_tss;
     uint32_t esp0;     // Kernel stack pointer
     uint32_t ss0;      // Kernel stack segment
@@ -32,7 +32,7 @@ struct TSSEntry {
     uint32_t es, cs, ss, ds, fs, gs;
     uint32_t ldt;
     uint16_t trap, iomap_base;
-} __attribute__((packed));
+} __attribute__((packed)) TSSEntry;
 
 extern TSSEntry tss_entry;
 

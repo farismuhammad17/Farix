@@ -17,7 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <string>
+#include <stdint.h>
+#include <stddef.h>
 
 #include "memory/vmm.h"
 #include "memory/heap.h"
@@ -25,9 +26,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "process/task.h"
 
-extern "C" uint32_t stack_top;
+// From boot.s
+extern uint32_t stack_top;
+extern void switch_task(uint32_t** old_esp, uint32_t new_esp);
 
-task* current_task = nullptr;
+task* current_task = NULL;
 uint32_t next_pid  = 0;
 size_t total_tasks = 0;
 
@@ -56,22 +59,22 @@ void init_multitasking() {
     main_task->state = TASK_READY;
     main_task->next  = main_task;     // Point to itself for now
     main_task->name  = "init";
-    main_task->page_directory = nullptr;
+    main_task->page_directory = NULL;
 
     current_task = main_task;
 
     total_tasks++;
 }
 
-task* create_task(void (*entry_point)(), std::string name) {
+task* create_task(void (*entry_point)(), const char* name) {
     task* new_task = (task*) kmalloc(sizeof(task));
     kmemset(new_task, 0, sizeof(task));
 
     new_task->id             = next_pid++;
     new_task->entry_func     = entry_point;
-    new_task->name           = name;
+    new_task->name           = (char*) name;
     new_task->state          = TASK_READY;
-    new_task->page_directory = nullptr;
+    new_task->page_directory = NULL;
     new_task->heap_break     = 0;
 
     uint32_t* stack = (uint32_t*) kmalloc(4096);
@@ -124,7 +127,7 @@ void schedule() {
         last->next = zombie->next;
 
         kfree(zombie->stack_origin);
-        delete zombie;
+        kfree(zombie);
 
         total_tasks--;
     }

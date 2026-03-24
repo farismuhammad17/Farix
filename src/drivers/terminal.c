@@ -17,9 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <string.h>
+#include <stdbool.h>
+#include <stddef.h>
 
 #include "architecture/io.h"
 #include "memory/heap.h"
@@ -35,20 +37,20 @@ size_t        cursor_y = 0;
 uint8_t       terminal_color  = 0;
 uint16_t*     terminal_buffer = (uint16_t*) MEMORY;
 
-TerminalCmd*  cmd_current_line  = nullptr;
-TerminalCmd*  cmd_history_head  = nullptr;
-TerminalCmd*  cmd_history_tail  = nullptr;
+TerminalCmd*  cmd_current_line  = NULL;
+TerminalCmd*  cmd_history_head  = NULL;
+TerminalCmd*  cmd_history_tail  = NULL;
 int           cmd_history_count = 0;
 
-TerminalLine* line_history_head    = nullptr;
-TerminalLine* line_history_tail    = nullptr;
-int           line_history_count   = 0;
-int           scroll_offset        = 0;
+TerminalLine* line_history_head  = NULL;
+TerminalLine* line_history_tail  = NULL;
+int           line_history_count = 0;
+int           scroll_offset      = 0;
 
-bool          is_scrolling = false;
+bool is_scrolling = false;
 
-bool          special_char_mode   = false;
-std::string   special_char_buffer = ""; // TODO: Use char instead
+bool special_char_mode = false;
+char special_char_buffer[MAX_SPECIAL_CHAR_LEN] = "";
 
 void init_terminal() {
 	update_cursor(0, 0);
@@ -73,8 +75,8 @@ void update_cursor(size_t x, size_t y) {
 }
 
 void terminal_clear() {
-    uint16_t* vga_buffer = (uint16_t*) 0xB8000;
-    uint16_t empty_char = ' ' | (terminal_color << 8);
+    uint16_t* vga_buffer = VGA_MEMORY;
+    uint16_t empty_char  = vga_entry(' ', terminal_color);
 
     for (int i = 0; i < WIDTH * HEIGHT; i++) {
         vga_buffer[i] = empty_char;
@@ -133,7 +135,7 @@ void save_line_to_history(uint16_t* line_data) {
         newNode->data[i] = line_data[i];
     }
 
-    newNode->next = nullptr;
+    newNode->next = NULL;
     newNode->prev = line_history_tail;
 
     if (line_history_tail) {
@@ -149,11 +151,11 @@ void save_line_to_history(uint16_t* line_data) {
         TerminalLine* toDelete = line_history_head;
         line_history_head = line_history_head->next;
 
-        if (line_history_head != nullptr) {
-            line_history_head->prev = nullptr;
+        if (line_history_head != NULL) {
+            line_history_head->prev = NULL;
         }
 
-        delete toDelete;
+        kfree(toDelete);
         line_history_count--;
     }
 }
@@ -185,7 +187,7 @@ void save_cmd_to_history(const char* command) {
     kmemset(newNode, 0, sizeof(TerminalCmd));
 
     newNode->command = strdup(command);
-    newNode->next    = nullptr;
+    newNode->next    = NULL;
     newNode->prev    = cmd_history_tail;
 
     if (cmd_history_tail) {
@@ -201,52 +203,48 @@ void save_cmd_to_history(const char* command) {
         TerminalCmd* toDelete = cmd_history_head;
         cmd_history_head = cmd_history_head->next;
 
-        if (cmd_history_head != nullptr) {
-            cmd_history_head->prev = nullptr;
+        if (cmd_history_head != NULL) {
+            cmd_history_head->prev = NULL;
         }
 
-        free((void*) toDelete->command);
-        delete toDelete;
+        kfree((void*) toDelete->command);
+        kfree(toDelete);
 
         cmd_history_count--;
     }
 }
 
 void cmd_history_up() {
-    if (cmd_history_head == nullptr) return;
+    if (cmd_history_head == NULL) return;
 
-    if (cmd_current_line == nullptr) {
+    if (cmd_current_line == NULL) {
         cmd_current_line = cmd_history_tail;
     } else if (cmd_current_line->prev) {
         cmd_current_line = cmd_current_line->prev;
     }
 
-    while (cursor_x > shell_directory.size() + 2) {
+    while (cursor_x > strlen(shell_directory) + 2) {
         echo_char('\b');
     }
 
     printf("%s", cmd_current_line->command);
-    shell_buffer = cmd_current_line->command;
+    strcpy(shell_buffer, cmd_current_line->command);
 }
 
 void cmd_history_down() {
-    if (cmd_history_head == nullptr || cmd_current_line == nullptr) return;
+    if (cmd_current_line == NULL) return;
 
     cmd_current_line = cmd_current_line->next;
 
-    if (cmd_current_line == nullptr) cmd_current_line = cmd_history_tail;
-    else if (cmd_current_line->next) cmd_current_line = cmd_current_line->next;
-
-    while (cursor_x > shell_directory.size() + 2) {
+    while (cursor_x > strlen(shell_directory) + 2) {
         echo_char('\b');
     }
 
-    if (cmd_current_line != nullptr) {
+    if (cmd_current_line != NULL) {
         printf("%s", cmd_current_line->command);
-        shell_buffer = cmd_current_line->command;
+        strcpy(shell_buffer, cmd_current_line->command);
     } else {
-        // We went past the most recent command, clear the buffer
-        shell_buffer = "";
+        shell_buffer[0] = '\0';
     }
 }
 
@@ -294,7 +292,7 @@ bool handle_special_chars(uint16_t c) {
     }
 
     else if (c == '\b') {
-        size_t prompt_len = 2;
+        size_t prompt_len = strlen(shell_directory) + 2;
 
         if (cursor_x <= prompt_len) {
             return true;
@@ -358,28 +356,38 @@ void handle_mouse() {
 }
 
 void handle_ansi_char(uint16_t c) {
-    if (c == ESC_CODE || c == '[' && special_char_mode) return;
+    if (c == ESC_CODE || (c == '[' && special_char_mode)) return;
 
     if (c == 'm') { // TODO: Only supports foreground, should implement background later, as well as letting ';' be used as a seperator
-             if (special_char_buffer == "0")  terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
-        else if (special_char_buffer == "30") terminal_color = vga_entry_color(VGA_COLOR_BLACK, VGA_COLOR_BLACK);
-        else if (special_char_buffer == "31") terminal_color = vga_entry_color(VGA_COLOR_RED, VGA_COLOR_BLACK);
-        else if (special_char_buffer == "32") terminal_color = vga_entry_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
-        else if (special_char_buffer == "33") terminal_color = vga_entry_color(VGA_COLOR_BROWN, VGA_COLOR_BLACK);
-        else if (special_char_buffer == "34") terminal_color = vga_entry_color(VGA_COLOR_BLUE, VGA_COLOR_BLACK);
-        else if (special_char_buffer == "35") terminal_color = vga_entry_color(VGA_COLOR_MAGENTA, VGA_COLOR_BLACK);
-        else if (special_char_buffer == "36") terminal_color = vga_entry_color(VGA_COLOR_CYAN, VGA_COLOR_BLACK);
-        else if (special_char_buffer == "37") terminal_color = vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+             if (strcmp(special_char_buffer, "0") == 0)  terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "30") == 0) terminal_color = vga_entry_color(VGA_COLOR_BLACK, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "31") == 0) terminal_color = vga_entry_color(VGA_COLOR_RED, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "32") == 0) terminal_color = vga_entry_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "33") == 0) terminal_color = vga_entry_color(VGA_COLOR_BROWN, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "34") == 0) terminal_color = vga_entry_color(VGA_COLOR_BLUE, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "35") == 0) terminal_color = vga_entry_color(VGA_COLOR_MAGENTA, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "36") == 0) terminal_color = vga_entry_color(VGA_COLOR_CYAN, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "37") == 0) terminal_color = vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
 
         special_char_mode   = false;
-        special_char_buffer = "";
+        special_char_buffer[0] = '\0';
     } else if (c == 'H' || c == 'f') {
-        size_t seperator = special_char_buffer.find(';');
+        int separator_idx = -1;
+        for (int i = 0; special_char_buffer[i] != '\0'; i++) {
+            if (special_char_buffer[i] == ';') {
+                separator_idx = i;
+                break;
+            }
+        }
 
-        cursor_y = std::stoi(special_char_buffer.substr(0, seperator))  - 1;
-        cursor_x = std::stoi(special_char_buffer.substr(seperator + 1)) - 1;
+        if (separator_idx != -1) {
+            special_char_buffer[separator_idx] = '\0';
 
-        update_cursor(cursor_x, cursor_y);
+            cursor_y = atoi(special_char_buffer) - 1;
+            cursor_x = atoi(&special_char_buffer[separator_idx + 1]) - 1;
+
+            update_cursor(cursor_x, cursor_y);
+        }
     } else if (c == 'J') {
         switch (special_char_buffer[0]) {
             case '0':
@@ -409,18 +417,22 @@ void handle_ansi_char(uint16_t c) {
                 break;
         }
     } else if (c == 'A') { // TODO Clamp the values so that the cursor doesn't fall outside of the terminal
-        cursor_y -= std::stoi(special_char_buffer);
+        cursor_y -= atoi(special_char_buffer);
         update_cursor(cursor_x, cursor_y);
     } else if (c == 'B') {
-        cursor_y += std::stoi(special_char_buffer);
+        cursor_y += atoi(special_char_buffer);
         update_cursor(cursor_x, cursor_y);
     } else if (c == 'C') {
-        cursor_x += std::stoi(special_char_buffer);
+        cursor_x += atoi(special_char_buffer);
         update_cursor(cursor_x, cursor_y);
     } else if (c == 'D') {
-        cursor_x -= std::stoi(special_char_buffer);
+        cursor_x -= atoi(special_char_buffer);
         update_cursor(cursor_x, cursor_y);
     } else {
-        special_char_buffer += c;
+        int len = strlen(special_char_buffer);
+        if (len < MAX_SPECIAL_CHAR_LEN - 1) {
+            special_char_buffer[len] = (char)c;
+            special_char_buffer[len + 1] = '\0';
+        }
     }
 }

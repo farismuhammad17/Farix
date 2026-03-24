@@ -43,12 +43,12 @@ AS = $(PREFIX)as
 LINKER = scripts/linker.ld
 
 # --- FLAGS ---
-CFLAGS = -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti \
+CFLAGS = -ffreestanding -O2 -Wall -Wextra -fno-exceptions \
          -Iinclude -I$(LIBC_INC)
 LDFLAGS = -T $(LINKER) -ffreestanding -O2 -nostdlib
 
 # --- OBJECTS ---
-CPP_SOURCES := $(shell find src -name '*.cpp')
+C_SOURCES := $(shell find src -name '*.c')
 ASM_SOURCES := $(shell find src -name '*.asm')
 
 CRTI_OBJ = build/asm/boot/crti.o
@@ -58,7 +58,7 @@ BOOT_OBJECT = build/boot.o
 CRTBEGIN := $(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND := $(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
 
-CPP_OBJECTS := $(patsubst src/%.cpp, build/%.o, $(CPP_SOURCES))
+C_OBJECTS := $(patsubst src/%.c, build/%.o, $(C_SOURCES))
 OTHER_ASM_SOURCES := $(filter-out src/asm/boot/crti.asm src/asm/boot/crtn.asm, $(ASM_SOURCES))
 OTHER_ASM_OBJECTS := $(patsubst src/%.asm, build/%.o, $(OTHER_ASM_SOURCES))
 
@@ -66,18 +66,18 @@ OTHER_ASM_OBJECTS := $(patsubst src/%.asm, build/%.o, $(OTHER_ASM_SOURCES))
 
 all: farix.bin
 
-farix.bin: $(BOOT_OBJECT) $(CRTI_OBJ) $(CRTBEGIN) $(CPP_OBJECTS) $(OTHER_ASM_OBJECTS) $(CRTEND) $(CRTN_OBJ)
+farix.bin: $(BOOT_OBJECT) $(CRTI_OBJ) $(CRTBEGIN) $(C_OBJECTS) $(OTHER_ASM_OBJECTS) $(CRTEND) $(CRTN_OBJ)
 	$(CC) $(LDFLAGS) -o $@ \
 		$(BOOT_OBJECT) \
 		$(CRTI_OBJ) \
 		$(CRTBEGIN) \
-		$(CPP_OBJECTS) \
+		$(C_OBJECTS) \
 		$(OTHER_ASM_OBJECTS) \
-		-L$(LIBC_LIB) -lstdc++ -lc -lm -lgcc \
+		-L$(LIBC_LIB) -lc -lm -lgcc \
 		$(CRTEND) \
 		$(CRTN_OBJ)
 
-build/%.o: src/%.cpp
+build/%.o: src/%.c
 	mkdir -p $(@D)
 	$(CC) -c $< -o $@ $(CFLAGS)
 

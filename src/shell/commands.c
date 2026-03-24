@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stddef.h>
+
 #include "shell/commands.h"
 
 ShellCommand command_table[] = {
@@ -37,7 +39,5 @@ ShellCommand command_table[] = {
     {"ls", cmd_ls, "List directory contents"},
     {"exec", cmd_exec, "Execute ELF file"},
 
-    {"test", cmd_test, "Test"}, // TODO REMOVE
-
-    {nullptr, nullptr, nullptr} // to mark the end
+    {NULL, NULL, NULL} // to mark the end
 };

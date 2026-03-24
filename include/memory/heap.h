@@ -23,16 +23,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define HEAP_MAGIC 0x12345678
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
 
-struct HeapSegment {
+typedef struct HeapSegment {
     size_t size;
-    HeapSegment* next;
-    HeapSegment* prev;
+    struct HeapSegment* next;
+    struct HeapSegment* prev;
     bool is_free;
     uint32_t magic;
     uint32_t caller;
-};
+} __attribute__((packed)) HeapSegment;
 
 void   init_heap();
 void*  kmalloc(size_t size);
@@ -47,11 +48,5 @@ size_t get_heap_total();
 size_t get_heap_used();
 
 void   print_memstat();
-
-void*  operator new      (size_t size);
-void*  operator new[]    (size_t size);
-void   operator delete   (void* p);
-void   operator delete[] (void* p);
-void   operator delete   (void* p, size_t size);
 
 #endif

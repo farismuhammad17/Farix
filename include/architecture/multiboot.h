@@ -24,14 +24,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002 // Refer https://wiki.osdev.org/Multiboot
 
-struct multiboot_mmap_entry {
+typedef struct multiboot_mmap_entry {
     uint32_t size;
     uint64_t addr;
     uint64_t len;
     uint32_t type; // Type 1 = Available RAM, others = Reserved
-} __attribute__((packed));
+} __attribute__((packed)) multiboot_mmap_entry;
 
-struct multiboot_info {
+typedef struct multiboot_info {
     uint32_t flags;
     uint32_t mem_lower;
     uint32_t mem_upper;
@@ -56,6 +56,6 @@ struct multiboot_info {
     uint16_t vbe_interface_seg;
     uint16_t vbe_interface_off;
     uint16_t vbe_interface_len;
-} __attribute__((packed));
+} __attribute__((packed)) multiboot_info;
 
 #endif

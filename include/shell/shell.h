@@ -20,21 +20,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef SHELL_H
 #define SHELL_H
 
-#include <string>
+#include <stdbool.h>
 #include <stdarg.h>
 
-extern std::string shell_directory;
-extern std::string shell_buffer;
-extern bool        shell_buffer_ready;
+#define MAX_DIRECTORY_PATH_LEN   256
+#define MAX_SHELL_BUFFER_LEN    1024
+#define MAX_LAST_CMD_OUTPUT_LEN 1024
 
-extern std::string last_cmd_output;
-extern char*       pipe_buffer;
-extern bool        is_piping;
+#define PIPE_BUFFER_SIZE 8192 // 8 KB
+
+#define MAX_FILENAME_LEN 64
+
+extern char shell_directory[MAX_DIRECTORY_PATH_LEN];
+extern char shell_buffer[MAX_SHELL_BUFFER_LEN];
+extern bool shell_buffer_ready;
+
+extern char  last_cmd_output[MAX_LAST_CMD_OUTPUT_LEN];
+extern char* pipe_buffer;
+extern bool  is_piping;
 
 void init_shell();
 void shell_update();
 
-void shell_parse(const std::string& input);
+void shell_parse(const char* input);
 
 void sh_print(const char* format, ...);
 

@@ -48,9 +48,9 @@ void shell_thread() {
     }
 }
 
-extern "C" void _init();
+extern void _init();
 
-extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
+void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_idt();
     init_gdt();
 
@@ -80,7 +80,7 @@ extern "C" void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_ramdisk();
     init_fat32();
 
-    vfs_mount(&fat32_ops);    // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
+    vfs_mount(&ramdisk_ops);    // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
 
     init_multitasking();
     init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms

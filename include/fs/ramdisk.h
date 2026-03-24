@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef RAMDISK_H
 #define RAMDISK_H
 
-#include <string>
+#define RAMDISK_HASH_SIZE 64
 
 #include "fs/vfs.h"
 
@@ -28,12 +28,12 @@ extern FileOperations ramdisk_ops;
 
 void      init_ramdisk();
 
-bool      ramdisk_read   (std::string& name, void* buffer, size_t size);
-bool      ramdisk_write  (std::string& name, const void* buffer, size_t size);
-bool      ramdisk_create (std::string& name);
-bool      ramdisk_mkdir  (std::string& name);
-bool      ramdisk_remove (std::string& name);
-File*     ramdisk_get    (std::string& name);
-FileNode* ramdisk_getall (std::string& path);
+int       ramdisk_read   (const char* name, void* buffer, size_t size);
+int       ramdisk_write  (const char* name, const void* buffer, size_t size);
+bool      ramdisk_create (const char* name);
+bool      ramdisk_mkdir  (const char* name);
+bool      ramdisk_remove (const char* name);
+File*     ramdisk_get    (const char* name);
+FileNode* ramdisk_getall (const char* path);
 
 #endif

@@ -27,13 +27,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-struct syscalls_registers_t {
+typedef struct syscalls_registers_t {
     uint32_t ds;                                           // Data segment (pushed by us)
     uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax; // Pushed by pusha
     uint32_t int_no, err_code;                             // Pushed in stub
     uint32_t eip, cs, eflags, useresp, ss;                 // Pushed by CPU
-};
+} syscalls_registers_t;
 
-extern "C" void syscall_handler(syscalls_registers_t* regs);
+void syscall_handler(syscalls_registers_t* regs);
 
 #endif

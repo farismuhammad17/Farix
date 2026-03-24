@@ -24,6 +24,4 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void init_timer(uint32_t frequency);
 
-extern "C" void timer_handler();
-
 #endif

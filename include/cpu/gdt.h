@@ -22,40 +22,34 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-enum GDT_Access : uint8_t {
-    GDT_ACCESS_PRESENT     = 0x80, // Must be 1 for valid segments
-    GDT_ACCESS_RING0       = 0x00, // Kernel privilege
-    GDT_ACCESS_RING3       = 0x60, // User privilege
-    GDT_ACCESS_CODE_DATA   = 0x10, // Must be 1 for code/data segments
-    GDT_ACCESS_EXECUTABLE  = 0x08, // 1 for Code, 0 for Data
-    GDT_ACCESS_WRITABLE    = 0x02, // Readable for code, Writable for data
-    GDT_ACCESS_ACCESSED    = 0x01  // Set by CPU when segment is used
-};
+#define GDT_ACCESS_PRESENT    0x80 // Must be 1 for valid segments
+#define GDT_ACCESS_RING0      0x00 // Kernel privilege
+#define GDT_ACCESS_RING3      0x60 // User privilege
+#define GDT_ACCESS_CODE_DATA  0x10 // Must be 1 for code/data segments
+#define GDT_ACCESS_EXECUTABLE 0x08 // 1 for Code ; 0 for Data
+#define GDT_ACCESS_WRITABLE   0x02 // Readable for code, Writable for data
+#define GDT_ACCESS_ACCESSED   0x01  // Set by CPU when segment is used
 
-enum GDT_Granularity : uint8_t {
-    GDT_GRAN_4K            = 0x80, // Limit is in 4KB blocks
-    GDT_GRAN_32BIT         = 0x40, // 32-bit protected mode
-    GDT_GRAN_64BIT         = 0x20  // Not used in i386
-};
+#define GDT_GRAN_4K    0x80 // Limit is in 4KB blocks
+#define GDT_GRAN_32BIT 0x40 // 32-bit protected mode
+#define GDT_GRAN_64BIT 0x20  // Not used in i386
 
-struct GDTEntry {
+typedef struct GDTEntry {
     uint16_t limit_low;
     uint16_t base_low;
     uint8_t  base_middle;
     uint8_t  access;
     uint8_t  granularity;
     uint8_t  base_high;
-} __attribute__((packed));
+} __attribute__((packed)) GDTEntry;
 
-struct GDTPointer {
+typedef struct GDTPointer {
     uint16_t limit;
     uint32_t base;
-} __attribute__((packed));
+} __attribute__((packed)) GDTPointer;
 
-extern "C" {
-    void gdt_flush(uint32_t gdt_ptr_addr);
-    void load_tss();
-}
+void gdt_flush(uint32_t gdt_ptr_addr);
+void load_tss();
 
 void init_gdt();
 void gdt_set_entry(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran);

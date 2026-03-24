@@ -23,9 +23,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <stdbool.h>
 
-#define PAGE_PRESENT  0x1   // 01 in binary  - If page is in RAM
-#define PAGE_RW       0x2   // 10 in binary  - 0 = Read-only,   1 = Read/Write
-#define PAGE_USER     0x4   // 100 in binary - 0 = Kernel only, 1 = Everyone
+#define PAGE_PRESENT  0x1 // 01 in binary  - If page is in RAM
+#define PAGE_RW       0x2 // 10 in binary  - 0 = Read-only,   1 = Read/Write
+#define PAGE_USER     0x4 // 100 in binary - 0 = Kernel only, 1 = Everyone
 
 #define PAGE_OFFSET    0xC0000000 // 3 GB
 #define USER_STACK_TOP 0xC0000000

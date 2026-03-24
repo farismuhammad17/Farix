@@ -17,6 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdio.h>
+#include <string.h>
+
 #include "memory/pmm.h"
 #include "memory/vmm.h"
 #include "memory/heap.h"
@@ -26,10 +29,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "fs/elf.h"
 
-extern "C" uint32_t stack_top; // From boot.s
-extern "C" void elf_user_trampoline_stub(uint32_t entry, uint32_t stack);
+extern uint32_t stack_top; // From boot.s
+extern void elf_user_trampoline_stub(uint32_t entry, uint32_t stack);
 
-void elf_user_trampoline() {
+static void elf_user_trampoline() {
     task* t = current_task;
 
     vmm_switch_directory(t->page_directory);
@@ -43,10 +46,10 @@ void elf_user_trampoline() {
     while(1); // Should never reach here
 }
 
-bool exec(std::string path) {
+bool exec(const char* path) {
     File* file_obj = fs_get(path);
     if (!file_obj || file_obj->size == 0) {
-        printf("ELF Error: File %s not found or empty\n", path.c_str());
+        printf("ELF Error: File %s not found or empty\n", path);
         return false;
     }
 
@@ -128,8 +131,6 @@ bool exec(std::string path) {
     uint32_t* stack_ptr = (uint32_t*) PHYSICAL_TO_VIRTUAL(stack_phys);
     for (int i = 0; i < 1024; i++) stack_ptr[i] = 0;
 
-    uint32_t entry_point = header->e_entry;
-
     task* elf_task = (task*) kmalloc(sizeof(task));
     kmemset(elf_task, 0, sizeof(task));
 
@@ -137,8 +138,11 @@ bool exec(std::string path) {
     elf_task->page_directory = user_pd_phys;
     elf_task->heap_break     = highest_vaddr;
     elf_task->state          = TASK_READY;
-    elf_task->name           = path;
-    elf_task->entry_func     = (void(*)()) entry_point;
+
+    strncpy(elf_task->name, path, 31);
+    elf_task->name[31] = '\0';
+
+    elf_task->entry_func     = (void(*)()) header->e_entry;
     elf_task->stack_base     = (uint32_t*) USER_STACK_TOP;
 
     uint32_t* stack = (uint32_t*) kmalloc(4096);

@@ -18,6 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
 
 #include "memory/pmm.h"
 #include "memory/vmm.h"
@@ -25,14 +28,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/heap.h"
 
 static void*        heap_start    = (void*) 0x1000000;
-static void*        heap_end      = nullptr;
-static HeapSegment* first_segment = nullptr;
+static void*        heap_end      = NULL;
+static HeapSegment* first_segment = NULL;
 
 static uint32_t user_heap_break = 0x40000000;
 
 bool check_heap() {
     HeapSegment* current = first_segment;
-    while (current != nullptr) {
+    while (current != NULL) {
         // Magic Check
         if (current->magic != HEAP_MAGIC) {
             printf("HEAP CORRUPTION: Bad Magic at %p (Val: %x)\n", current, current->magic);
@@ -46,7 +49,7 @@ bool check_heap() {
         }
 
         // Pointer Check
-        if (current->next != nullptr) {
+        if (current->next != NULL) {
             if (current->next <= current) {
                 printf("HEAP CORRUPTION: Circular or backwards link at %p -> %p\n", current, current->next);
                 return false;
@@ -76,8 +79,8 @@ void init_heap() {
 
     first_segment = (HeapSegment*) heap_start;
     first_segment->size    = (initial_pages << LOG2_PAGE_SIZE) - sizeof(HeapSegment);
-    first_segment->next    = nullptr;
-    first_segment->prev    = nullptr;
+    first_segment->next    = NULL;
+    first_segment->prev    = NULL;
     first_segment->is_free = true;
     first_segment->magic   = HEAP_MAGIC;
     first_segment->caller  = 0;
@@ -95,7 +98,7 @@ void* kmalloc(size_t size) {
 
     HeapSegment* current = first_segment;
 
-    while (current != nullptr) {
+    while (current != NULL) {
         if (current->is_free && current->size >= size) {
             // We need enough space for the requested size + a new header + at least 4 bytes of data
             if (current->size > size + sizeof(HeapSegment) + 4) {
@@ -110,7 +113,7 @@ void* kmalloc(size_t size) {
                 next_seg->magic   = HEAP_MAGIC;
                 next_seg->caller  = 0;
 
-                if (current->next != nullptr) {
+                if (current->next != NULL) {
                     current->next->prev = next_seg;
                 }
 
@@ -139,7 +142,7 @@ void kfree(void* ptr) {
     //     while(1);
     // }
 
-    if (ptr == nullptr) return;
+    if (ptr == NULL) return;
     HeapSegment* current = (HeapSegment*) ((uint32_t) ptr - sizeof(HeapSegment));
     if (current->magic != HEAP_MAGIC) return;
 
@@ -200,11 +203,11 @@ void kheap_expand(size_t size) {
 
     // Link it to the end of the chain
     HeapSegment* last = first_segment;
-    while (last->next != nullptr) last = last->next;
+    while (last->next != NULL) last = last->next;
 
     last->next = new_seg;
     new_seg->prev = last;
-    new_seg->next = nullptr;
+    new_seg->next = NULL;
 
     // Merge this new free block with the previous one if possible
     // free function already handles merging
@@ -216,7 +219,7 @@ size_t get_heap_total() {
 
     size_t total = 0;
     HeapSegment* current = first_segment;
-    while (current != nullptr) {
+    while (current != NULL) {
         total += current->size + sizeof(HeapSegment);
         current = current->next;
     }
@@ -226,7 +229,7 @@ size_t get_heap_total() {
 size_t get_heap_used() {
     size_t used = 0;
     HeapSegment* current = first_segment;
-    while (current != nullptr) {
+    while (current != NULL) {
         if (!current->is_free) {
             used += current->size;
         }
@@ -250,7 +253,7 @@ void print_memstat() {
     size_t heap_used  = get_heap_used();
 
     HeapSegment* current = first_segment;
-    while (current != nullptr) {
+    while (current != NULL) {
         printf("%p | %-9u | %-6s | 0x%08X\n",
                 current,
                 current->size,

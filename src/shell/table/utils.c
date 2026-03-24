@@ -17,7 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <string>
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
 
 #include "drivers/terminal.h"
 #include "process/task.h"
@@ -26,10 +28,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "shell/commands.h"
 
-#include "test.h" // TODO REMOVE
-
-void cmd_help(const std::string& args) {
-    for (size_t i = 0; command_table[i].name != nullptr; i++) {
+void cmd_help(const char* args) {
+    for (size_t i = 0; command_table[i].name != NULL; i++) {
         sh_print("%-*s %s\n",
                 INDENT_LEN * 2, // *2 because some commands are longer than 4 characters
                 command_table[i].name,
@@ -37,19 +37,19 @@ void cmd_help(const std::string& args) {
     }
 }
 
-void cmd_clear(const std::string& args) {
+void cmd_clear(const char* args) {
     terminal_clear();
 }
 
-void cmd_echo(const std::string& args) {
-    sh_print("%s\n", args.c_str());
+void cmd_echo(const char* args) {
+    sh_print("%s\n", args);
 }
 
-void cmd_memstat(const std::string& args) {
+void cmd_memstat(const char* args) {
     print_memstat();
 }
 
-void cmd_tasks(const std::string& args) {
+void cmd_tasks(const char* args) {
     size_t total_tasks = 0;
 
     // Disable interrupts to ensure atomicity
@@ -59,7 +59,7 @@ void cmd_tasks(const std::string& args) {
     task* curr = head;
 
     do {
-        const char* state_str = "READY";
+        char* state_str = "READY";
         if (curr->state == TASK_RUNNING) state_str = "RUNNING";
         if (curr->state == TASK_SLEEPING) state_str = "SLEEPING";
         if (curr->state == TASK_DEAD) state_str = "DEAD";
@@ -67,7 +67,7 @@ void cmd_tasks(const std::string& args) {
         sh_print("%-4ld %-10s %s\n",
             curr->id,
             state_str,
-            curr->name.c_str()
+            curr->name
         );
         curr = curr->next;
 
@@ -80,25 +80,32 @@ void cmd_tasks(const std::string& args) {
     sh_print("Total Tasks: %ld\n", total_tasks);
 }
 
-void cmd_kill(const std::string& args) {
-    if (args.empty()) {
+void cmd_kill(const char* args) {
+    if (args[0] == '\0') {
         sh_print("Usage: kill <pid>\n");
         return;
     }
 
-    uint32_t pid = std::stoi(args);
+    uint32_t pid = atoi(args);
     kill_task(pid);
 }
 
-void cmd_peek(const std::string& args) {
+void cmd_peek(const char* args) {
+    if (args[0] == '\0') {
+        sh_print("Usage: peek <pid>\n");
+        return;
+    }
+
     task* t = current_task;
-    for (int i = 0; i < total_tasks; i++) {
-        if(t->id == std::stoi(args)) {
+    uint32_t target_pid = atoi(args);
+
+    for (size_t i = 0; i < total_tasks; i++) {
+        if(t->id == target_pid) {
             task_registers_t* regs = (task_registers_t*) t->stack_pointer;
 
-            sh_print("--- Task Inspection: %s (PID: %d) ---\n", t->name.c_str(), t->id);
+            sh_print("--- Task Inspection: %s (PID: %d) ---\n", t->name, t->id);
             sh_print("State:           %d\n", t->state);
-            sh_print("Next task:       %s\n", t->next->name.c_str());
+            sh_print("Next task:       %s\n", t->next->name);
             sh_print("Page directory:  %p\n", t->page_directory);
             sh_print("Stack base:      %p\n", t->stack_base);
             sh_print("Stack origin:    %p\n", t->stack_origin);
@@ -116,39 +123,34 @@ void cmd_peek(const std::string& args) {
     sh_print("Task not found\n");
 }
 
-void cmd_grep(const std::string& args) {
-    // If someone types just 'grep' without a pipe or args
-    if (last_cmd_output.empty()) {
+void cmd_grep(const char* args) {
+    if (last_cmd_output[0] == '\0') {
         sh_print("grep: No input to search.\n");
         return;
     }
-    if (args.empty()) {
+    else if (args == NULL || args[0] == '\0') {
         sh_print("grep: Usage: <command> | grep <pattern>\n");
         return;
     }
 
-    size_t start = 0;
-    size_t end = last_cmd_output.find('\n');
+    char* start = last_cmd_output;
+    char* end = strchr(start, '\n');
 
-    while (end != std::string::npos) {
-        std::string line = last_cmd_output.substr(start, end - start);
+    while (end != NULL) {
+        char saved_char = *end;
+        *end = '\0';
 
-        if (line.find(args) != std::string::npos) {
-            sh_print("%s\n", line.c_str());
+        if (strstr(start, args) != NULL) {
+            sh_print("%s\n", start);
         }
 
+        *end = saved_char;
         start = end + 1;
-        end = last_cmd_output.find('\n', start);
+
+        end = strchr(start, '\n');
     }
 
-    std::string last_line = last_cmd_output.substr(start);
-    if (!last_line.empty() && last_line.find(args) != std::string::npos) {
-        sh_print("%s\n", last_line.c_str());
+    if (*start != '\0' && strstr(start, args) != NULL) {
+        sh_print("%s\n", start);
     }
-}
-
-void cmd_test(const std::string& args) { // TODO REMOVE
-    printf("test_pt_virt: %d\n", test_pt_virt);
-    printf("test_pt_first_entry: %d\n", test_pt_first_entry);
-    printf("test_value_int: %d\n", test_value_int);
 }

@@ -17,13 +17,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdbool.h>
+
 #include "architecture/io.h"
 
 #include "drivers/mouse.h"
 
 MouseEvent mouse_buffer[MOUSE_BUFFER_LEN];
-uint8_t    buffer_head = 0;
-uint8_t    buffer_tail = 0;
+volatile uint8_t buffer_head = 0;
+volatile uint8_t buffer_tail = 0;
 
 uint8_t    mouse_cycle = 0;
 int8_t     mouse_bytes[4];
@@ -100,7 +102,7 @@ void init_mouse() {
     inb(0x60); // Acknowledge
 }
 
-extern "C" void mouse_handler() {
+extern void mouse_handler() {
     uint8_t status = inb(0x64);
     if (!(status & 0x01) || !(status & 0x20)) goto end;
 

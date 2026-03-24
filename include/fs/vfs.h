@@ -20,38 +20,39 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef VFS_H
 #define VFS_H
 
-#include <string>
+#include <stdint.h>
+#include <stdbool.h>
 
-struct File {
-    std::string   name;
-    uint8_t*      data; // Pointer to the actual content in RAM
-    size_t        size;
-    bool          is_directory;
-};
+typedef struct File {
+    const char* name;
+    uint8_t*    data; // Pointer to the actual content in RAM
+    size_t      size;
+    bool        is_directory;
+} File;
 
-struct FileNode {
+typedef struct FileNode {
     File file;
-    FileNode* next;
-};
+    struct FileNode* next;
+} FileNode;
 
-struct FileOperations {
-    bool      (*read)   (std::string& name, void* buffer, size_t size);
-    bool      (*write)  (std::string& name, const void* buffer, size_t size);
-    bool      (*create) (std::string& name);
-    bool      (*mkdir)  (std::string& name);
-    bool      (*remove) (std::string& name);
-    File*     (*get)    (std::string& name);
-    FileNode* (*getall) (std::string& path);
-};
+typedef struct FileOperations {
+    int       (*read)   (const char* name, void* buffer, size_t size);
+    int       (*write)  (const char* name, const void* buffer, size_t size);
+    bool      (*create) (const char* name);
+    bool      (*mkdir)  (const char* name);
+    bool      (*remove) (const char* name);
+    File*     (*get)    (const char* name);
+    FileNode* (*getall) (const char* path);
+} FileOperations;
 
 void      vfs_mount (FileOperations* ops);
 
-bool      fs_read   (std::string& name, void* buffer, size_t size);
-bool      fs_write  (std::string& name, const void* buffer, size_t size);
-bool      fs_create (std::string& name);
-bool      fs_mkdir  (std::string& name);
-bool      fs_remove (std::string& name);
-File*     fs_get    (std::string& name);
-FileNode* fs_getall (std::string& path);
+int       fs_read   (const char* name, void* buffer, size_t size);
+int       fs_write  (const char* name, const void* buffer, size_t size);
+bool      fs_create (const char* name);
+bool      fs_mkdir  (const char* name);
+bool      fs_remove (const char* name);
+File*     fs_get    (const char* name);
+FileNode* fs_getall (const char* path);
 
 #endif

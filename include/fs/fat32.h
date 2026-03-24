@@ -20,10 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef FAT32_H
 #define FAT32_H
 
-#include <string>
 #include <stdint.h>
 
-struct FAT32Header {
+typedef struct FAT32Header {
     uint8_t  boot_jmp[3];
     uint8_t  oem_name[8];
     uint16_t bytes_per_sector;
@@ -53,9 +52,9 @@ struct FAT32Header {
     uint32_t volume_id;
     uint8_t  volume_label[11];
     uint8_t  fs_type[8];        // Should say "FAT32   " (hopefully)
-} __attribute__((packed));
+} __attribute__((packed)) FAT32Header;
 
-struct FAT32File {
+typedef struct FAT32File {
     uint8_t  name[11];      // 8 chars name, 3 extension
     uint8_t  attributes;    // If folder, read-only, etc.
     uint8_t  reservedNT;
@@ -68,18 +67,18 @@ struct FAT32File {
     uint16_t write_date;
     uint16_t cluster_low;   // Bottom 16 bits of the address
     uint32_t size;          // File size in bytes
-} __attribute__((packed));
+} __attribute__((packed)) FAT32File;
 
 extern FileOperations fat32_ops;
 
 void      init_fat32();
 
-bool      fat32_read   (std::string& name, void* buffer, size_t size);
-bool      fat32_write  (std::string& name, const void* buffer, size_t size);
-bool      fat32_create (std::string& name);
-bool      fat32_mkdir  (std::string& name);
-bool      fat32_remove (std::string& name);
-File*     fat32_get    (std::string& name);
-FileNode* fat32_getall (std::string& path);
+int       fat32_read   (const char* name, void* buffer, size_t size);
+int       fat32_write  (const char* name, const void* buffer, size_t size);
+bool      fat32_create (const char* name);
+bool      fat32_mkdir  (const char* name);
+bool      fat32_remove (const char* name);
+File*     fat32_get    (const char* name);
+FileNode* fat32_getall (const char* path);
 
 #endif

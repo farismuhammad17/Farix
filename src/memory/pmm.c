@@ -17,11 +17,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stddef.h>
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "memory/pmm.h"
 
 // Defined in scripts/linker.ld
-extern "C" uint32_t _kernel_start;
-extern "C" uint32_t _kernel_end;
+extern char _kernel_start;
+extern char _kernel_end;
 
 static uint32_t pmm_bitmap[BITMAP_SIZE];
 
@@ -70,17 +74,17 @@ void init_pmm(multiboot_info* mbi) {
     for (uint32_t i = 0; i < 256; i++) pmm_set_bit(i);
 
     // Protect Kernel (_kernel_start to _kernel_end)
-    uint32_t start_p = (uint32_t)  &_kernel_start / PAGE_SIZE;
-    uint32_t end_p   = ((uint32_t) &_kernel_end + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint32_t start_p = (uint32_t)  &_kernel_start >> LOG2_PAGE_SIZE;
+    uint32_t end_p   = ((uint32_t) &_kernel_end + PAGE_SIZE - 1) >> LOG2_PAGE_SIZE;
     for (uint32_t i = start_p; i <= end_p; i++) pmm_set_bit(i);
 
     // Protect the Bitmap itself
-    uint32_t b_start = (uint32_t)  pmm_bitmap / PAGE_SIZE;
-    uint32_t b_end   = ((uint32_t) pmm_bitmap + sizeof(pmm_bitmap) + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint32_t b_start = (uint32_t)  pmm_bitmap >> LOG2_PAGE_SIZE;
+    uint32_t b_end   = ((uint32_t) pmm_bitmap + sizeof(pmm_bitmap) + PAGE_SIZE - 1) >> LOG2_PAGE_SIZE;
     for (uint32_t i = b_start; i <= b_end; i++) pmm_set_bit(i);
 
     // Protect Multiboot structure
-    pmm_set_bit((uint32_t) mbi / PAGE_SIZE);
+    pmm_set_bit((uint32_t) mbi >> LOG2_PAGE_SIZE);
 }
 
 void* pmm_alloc_page() {
@@ -110,7 +114,7 @@ void* pmm_alloc_page() {
     }
 
     // If we're out of memory
-    return nullptr;
+    return NULL;
 }
 
 void pmm_free_page(void* addr) {

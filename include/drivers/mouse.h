@@ -20,20 +20,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef MOUSE_H
 #define MOUSE_H
 
+#include <stdbool.h>
+
 #define MOUSE_BUFFER_LEN 16
 
-struct MouseEvent {
+typedef struct MouseEvent {
     int8_t x, y;
     int8_t scroll;
     bool left, right;
-};
+} MouseEvent;
 
 extern MouseEvent mouse_buffer[16];
-extern uint8_t    buffer_head;
-extern uint8_t    buffer_tail;
+extern volatile uint8_t buffer_head;
+extern volatile uint8_t buffer_tail;
 
 void init_mouse();
-
-extern "C" void mouse_handler();
+extern void mouse_handler();
 
 #endif

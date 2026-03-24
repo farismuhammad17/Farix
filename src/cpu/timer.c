@@ -32,7 +32,7 @@ void init_timer(uint32_t frequency) {
     outb(0x40, high);
 }
 
-extern "C" void timer_handler() {
+void timer_handler() {
     // Send EOI to the PIC
     outb(0x20, 0x20);
     schedule(); // Swap tasks

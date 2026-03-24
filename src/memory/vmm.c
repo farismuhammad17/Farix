@@ -17,17 +17,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include "memory/pmm.h"
 
 #include "memory/vmm.h"
 
-#include "test.h" // TODO REMOVE
-
-int test_value_int;
-uint32_t test_pt_virt;
-uint32_t test_pt_first_entry;
-
-uint32_t* kernel_directory = nullptr;
+uint32_t* kernel_directory = NULL;
 
 void init_vmm() {
     // Allocate the Page Directory
