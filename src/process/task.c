@@ -37,8 +37,6 @@ size_t total_tasks = 0;
 void task_trampoline() {
     asm volatile("sti");
 
-    vmm_switch_directory(kernel_directory);
-
     if (current_task && current_task->entry_func) {
         current_task->entry_func();
     }
@@ -74,7 +72,7 @@ task* create_task(void (*entry_point)(), const char* name) {
     new_task->entry_func     = entry_point;
     new_task->name           = (char*) name;
     new_task->state          = TASK_READY;
-    new_task->page_directory = NULL;
+    new_task->page_directory = kernel_directory;
     new_task->heap_break     = 0;
 
     uint32_t* stack = (uint32_t*) kmalloc(4096);
@@ -138,6 +136,8 @@ void schedule() {
     if (next->stack_origin) {
         tss_entry.esp0 = (uint32_t) next->stack_origin + 4096;
     }
+
+    vmm_switch_directory(next->page_directory);
 
     switch_task(&last->stack_pointer, next->stack_pointer);
 }

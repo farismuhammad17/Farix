@@ -23,7 +23,7 @@ elf_user_trampoline_stub:
     ; The processor expects: SS, ESP, EFLAGS, CS, EIP
     push 0x23           ; SS (User Data)
     push ecx            ; ESP (User Stack)
-    push 0x202          ; EFLAGS (IF bit set)
+    push 0x3202         ; EFLAGS (IF bit set)
     push 0x1B           ; CS (User Code: Index 3, RPL 3)
     push eax            ; EIP (Entry Point)
 

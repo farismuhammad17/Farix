@@ -35,7 +35,6 @@ extern void elf_user_trampoline_stub(uint32_t entry, uint32_t stack);
 static void elf_user_trampoline() {
     task* t = current_task;
 
-    vmm_switch_directory(t->page_directory);
     set_kernel_stack((uint32_t) t->stack_origin + 4096);
 
     uint32_t entry_point = (uint32_t) t->entry_func;
@@ -67,7 +66,8 @@ bool exec(const char* path) {
 
     elf_header_t* header = (elf_header_t*) file_buffer;
 
-    if (header->e_ident[0] != ELFMAG0 || // An ELF file always starts with 0x7F, then 'E', 'L', and 'F'
+    // An ELF file always starts with 0x7F, then 'E', 'L', and 'F'
+    if (header->e_ident[0] != ELFMAG0 ||
         header->e_ident[1] != ELFMAG1 ||
         header->e_ident[2] != ELFMAG2 ||
         header->e_ident[3] != ELFMAG3)
@@ -86,16 +86,18 @@ bool exec(const char* path) {
         return false;
     }
 
-    uint32_t* current_pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(current_pd_phys);
+    uint32_t* current_pd_virt     = (uint32_t*) PHYSICAL_TO_VIRTUAL(current_pd_phys);
     uint32_t* user_pd_virt_handle = (uint32_t*) PHYSICAL_TO_VIRTUAL(user_pd_phys);
 
     for (int i = 0; i < 768; i++)    user_pd_virt_handle[i] = 0;
     for (int i = 768; i < 1024; i++) user_pd_virt_handle[i] = current_pd_virt[i];
 
-    elf_program_header_t* phdr = (elf_program_header_t*)(file_buffer + header->e_phoff);
+    asm volatile("cli");
+
+    vmm_switch_directory(user_pd_phys);
 
     uint32_t highest_vaddr = 0;
-    vmm_switch_directory(user_pd_phys);
+    elf_program_header_t* phdr = (elf_program_header_t*)(file_buffer + header->e_phoff);
 
     for (int i = 0; i < header->e_phnum; i++) {
         if (phdr[i].p_type == PT_LOAD) {
@@ -108,18 +110,53 @@ bool exec(const char* path) {
 
             for (uint32_t v = start_vaddr; v < end_vaddr; v += PAGE_SIZE) {
                 void* phys = pmm_alloc_page();
-
                 vmm_map_page(user_pd_phys, phys, (void*) v, PAGE_PRESENT | PAGE_RW | PAGE_USER);
-                kmemset((void*) PHYSICAL_TO_VIRTUAL(phys), 0, PAGE_SIZE);
+
+                // Access the page via the Kernel's Direct Mapping
+                uint8_t* kernel_vaddr = (uint8_t*) PHYSICAL_TO_VIRTUAL(phys);
+
+                // Always zero the page first (handles .bss and padding)
+                kmemset(kernel_vaddr, 0, PAGE_SIZE);
+
+                // Check if we need to copy file data into this specific page
+                uint32_t segment_start    = phdr[i].p_vaddr;
+                uint32_t segment_data_end = phdr[i].p_vaddr + phdr[i].p_filesz;
+
+                // Calculate overlap between this page [v, v + 4096] and the initialized data
+                uint32_t copy_start = (v > segment_start) ? v : segment_start;
+                uint32_t copy_end   = (v + PAGE_SIZE < segment_data_end) ? (v + PAGE_SIZE) : segment_data_end;
+
+                if (copy_start < copy_end) {
+                    uint32_t offset_in_page = copy_start - v;
+                    uint32_t offset_in_file = copy_start - segment_start;
+                    uint32_t len = copy_end - copy_start;
+
+                    uint32_t src_addr = (uint32_t)file_buffer + phdr[i].p_offset + offset_in_file;
+                    printf("Copying from %x to %x (len %d)\n", src_addr, kernel_vaddr + offset_in_page, len);
+
+                    kmemcpy(kernel_vaddr + offset_in_page,
+                            file_buffer + phdr[i].p_offset + offset_in_file,
+                            len);
+
+                    uint8_t* phys_view = (uint8_t*) PHYSICAL_TO_VIRTUAL(phys); // TODO REM
+                    uint8_t* virt_view = (uint8_t*) v;
+
+                    printf("PHYS (RAM): %x %x %x\n", phys_view[0], phys_view[1], phys_view[2]);
+                    printf("VIRT (CPU): %x %x %x\n", virt_view[0], virt_view[1], virt_view[2]);
+                }
             }
 
-            if (phdr[i].p_filesz > 0) {
-                kmemcpy((void*) phdr[i].p_vaddr, (void*)(file_buffer + phdr[i].p_offset), phdr[i].p_filesz);
+            // Final Verification Check (Reading from the USER virtual address) TODO REM
+            printf("Segment %d mapped. Verifying at %x:\n", i, phdr[i].p_vaddr);
+            uint8_t* check = (uint8_t*) phdr[i].p_vaddr;
+            for (int j = 0; j < 16; j++) {
+                printf("%x ", check[j]);
             }
+            printf("\n");
         }
     }
 
-    vmm_switch_directory(current_pd_phys);
+    asm volatile("sti");
 
     kfree(file_buffer);
 
@@ -142,8 +179,8 @@ bool exec(const char* path) {
     strncpy(elf_task->name, path, 31);
     elf_task->name[31] = '\0';
 
-    elf_task->entry_func     = (void(*)()) header->e_entry;
-    elf_task->stack_base     = (uint32_t*) USER_STACK_TOP;
+    elf_task->entry_func = (void(*)()) header->e_entry;
+    elf_task->stack_base = (uint32_t*) USER_STACK_TOP;
 
     uint32_t* stack = (uint32_t*) kmalloc(4096);
     uint32_t* esp   = stack + 1024;

@@ -17,7 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "fs/vfs.h"
 #include "fs/elf.h"
@@ -41,7 +43,7 @@ char* full_path_to(const char* filename) {
         return (char*) filename;
 
     // dir + "/" + filename
-    kmemset(path_buffer, 0, sizeof(path_buffer));
+    memset(path_buffer, 0, sizeof(path_buffer));
     strcpy(path_buffer, dir);
     strcat(path_buffer, "/");
     strcat(path_buffer, filename);
@@ -120,13 +122,13 @@ void cmd_cat(const char* args) {
 
     if (f->size == 0) return;
 
-    char* buffer = (char*) kmalloc(f->size + 1);
+    char* buffer = (char*) malloc(f->size + 1);
     if (!buffer) {
         sh_print("cat: out of memory\n");
         return;
     }
 
-    kmemset(buffer, 0, f->size + 1);
+    memset(buffer, 0, f->size + 1);
 
     if (fs_read(filename, (uint8_t*)buffer, f->size))
         sh_print("%s\n", buffer);
@@ -139,10 +141,10 @@ void cmd_write(const char* args) {
 
     const char* content = NULL;
     char filename[MAX_FILENAME_LEN];
-    kmemset(filename, 0, MAX_FILENAME_LEN);
+    memset(filename, 0, MAX_FILENAME_LEN);
 
     // Find space to separate filename from inline content
-    char* first_space = strchr(args, ' ');
+    char* first_space = (char*) strchr(args, ' ');
 
     if (first_space == NULL) {
         if (last_cmd_output[0] == '\0') return;

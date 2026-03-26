@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -58,7 +59,7 @@ void init_shell() {
     shell_directory[MAX_DIRECTORY_PATH_LEN - 1] = '\0';
 
     // Clear the buffer
-    kmemset(shell_buffer, 0, MAX_SHELL_BUFFER_LEN);
+    memset(shell_buffer, 0, MAX_SHELL_BUFFER_LEN);
     shell_buffer_ready = false;
 
     printf("%s> ", shell_directory);
@@ -109,7 +110,7 @@ void shell_parse(const char* input) {
 
     // Allocate the buffer once if it's null
     if (!pipe_buffer) pipe_buffer = (char*) malloc(PIPE_BUFFER_SIZE);
-    kmemset(pipe_buffer, 0, PIPE_BUFFER_SIZE);
+    memset(pipe_buffer, 0, PIPE_BUFFER_SIZE);
 
     char* segments[2];
     int num_segments = 0;
