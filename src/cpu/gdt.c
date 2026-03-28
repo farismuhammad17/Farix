@@ -55,9 +55,13 @@ void init_gdt() {
         base_access | GDT_ACCESS_RING3 | GDT_ACCESS_WRITABLE,
         base_gran | 0x0F);
 
-    init_tss(5, 0x10, 0); // TODO: Set properly later
+    uint32_t current_esp;
+    asm volatile("mov %%esp, %0" : "=r"(current_esp));
+    init_tss(5, 0x10, current_esp);
+
+    // Defined in gdt_flush.asm
     gdt_flush((uint32_t) &gdt_ptr);
-    load_tss(); // Defined in gdt_flush.asm
+    load_tss();
 }
 
 void gdt_set_entry(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran) {

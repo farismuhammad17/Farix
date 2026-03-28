@@ -26,30 +26,40 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 uint32_t* kernel_directory = NULL;
 
-void init_vmm() {
-    // Allocate the Page Directory
-    uint32_t phys_pd = (uint32_t)  pmm_alloc_page();
-    kernel_directory = (uint32_t*) phys_pd; // Physical anchor for CR3
+static void vmm_enable_paging(uint32_t pd_phys) {
+    asm volatile("mov %0, %%cr3" : : "r"(pd_phys));
 
-    // Clear the Directory using its physical address
+    uint32_t cr0;
+    asm volatile("mov %%cr0, %0" : "=r"(cr0));
+
+    cr0 |= PAGING_BIT;
+    cr0 |= PAGE_WP_BIT;
+
+    asm volatile("mov %0, %%cr0" : : "r"(cr0));
+}
+
+void init_vmm() {
+    uint32_t phys_pd = (uint32_t) pmm_alloc_page();
+    kernel_directory = (uint32_t*) phys_pd;
+
+    // Before paging is on, physical == virtual
     uint32_t* pd_ptr = (uint32_t*) phys_pd;
     for (int i = 0; i < 1024; i++) pd_ptr[i] = 0;
 
-    // Allocate one Page Table to identity map the first 4MB
-    uint32_t phys_pt = (uint32_t)  pmm_alloc_page();
-    uint32_t* pt_ptr = (uint32_t*) phys_pt;
-    for (uint32_t i = 0; i < 1024; i++) {
-        pt_ptr[i] = (i << 12) | PAGE_PRESENT | PAGE_RW;
+    for (uint32_t i = 0; i < (VMM_INIT_MAP_SIZE >> 2); i++) {
+        uint32_t phys_pt = (uint32_t) pmm_alloc_page();
+        uint32_t* pt_ptr = (uint32_t*) phys_pt;
+
+        for (uint32_t j = 0; j < 1024; j++) {
+            uint32_t physical_addr = (i << 22) + (j << 12);
+            pt_ptr[j] = physical_addr | PAGE_PRESENT | PAGE_RW;
+        }
+
+        pd_ptr[i] = phys_pt | PAGE_PRESENT | PAGE_RW;
+        pd_ptr[768 + i] = phys_pt | PAGE_PRESENT | PAGE_RW;
     }
 
-    // Index 0: Identity Map (0x0 - 0x3FFFFF)
-    pd_ptr[0] = phys_pt | PAGE_PRESENT | PAGE_RW;
-
-    // Index 768: Direct Map (0xC0000000 - 0xC03FFFFF)
-    // 22 = log_2(PAGE_SIZE) + log_2(PAGE_TABLES) = 12 + 10 = 22
-    pd_ptr[PAGE_OFFSET >> 22] = phys_pt | PAGE_PRESENT | PAGE_RW;
-
-    vmm_switch_directory(kernel_directory);
+    vmm_enable_paging(phys_pd);
 }
 
 void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags) {
@@ -65,7 +75,7 @@ void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags) {
         // Link it in the PD
         pd_virt[pd_index] = phys_table | PAGE_PRESENT | PAGE_RW | PAGE_USER;
 
-        // Zero out the new table using Direct Mapping
+        // Zero out the new table
         uint32_t* table_ptr = (uint32_t*) PHYSICAL_TO_VIRTUAL(phys_table);
         for (int i = 0; i < 1024; i++) {
             table_ptr[i] = 0;
@@ -105,8 +115,24 @@ void vmm_unmap_page(void* virt) {
     }
 }
 
-void vmm_switch_directory(uint32_t* directory) {
-    asm volatile("mov %0, %%cr3" : : "r"(directory) : "memory");
+uint32_t* vmm_copy_kernel_directory() {
+    uint32_t  phys_pd = (uint32_t)  pmm_alloc_page();
+    uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(phys_pd);
+    for (int i = 0; i < 1024; i++) pd_virt[i] = 0;
+
+    uint32_t* k_pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(kernel_directory);
+
+    for (int i = 768; i < 1024; i++)
+        pd_virt[i] = k_pd_virt[i];
+    for (int i = 0; i < (VMM_INIT_MAP_SIZE >> 2); i++)
+        pd_virt[i] = k_pd_virt[i];
+
+    return (uint32_t*) phys_pd;
+}
+
+// Uses physical addresses
+void vmm_switch_directory(uint32_t* page_directory) {
+    asm volatile("mov %0, %%cr3" : : "r"(page_directory) : "memory");
 }
 
 uint32_t* vmm_get_current_directory() {

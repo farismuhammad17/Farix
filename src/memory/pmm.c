@@ -97,15 +97,6 @@ void* pmm_alloc_page() {
                     uint32_t page_number = (i << 5) | j;
                     pmm_set_bit(page_number);
 
-                    // Since we don't actually free out the stuff in data when
-                    // we free a page, when we come to allocate a page, we may
-                    // get back a page filled with junk data - potentially im-
-                    // portant passwords, stack data, etc.
-                    //
-                    // A better OS/Kernel would clean off with a memset before
-                    // giving back the page here, but we're not a good kernel,
-                    // yet.
-
                     // Address = Page Number * 4096 (4KB)
                     return (void*)(page_number << LOG2_PAGE_SIZE);
                 }

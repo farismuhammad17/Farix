@@ -23,13 +23,15 @@ extern timer_handler
 global timer_handler_stub
 
 switch_task:
-    pusha               ; Save current registers
-    mov eax, [esp + 36] ; &last->stack_pointer
-    mov [eax], esp
+    pusha
+    mov eax, [esp + 36] ; eax = &last->stack_pointer
+    mov edx, [esp + 40] ; edx = next->stack_pointer (Load this NOW)
 
-    mov esp, [esp + 40] ; Load next->stack_pointer
-    popa                ; Restore new task's registers
-    ret                 ; Return back into timer_handler -> timer_handler_stub
+    mov [eax], esp      ; Save old ESP
+    mov esp, edx        ; Switch to new ESP
+
+    popa
+    ret
 
 timer_handler_stub:
     pusha                ; Save everything before calling C++

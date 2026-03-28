@@ -23,6 +23,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <stdbool.h>
 
+#define VMM_INIT_MAP_SIZE 32 // MB
+
+#define PAGING_BIT  0x80000000
+#define PAGE_WP_BIT 0x00010000
+
 #define PAGE_PRESENT  0x1 // 01 in binary  - If page is in RAM
 #define PAGE_RW       0x2 // 10 in binary  - 0 = Read-only,   1 = Read/Write
 #define PAGE_USER     0x4 // 100 in binary - 0 = Kernel only, 1 = Everyone
@@ -38,8 +43,9 @@ extern uint32_t* kernel_directory;
 void init_vmm();
 void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags);
 void vmm_unmap_page(void* virt);
+uint32_t* vmm_copy_kernel_directory();
 
-void vmm_switch_directory(uint32_t* directory);
+void vmm_switch_directory(uint32_t* page_directory);
 uint32_t* vmm_get_current_directory();
 
 #endif

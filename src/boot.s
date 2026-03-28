@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-/* Multiboot Header constants */
+# Multiboot Header constants
 
 .set ALIGN,    1<<0
 .set MEMINFO,  1<<1
@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 .set MAGIC,    0x1BADB002
 .set CHECKSUM, -(MAGIC + FLAGS)
 
-/* Declare the Multiboot section */
+# Declare the Multiboot section
 
 .section .multiboot
 .align 4
@@ -33,40 +33,41 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 .long FLAGS
 .long CHECKSUM
 
-/* Reserve a small area for the stack */
+# Reserve a small area for the stack
 
 .section .bss
 .align 16
 stack_bottom:
-.skip 65536 /* 64 KiB of space */
+.global stack_bottom
+.skip 65536 # 64 KiB of space
 stack_top:
 .global stack_top
 
-/* The actual entry point where the CPU begins execution */
+# The actual entry point where the CPU begins execution
 
 .section .text
 .global _start
 .type _start, @function
 
 _start:
-	/* Setup the Stack */
+	# Setup the Stack
 	mov $stack_top, %esp
 
 	push %ebx    # This becomes 'mbi'
     push %eax    # This becomes 'magic'
 
-	/* Call the C++ kernel_main function */
+	# Call the C++ kernel_main function
 	call kernel_main
 
-	/* Safety Net */
-	/* If kernel_main ever returns, we put the CPU in an infinite loop */
+	# Safety Net
+	# If kernel_main ever returns, we put the CPU in an infinite loop
 cli
 1:	hlt
 	jmp 1b
 
 .size _start, . - _start
 
-/* IDT handlers */
+# IDT handlers
 
 .global default_handler_stub
 .global keyboard_handler_stub

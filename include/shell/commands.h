@@ -30,6 +30,7 @@ typedef struct ShellCommand {
 
 extern ShellCommand command_table[];
 
+// utils
 void cmd_help(const char* args);
 void cmd_clear(const char* args);
 void cmd_echo(const char* args);
@@ -39,6 +40,7 @@ void cmd_kill(const char* args);
 void cmd_peek(const char* args);
 void cmd_grep(const char* args);
 
+// fs
 void cmd_cd(const char* args);
 void cmd_cat(const char* args);
 void cmd_write(const char* args);
@@ -47,5 +49,8 @@ void cmd_mkdir(const char* args);
 void cmd_rm(const char* args);
 void cmd_ls(const char* args);
 void cmd_exec(const char* args);
+
+void test_write(const char* args);
+void test_read(const char* args);
 
 #endif

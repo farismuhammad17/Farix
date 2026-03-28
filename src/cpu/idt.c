@@ -40,7 +40,7 @@ void init_idt() {
     idt_set_gate(128, (uint32_t) syscall_handler_stub, 0x08, IDT_GATE_USER);
 
     // CPU Exceptions (0-31)
-    idt_set_gate(0,  (uint32_t) isr0,  0x08, IDT_GATE_KERNEL); // Divide by Zero
+    idt_set_gate(0,  (uint32_t) isr0,  0x08, IDT_GATE_KERNEL);
     idt_set_gate(1,  (uint32_t) isr1,  0x08, IDT_GATE_KERNEL);
     idt_set_gate(2,  (uint32_t) isr2,  0x08, IDT_GATE_KERNEL);
     idt_set_gate(3,  (uint32_t) isr3,  0x08, IDT_GATE_KERNEL);
@@ -53,8 +53,8 @@ void init_idt() {
     idt_set_gate(10, (uint32_t) isr10, 0x08, IDT_GATE_KERNEL);
     idt_set_gate(11, (uint32_t) isr11, 0x08, IDT_GATE_KERNEL);
     idt_set_gate(12, (uint32_t) isr12, 0x08, IDT_GATE_KERNEL);
-    idt_set_gate(13, (uint32_t) isr13, 0x08, IDT_GATE_KERNEL); // General Protection Fault
-    idt_set_gate(14, (uint32_t) isr14, 0x08, IDT_GATE_KERNEL); // Page Fault
+    idt_set_gate(13, (uint32_t) isr13, 0x08, IDT_GATE_KERNEL);
+    idt_set_gate(14, (uint32_t) isr14, 0x08, IDT_GATE_KERNEL);
     idt_set_gate(15, (uint32_t) isr15, 0x08, IDT_GATE_KERNEL);
     idt_set_gate(16, (uint32_t) isr16, 0x08, IDT_GATE_KERNEL);
     idt_set_gate(17, (uint32_t) isr17, 0x08, IDT_GATE_KERNEL);

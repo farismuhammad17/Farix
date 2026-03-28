@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // From boot.s
 extern uint32_t stack_top;
+extern uint32_t stack_bottom;
 extern void switch_task(uint32_t** old_esp, uint32_t new_esp);
 
 task* current_task = NULL;
@@ -57,7 +58,8 @@ void init_multitasking() {
     main_task->state = TASK_READY;
     main_task->next  = main_task;     // Point to itself for now
     main_task->name  = "init";
-    main_task->page_directory = NULL;
+    main_task->page_directory = kernel_directory;
+    main_task->stack_origin   = &stack_bottom;
 
     current_task = main_task;
 

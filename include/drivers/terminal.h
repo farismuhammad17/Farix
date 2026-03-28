@@ -24,11 +24,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdbool.h>
 #include <stddef.h>
 
-#define VGA_MEMORY (uint16_t*) 0xB8000
-
 #define WIDTH  80
 #define HEIGHT 25
 #define MEMORY 0xB8000
+#define VGA_MEMORY (uint16_t*) 0xB8000
 
 #define ESC_CODE 0x1B
 

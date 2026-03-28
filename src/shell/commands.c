@@ -38,6 +38,8 @@ ShellCommand command_table[] = {
     {"rm", cmd_rm, "Delete file"},
     {"ls", cmd_ls, "List directory contents"},
     {"exec", cmd_exec, "Execute ELF file"},
+    {"tr", test_read, "TODO"},
+    {"tw", test_write, "REMOVE"},
 
     {NULL, NULL, NULL} // to mark the end
 };

@@ -50,11 +50,18 @@ void shell_thread() {
 
 extern void _init();
 
-void kernel_main(uint32_t magic, multiboot_info* mbi) {
-    init_idt();
-    init_gdt();
+/*
+ * TODO:
+ * - Verify VMM functions
+ * - Is everything actually working
+ * - Check RAMDISK
+ */
 
+void kernel_main(uint32_t magic, multiboot_info* mbi) {
     pic_remap();
+
+    init_gdt();
+    init_idt();
 
     init_terminal();
 
@@ -72,6 +79,9 @@ void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_keyboard();
     init_mouse();
 
+    init_multitasking();
+    init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms
+
     // Enable interrupts
     asm volatile("sti");
 
@@ -81,9 +91,6 @@ void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_fat32();
 
     vfs_mount(&fat32_ops);    // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
-
-    init_multitasking();
-    init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms
 
     init_shell();
 
