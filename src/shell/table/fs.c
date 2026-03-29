@@ -17,15 +17,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#include "fs/vfs.h"
-#include "fs/elf.h"
-#include "process/task.h"
-#include "memory/heap.h"
 #include "drivers/terminal.h"
+#include "fs/elf.h"
+#include "fs/vfs.h"
+#include "memory/heap.h"
+#include "process/task.h"
 #include "shell/shell.h"
 
 #include "shell/commands.h"

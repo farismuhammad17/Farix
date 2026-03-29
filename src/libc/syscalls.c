@@ -17,19 +17,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <errno.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <stdio.h>
-#include <errno.h>
 
+#include "drivers/keyboard.h"
+#include "drivers/terminal.h"
+#include "fs/vfs.h"
+#include "memory/heap.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
-#include "memory/heap.h"
-#include "drivers/terminal.h"
-#include "drivers/keyboard.h"
 #include "process/task.h"
-#include "fs/vfs.h"
 
 #include "libc/syscalls.h"
 

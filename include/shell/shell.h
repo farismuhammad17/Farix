@@ -20,8 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef SHELL_H
 #define SHELL_H
 
-#include <stdbool.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 #define MAX_DIRECTORY_PATH_LEN   256
 #define MAX_SHELL_BUFFER_LEN    1024

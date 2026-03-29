@@ -65,6 +65,8 @@ typedef struct {
     uint32_t p_align;
 } __attribute__((packed)) elf_program_header_t;
 
+extern void elf_user_trampoline();
+
 bool exec(const char* path);
 
 #endif

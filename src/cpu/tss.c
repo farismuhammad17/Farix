@@ -17,8 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "memory/heap.h"
 #include "cpu/gdt.h"
+#include "memory/heap.h"
 
 #include "cpu/tss.h"
 

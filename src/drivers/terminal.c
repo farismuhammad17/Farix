@@ -17,17 +17,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "architecture/io.h"
-#include "memory/heap.h"
-#include "process/task.h"
 #include "drivers/keyboard.h"
 #include "drivers/mouse.h"
+#include "memory/heap.h"
+#include "process/task.h"
 #include "shell/shell.h"
 
 #include "drivers/terminal.h"

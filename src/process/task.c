@@ -17,12 +17,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
-#include "memory/vmm.h"
-#include "memory/heap.h"
 #include "cpu/tss.h"
+#include "memory/heap.h"
+#include "memory/vmm.h"
+
+#include "fs/elf.h"
 
 #include "process/task.h"
 
@@ -66,7 +69,7 @@ void init_multitasking() {
     total_tasks++;
 }
 
-task* create_task(void (*entry_point)(), const char* name) {
+task* create_task(void (*entry_point)(), const char* name, const bool privilege) {
     task* new_task = (task*) kmalloc(sizeof(task));
     kmemset(new_task, 0, sizeof(task));
 
@@ -76,11 +79,16 @@ task* create_task(void (*entry_point)(), const char* name) {
     new_task->state          = TASK_READY;
     new_task->page_directory = kernel_directory;
     new_task->heap_break     = 0;
+    new_task->privilege      = privilege;
 
     uint32_t* stack = (uint32_t*) kmalloc(4096);
     uint32_t* esp = stack + 1024; // High address
 
-    *(--esp) = (uint32_t) task_trampoline;  // EIP (Where the task starts)
+    if (privilege) { // 0 -> Kernel task
+        *(--esp) = (uint32_t) elf_user_trampoline;
+    } else {
+        *(--esp) = (uint32_t) task_trampoline;  // EIP (Where the task starts)
+    }
 
     // The PUSHA placeholders (8 registers)
     for (int i = 0; i < 8; i++) *(--esp) = 0;
@@ -117,6 +125,16 @@ void kill_task(uint32_t id) {
     }
 }
 
+// I have thought up of an algorithm much more efficient
+// that works in O(1) time, and genuinely works significantly
+// better than any other kernel's (as far as I have seen).
+// Got it right before sleeping at night (yes, that occasionally
+// happens from time-to-time), but I'm scared to changing this rn
+// and leave some small error in here that I have no clue about
+// and mess up the entire kernel in the future because of some
+// weird scheduler reason. As a result, this circular singly linked
+// list will do, and will later be swapped out for the different
+// algorithm in my head.
 void schedule() {
     if (!current_task || current_task->next == current_task) return;
 

@@ -20,19 +20,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <string.h>
 
-#include "memory/pmm.h"
-#include "memory/vmm.h"
-#include "memory/heap.h"
-#include "process/task.h"
 #include "cpu/tss.h"
 #include "fs/vfs.h"
+#include "memory/heap.h"
+#include "memory/pmm.h"
+#include "memory/vmm.h"
+#include "process/task.h"
 
 #include "fs/elf.h"
 
 extern uint32_t stack_top; // From boot.s
 extern void elf_user_trampoline_stub(uint32_t entry, uint32_t stack);
 
-static void elf_user_trampoline() {
+void elf_user_trampoline() {
     task* t = current_task;
 
     set_kernel_stack((uint32_t) t->stack_origin + 4096);
@@ -78,7 +78,7 @@ bool exec(const char* path) {
     }
 
     uint32_t* current_pd_phys = vmm_get_current_directory();
-    uint32_t* user_pd_phys = (uint32_t*) pmm_alloc_page();
+    uint32_t* user_pd_phys    = (uint32_t*) pmm_alloc_page();
 
     if (!user_pd_phys) {
         printf("ELF Error: Failed to allocate page directory\n");
@@ -94,8 +94,6 @@ bool exec(const char* path) {
 
     asm volatile("cli");
 
-    vmm_switch_directory(user_pd_phys);
-
     uint32_t highest_vaddr = 0;
     elf_program_header_t* phdr = (elf_program_header_t*)(file_buffer + header->e_phoff);
 
@@ -104,9 +102,8 @@ bool exec(const char* path) {
             uint32_t start_vaddr = phdr[i].p_vaddr & ~0xFFF;
             uint32_t end_vaddr   = (phdr[i].p_vaddr + phdr[i].p_memsz + 0xFFF) & ~0xFFF;
 
-            if (end_vaddr > highest_vaddr) {
+            if (end_vaddr > highest_vaddr)
                 highest_vaddr = end_vaddr;
-            }
 
             for (uint32_t v = start_vaddr; v < end_vaddr; v += PAGE_SIZE) {
                 void* phys = pmm_alloc_page();
@@ -131,69 +128,33 @@ bool exec(const char* path) {
                     uint32_t offset_in_file = copy_start - segment_start;
                     uint32_t len = copy_end - copy_start;
 
-                    uint32_t src_addr = (uint32_t)file_buffer + phdr[i].p_offset + offset_in_file;
-                    printf("Copying from %x to %x (len %d)\n", src_addr, kernel_vaddr + offset_in_page, len);
-
                     kmemcpy(kernel_vaddr + offset_in_page,
                             file_buffer + phdr[i].p_offset + offset_in_file,
                             len);
-
-                    uint8_t* phys_view = (uint8_t*) PHYSICAL_TO_VIRTUAL(phys); // TODO REM
-                    uint8_t* virt_view = (uint8_t*) v;
-
-                    printf("PHYS (RAM): %x %x %x\n", phys_view[0], phys_view[1], phys_view[2]);
-                    printf("VIRT (CPU): %x %x %x\n", virt_view[0], virt_view[1], virt_view[2]);
                 }
             }
-
-            // Final Verification Check (Reading from the USER virtual address) TODO REM
-            printf("Segment %d mapped. Verifying at %x:\n", i, phdr[i].p_vaddr);
-            uint8_t* check = (uint8_t*) phdr[i].p_vaddr;
-            for (int j = 0; j < 16; j++) {
-                printf("%x ", check[j]);
-            }
-            printf("\n");
         }
     }
 
     asm volatile("sti");
 
-    kfree(file_buffer);
+    task* elf_task = create_task((void(*)()) header->e_entry, path, 1);
 
-    void*    stack_phys = pmm_alloc_page();
+    elf_task->page_directory = user_pd_phys;   // Switch from default kernel_directory
+    elf_task->heap_break     = highest_vaddr;
+    elf_task->stack_base     = (uint32_t*) USER_STACK_TOP;
+
+    void* stack_phys = pmm_alloc_page();
     uint32_t stack_virt_addr = USER_STACK_TOP - PAGE_SIZE;
 
-    vmm_map_page(user_pd_phys, stack_phys, (void*) stack_virt_addr, PAGE_PRESENT | PAGE_RW | PAGE_USER);
+    // Map it into the USER Page Directory
+    vmm_map_page(user_pd_phys, stack_phys, (void*) stack_virt_addr,
+                    PAGE_PRESENT | PAGE_RW | PAGE_USER);
 
     uint32_t* stack_ptr = (uint32_t*) PHYSICAL_TO_VIRTUAL(stack_phys);
-    for (int i = 0; i < 1024; i++) stack_ptr[i] = 0;
+    kmemset(stack_ptr, 0, PAGE_SIZE);
 
-    task* elf_task = (task*) kmalloc(sizeof(task));
-    kmemset(elf_task, 0, sizeof(task));
-
-    elf_task->id             = next_pid++;
-    elf_task->page_directory = user_pd_phys;
-    elf_task->heap_break     = highest_vaddr;
-    elf_task->state          = TASK_READY;
-
-    strncpy(elf_task->name, path, 31);
-    elf_task->name[31] = '\0';
-
-    elf_task->entry_func = (void(*)()) header->e_entry;
-    elf_task->stack_base = (uint32_t*) USER_STACK_TOP;
-
-    uint32_t* stack = (uint32_t*) kmalloc(4096);
-    uint32_t* esp   = stack + 1024;
-
-    *(--esp) = (uint32_t) elf_user_trampoline;
-    for (int i = 0; i < 8; i++) *(--esp) = 0;
-
-    elf_task->stack_pointer = (uint32_t) esp;
-    elf_task->stack_origin  = stack;
-
-    elf_task->next     = current_task->next;
-    current_task->next = elf_task;
-    total_tasks++;
+    kfree(file_buffer);
 
     return true;
 }

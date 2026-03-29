@@ -20,8 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef TASK_H
 #define TASK_H
 
-#include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #define TASK_RUNNING  0
 #define TASK_READY    1
@@ -44,6 +45,7 @@ typedef struct task {
     uint32_t* stack_origin;
     uint32_t elf_entry_point;
     void (*entry_func)();
+    bool privilege;           // 0 -> Kernel ; 1 -> User
     char* name;
 } task;
 
@@ -58,7 +60,7 @@ extern size_t total_tasks;
 
 void init_multitasking();
 
-task* create_task(void (*entry_point)(), const char* name);
+task* create_task(void (*entry_point)(), const char* name, const bool privilege);
 void  kill_task(uint32_t id);
 void  schedule();
 

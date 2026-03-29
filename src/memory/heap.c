@@ -17,21 +17,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdio.h>
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "memory/pmm.h"
 #include "memory/vmm.h"
 
 #include "memory/heap.h"
 
-static void*        heap_start    = (void*) 0x1000000;
+static void*        heap_start    = (void*) PHYSICAL_TO_VIRTUAL(0x1000000);
 static void*        heap_end      = NULL;
 static HeapSegment* first_segment = NULL;
-
-static uint32_t user_heap_break = 0x40000000;
 
 bool check_heap() {
     HeapSegment* current = first_segment;

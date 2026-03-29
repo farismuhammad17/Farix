@@ -18,12 +18,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <ctype.h>
-#include <string.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "drivers/ata.h"
-#include "memory/heap.h"
 #include "fs/vfs.h"
+#include "memory/heap.h"
 
 #include "fs/fat32.h"
 

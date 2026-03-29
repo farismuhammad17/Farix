@@ -17,13 +17,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdlib.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "drivers/terminal.h"
-#include "process/task.h"
 #include "memory/heap.h"
+#include "process/task.h"
 #include "shell/shell.h"
 
 #include "memory/vmm.h" // TODOR REM
@@ -159,77 +159,59 @@ void cmd_grep(const char* args) {
 
 // TODO REMOVE
 
-static void* pmm_alloc_page_SAFE() {
-    void* ptr = pmm_alloc_page();
-    if ((uint32_t)ptr >= (31 * 1024 * 1024)) {
-        sh_print("PMM SAFETY: Refusing page at %x (Out of 32MB window)\n", ptr);
-        return NULL;
-    }
-    sh_print("PMM ALLOC AT: %x\n", ptr);
-    return ptr;
-}
-
-static void* test_phys_page = NULL;
-static uint32_t* test_pd = NULL; // Stores physical address of our test PD
-
 void test_write(const char* args) {
-    asm volatile ("cli");
+    sh_print("--- HEAP BASIC TEST ---\n");
 
-    // 1. Create a directory that inherits kernel mappings (Identity + High Half)
-    test_pd = vmm_copy_kernel_directory();
+    uint32_t* ptr1 = (uint32_t*) kmalloc(128);
+    uint32_t* ptr2 = (uint32_t*) kmalloc(256);
 
-    // 2. Move into this new context
-    vmm_switch_directory(test_pd);
-
-    // 3. Allocate the data page and map it at 0x50000000
-    test_phys_page = pmm_alloc_page_SAFE();
-    vmm_map_page(test_pd, test_phys_page, (void*)0x50000000, PAGE_PRESENT | PAGE_RW | PAGE_USER);
-
-    // 4. Write data to the VIRTUAL address
-    uint32_t* virt_ptr = (uint32_t*)0x50000000;
-    *virt_ptr = 0xDEADBEEF;
-
-    sh_print("Write Cmd: PD %x | Phys %x | Val: %x | Curr: %x\n", test_pd, test_phys_page, *virt_ptr, vmm_get_current_directory());
-
-    // NOTE: We don't switch back to the old PD here because we want the
-    // system to stay in this context for the read test, OR
-    // you can switch back and the read test will handle switching back in.
-    asm volatile ("sti");
-}
-
-void test_read(const char* args) {
-    asm volatile ("cli");
-
-    if (!test_phys_page || !test_pd) {
-        sh_print("Test Fail: Run test_write first\n");
-        asm volatile ("sti");
+    if (!ptr1 || !ptr2) {
+        sh_print("Error: kmalloc returned NULL\n");
         return;
     }
 
-    // 1. Switch to the directory where the mapping actually exists
-    uint32_t* old_pd = vmm_get_current_directory();
-    vmm_switch_directory(test_pd);
+    sh_print("Allocated ptr1 at %x, ptr2 at %x\n", ptr1, ptr2);
 
-    sh_print("Switched to PD: %x (from) %x\n", test_pd, old_pd);
+    // 2. Test Write/Read to Heap
+    *ptr1 = 0xAAAA1111;
+    *ptr2 = 0xBBBB2222;
 
-    // 2. Access the virtual address directly
-    uint32_t* virt_ptr = (uint32_t*)0x50000000;
-    uint32_t val = *virt_ptr;
-
-    // 3. Access physical page via Direct Mapping (C0000000 + phys)
-    // This works because vmm_copy_kernel_directory copied the high-half tables!
-    uint32_t* phys_view = (uint32_t*) PHYSICAL_TO_VIRTUAL(test_phys_page);
-
-    sh_print("Virt(50000000)=%x\nPhys(%x)=%x\n", val, test_phys_page, *phys_view);
-
-    if (val == 0xDEADBEEF && *phys_view == 0xDEADBEEF) {
-        sh_print("VMM TEST PASSED!\n");
+    if (*ptr1 == 0xAAAA1111 && *ptr2 == 0xBBBB2222) {
+        sh_print("Heap Write/Read: SUCCESS\n");
     } else {
-        sh_print("VMM TEST FAILED! %x and %x\n", val, *phys_view);
+        sh_print("Heap Write/Read: FAILED! %x, %x\n", *ptr1, *ptr2);
     }
 
-    // 4. Clean up: Return to the previous directory
-    vmm_switch_directory(old_pd);
+    kfree(ptr1);
+    kfree(ptr2);
 
-    asm volatile ("sti");
+    sh_print("Blocks freed successfully.\n");
+}
+
+void test_read(const char* args) {
+    sh_print("--- HEAP EXPANSION TEST ---\n");
+
+    // Your init_heap only starts with 16 pages (64KB)
+    // Let's force it to grow by allocating 128KB
+    size_t big_size = 128 * 1024;
+    sh_print("Allocating %u bytes (Should trigger expansion)...\n", big_size);
+
+    void* big_ptr = kmalloc(big_size);
+
+    if (big_ptr) {
+        sh_print("Expansion SUCCESS: Allocated at %x\n", big_ptr);
+
+        // Write to the end of the new memory to ensure it's actually mapped
+        uint32_t* end_check = (uint32_t*)((uint32_t)big_ptr + big_size - 4);
+        *end_check = 0xFEEDFACE;
+
+        if (*end_check == 0xFEEDFACE) {
+            sh_print("Integrity check passed at end of block.\n");
+        }
+
+        kfree(big_ptr);
+        sh_print("Big block freed.\n");
+    } else {
+        sh_print("Expansion FAILED: kmalloc returned NULL\n");
+    }
 }

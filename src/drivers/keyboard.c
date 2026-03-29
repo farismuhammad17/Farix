@@ -17,8 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdio.h> // TODO: Remove if no requirement of echoing scan codes
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "architecture/io.h"
 
@@ -41,7 +41,8 @@ unsigned char kbd[128] = {
 };
 
 // For DEBUG: Print the raw hex value to terminal
-const bool echo_scancodes = false;
+// Uncomment later line that prints it
+// const bool echo_scancodes = false;
 
 static bool is_extended = false;
 
@@ -82,10 +83,10 @@ extern void keyboard_handler() {
 
     uint8_t scancode = inb(0x60);
 
-    if (echo_scancodes) {
-        printf("Status: 0x%x\n", status);
-        printf("Scancode: 0x%x\n", scancode);
-    }
+    // if (echo_scancodes) {
+    //     printf("Status: 0x%x\n", status);
+    //     printf("Scancode: 0x%x\n", scancode);
+    // }
 
     if (scancode == 0xE0) {
         is_extended = true;

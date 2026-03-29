@@ -19,25 +19,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdio.h>
 
-#include "memory/pmm.h"
-#include "memory/vmm.h"
-#include "memory/heap.h"
-#include "architecture/multiboot.h"
 #include "architecture/io.h"
+#include "architecture/multiboot.h"
 #include "cpu/gdt.h"
 #include "cpu/idt.h"
 #include "cpu/pic.h"
 #include "cpu/timer.h"
-#include "process/task.h"
 #include "drivers/ata.h"
 #include "drivers/keyboard.h"
 #include "drivers/mouse.h"
 #include "drivers/terminal.h"
-#include "shell/shell.h"
-#include "fs/vfs.h"
-#include "fs/ramdisk.h"
-#include "fs/fat32.h"
 #include "fs/elf.h"
+#include "fs/fat32.h"
+#include "fs/ramdisk.h"
+#include "fs/vfs.h"
+#include "memory/heap.h"
+#include "memory/pmm.h"
+#include "memory/vmm.h"
+#include "process/task.h"
+#include "shell/shell.h"
 
 #define THREAD_HZ 100
 
@@ -94,8 +94,8 @@ void kernel_main(uint32_t magic, multiboot_info* mbi) {
 
     init_shell();
 
-    create_task(shell_thread, "Shell");
-    create_task(handle_mouse, "Terminal mouse handler");
+    create_task(shell_thread, "Shell", 0);
+    create_task(handle_mouse, "Terminal mouse handler", 0);
 
     // The OS must NEVER die.
     // Interrupts take back control from this loop whenever

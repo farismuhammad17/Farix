@@ -55,7 +55,10 @@ void init_vmm() {
             pt_ptr[j] = physical_addr | PAGE_PRESENT | PAGE_RW;
         }
 
+        // Identity map
         pd_ptr[i] = phys_pt | PAGE_PRESENT | PAGE_RW;
+
+        // Higher half map
         pd_ptr[768 + i] = phys_pt | PAGE_PRESENT | PAGE_RW;
     }
 
@@ -93,35 +96,35 @@ void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags) {
     asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
 }
 
-void vmm_unmap_page(void* virt) {
-    uint32_t virt_addr = (uint32_t)virt;
+uint32_t vmm_unmap_page(void* virt) {
+    uint32_t virt_addr = (uint32_t) virt;
     uint32_t pd_index  = virt_addr >> 22;
     uint32_t pt_index  = (virt_addr >> 12) & 0x3FF;
 
-    // Get the PD using your new direct map logic
-    uint32_t phys_pd  = (uint32_t)  vmm_get_current_directory();
-    uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(phys_pd);
+    uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(vmm_get_current_directory());
 
-    if (pd_virt[pd_index] & PAGE_PRESENT) {
-        // Find the Page Table
-        uint32_t pt_phys = pd_virt[pd_index] & ~0xFFF;
-        uint32_t* pt_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pt_phys);
+    if (!(pd_virt[pd_index] & PAGE_PRESENT)) return 0;
 
-        // Clear the entry
-        pt_virt[pt_index] = 0;
+    uint32_t pt_phys = pd_virt[pd_index] & ~0xFFF;
+    uint32_t* pt_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pt_phys);
 
-        // Flush the TLB so the CPU realizes the page is gone
-        asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
-    }
+    // Grab the physical address before we wipe it
+    uint32_t phys_to_return = pt_virt[pt_index] & ~0xFFF;
+
+    pt_virt[pt_index] = 0;
+    asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
+
+    return phys_to_return;
 }
 
 uint32_t* vmm_copy_kernel_directory() {
-    uint32_t  phys_pd = (uint32_t)  pmm_alloc_page();
+    uint32_t phys_pd  = (uint32_t)  pmm_alloc_page();
     uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(phys_pd);
     for (int i = 0; i < 1024; i++) pd_virt[i] = 0;
 
     uint32_t* k_pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(kernel_directory);
 
+    // Copy higher-half
     for (int i = 768; i < 1024; i++)
         pd_virt[i] = k_pd_virt[i];
     for (int i = 0; i < (VMM_INIT_MAP_SIZE >> 2); i++)
@@ -132,11 +135,35 @@ uint32_t* vmm_copy_kernel_directory() {
 
 // Uses physical addresses
 void vmm_switch_directory(uint32_t* page_directory) {
-    asm volatile("mov %0, %%cr3" : : "r"(page_directory) : "memory");
+    // Only switch if we're not current already there
+    if (vmm_get_current_directory() != page_directory)
+        asm volatile("mov %0, %%cr3" : : "r"(page_directory) : "memory");
 }
 
 uint32_t* vmm_get_current_directory() {
     uint32_t cr3;
     asm volatile("mov %%cr3, %0" : "=r"(cr3));
     return (uint32_t*) cr3;
+}
+
+uint32_t vmm_get_phys(uint32_t* pd_phys, void* virt_addr) {
+    uint32_t v = (uint32_t)virt_addr;
+    uint32_t pd_idx = v >> 22;
+    uint32_t pt_idx = (v >> 12) & 0x3FF;
+
+    // Get the Page Directory (Virtually)
+    uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pd_phys);
+
+    // Check if the Page Table exists
+    if (!(pd_virt[pd_idx] & PAGE_PRESENT)) return 0;
+
+    // Get the Page Table (Virtually)
+    uint32_t pt_phys = pd_virt[pd_idx] & ~0xFFF;
+    uint32_t* pt_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pt_phys);
+
+    // Check if the Page is present
+    if (!(pt_virt[pt_idx] & PAGE_PRESENT)) return 0;
+
+    // Return the physical address + page offset
+    return (pt_virt[pt_idx] & ~0xFFF) | (v & 0xFFF);
 }

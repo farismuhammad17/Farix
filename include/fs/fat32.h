@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include "fs/vfs.h"
+
 typedef struct FAT32Header {
     uint8_t  boot_jmp[3];
     uint8_t  oem_name[8];

@@ -17,17 +17,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stddef.h>
-#include <stdbool.h>
 #include <stdarg.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 
-#include "shell/shell.h"
 #include "shell/commands.h"
+#include "shell/shell.h"
 
 char shell_directory[MAX_DIRECTORY_PATH_LEN];
 char shell_buffer[MAX_SHELL_BUFFER_LEN];
