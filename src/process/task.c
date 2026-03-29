@@ -154,7 +154,7 @@ void schedule() {
     current_task = next;
 
     if (next->stack_origin) {
-        tss_entry.esp0 = (uint32_t) next->stack_origin + 4096;
+        set_kernel_stack((uint32_t) next->stack_origin + 4096);
     }
 
     vmm_switch_directory(next->page_directory);

@@ -52,9 +52,7 @@ extern void _init();
 
 /*
  * TODO:
- * - Verify VMM functions
- * - Is everything actually working
- * - Check RAMDISK
+ * - 'cd' doesn't work in ramdisk, but does on fat32
  */
 
 void kernel_main(uint32_t magic, multiboot_info* mbi) {

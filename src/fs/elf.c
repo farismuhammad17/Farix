@@ -35,8 +35,6 @@ extern void elf_user_trampoline_stub(uint32_t entry, uint32_t stack);
 void elf_user_trampoline() {
     task* t = current_task;
 
-    set_kernel_stack((uint32_t) t->stack_origin + 4096);
-
     uint32_t entry_point = (uint32_t) t->entry_func;
     uint32_t user_stack  = (uint32_t) t->stack_base;
 
@@ -89,8 +87,7 @@ bool exec(const char* path) {
     uint32_t* current_pd_virt     = (uint32_t*) PHYSICAL_TO_VIRTUAL(current_pd_phys);
     uint32_t* user_pd_virt_handle = (uint32_t*) PHYSICAL_TO_VIRTUAL(user_pd_phys);
 
-    for (int i = 0; i < 768; i++)    user_pd_virt_handle[i] = 0;
-    for (int i = 768; i < 1024; i++) user_pd_virt_handle[i] = current_pd_virt[i];
+    for (int i = 768; i < 1024; i++) user_pd_virt_handle[i] = current_pd_virt[i] | PAGE_USER;
 
     asm volatile("cli");
 
@@ -140,7 +137,7 @@ bool exec(const char* path) {
 
     task* elf_task = create_task((void(*)()) header->e_entry, path, 1);
 
-    elf_task->page_directory = user_pd_phys;   // Switch from default kernel_directory
+    elf_task->page_directory = user_pd_phys; // Switch from default kernel_directory
     elf_task->heap_break     = highest_vaddr;
     elf_task->stack_base     = (uint32_t*) USER_STACK_TOP;
 
