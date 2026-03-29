@@ -60,7 +60,7 @@ extern uint16_t* terminal_buffer;
 #define VGA_COLOR_WHITE         15
 
 typedef struct TerminalCmd {
-    const char*  command;
+    const char* command;
     struct TerminalCmd* next;
     struct TerminalCmd* prev;
 } TerminalCmd;

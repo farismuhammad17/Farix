@@ -71,12 +71,12 @@ const char* exception_messages[] = {
 // A table of strings representing the names of open files
 static const char* fd_table[20] = {NULL};
 
-int _close(int file) { return -1; }
-int _fstat(int file, struct stat *st) { st->st_mode = S_IFCHR; return 0; }
-int _isatty(int file) { return 1; }
-int _lseek(int file, int ptr, int dir) { return 0; }
+int _close(UNUSED_ARG int file) { return -1; }
+int _fstat(UNUSED_ARG int file, struct stat *st) { st->st_mode = S_IFCHR; return 0; }
+int _isatty(UNUSED_ARG int file) { return 1; }
+int _lseek(UNUSED_ARG int file, UNUSED_ARG int ptr, UNUSED_ARG int dir) { return 0; }
 int _getpid() { return 1; }
-int _kill(int pid, int sig) { return -1; }
+int _kill(UNUSED_ARG int pid, UNUSED_ARG int sig) { return -1; }
 
 void* _sbrk(int incr) {
     if (current_task->page_directory == NULL) {
@@ -103,7 +103,7 @@ void* _sbrk(int incr) {
     return (void*) old_break;
 }
 
-void _exit(int status) {
+void _exit(UNUSED_ARG int status) {
     current_task->state = TASK_DEAD;
     schedule();
 
@@ -155,7 +155,7 @@ int _write(int file, char *ptr, int len) {
     return -1;
 }
 
-int _open(const char *name, int flags, int mode) {
+int _open(const char *name, UNUSED_ARG int flags, UNUSED_ARG int mode) {
     File* f = fs_get(name);
 
     if (!f) {
@@ -214,7 +214,7 @@ int isatty(int file) { return _isatty(file); }
 int kill(int pid, int sig) { return _kill(pid, sig); }
 int getpid() { return _getpid(); }
 
-void _free_r(struct _reent *r, void *ptr) {
+void _free_r(UNUSED_ARG struct _reent *r, void *ptr) {
     kfree(ptr);
 }
 
@@ -268,28 +268,30 @@ void syscall_handler(syscalls_registers_t* regs) {
             break;
 
         default:
-            printf("Unknown syscall: %d\n", regs->eax);
+            printf("Unknown syscall: %ld\n", regs->eax);
             break;
     }
 }
 
 void exception_handler(syscalls_registers_t* regs) {
+    asm volatile("cli");
+
     printf("\n--- !!! KERNEL PANIC !!! ---");
 
     if (regs->int_no < 32) {
-        printf("\nException: %d (%s)", regs->int_no, exception_messages[regs->int_no]);
+        printf("\nException: %ld (%s)", regs->int_no, exception_messages[regs->int_no]);
     } else {
-        printf("\nUnknown Exception: %d", regs->int_no);
+        printf("\nUnknown Exception: %ld", regs->int_no);
     }
 
-    printf("\nEIP: %x  CS: %x  EFLAGS: %x", regs->eip, regs->cs, regs->eflags);
-    printf("\nError Code: %x", regs->err_code);
+    printf("\nEIP: %lx  CS: %lx  EFLAGS: %lx", regs->eip, regs->cs, regs->eflags);
+    printf("\nError Code: %lx", regs->err_code);
 
     // Specifically for Page Faults
     if (regs->int_no == 14) {
         uint32_t faulting_address;
         asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
-        printf("\nFaulting Address (CR2): %x", faulting_address);
+        printf("\nFaulting Address (CR2): %lx", faulting_address);
 
         printf("\nReason: %s, %s, %s",
             (regs->err_code & 0x1) ? "Page-level protection" : "Non-present page",
@@ -299,8 +301,8 @@ void exception_handler(syscalls_registers_t* regs) {
 
     // Dump general purpose registers for deeper debugging
     printf("\n--- Register values ---");
-    printf("\nEAX: %x  EBX: %x  ECX: %x  EDX: %x", regs->eax, regs->ebx, regs->ecx, regs->edx);
-    printf("\nEDI: %x  ESI: %x  EBP: %x  ESP: %x", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
+    printf("\nEAX: %lx  EBX: %lx  ECX: %lx  EDX: %lx", regs->eax, regs->ebx, regs->ecx, regs->edx);
+    printf("\nEDI: %lx  ESI: %lx  EBP: %lx  ESP: %lx", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
 
-    asm volatile("cli; hlt");
+    while(1) asm volatile("hlt");
 }

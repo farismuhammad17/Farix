@@ -44,11 +44,12 @@ static void pmm_clear_bit(uint32_t page_number) {
 }
 
 // Check if a page is in use
-static bool pmm_test_bit(uint32_t page_number) {
-    uint32_t index = page_number >> 5;
-    uint32_t bit   = page_number & 31;
-    return (pmm_bitmap[index] & (1 << bit));
-}
+// CURRENTLY UNUSED
+// static bool pmm_test_bit(uint32_t page_number) {
+//     uint32_t index = page_number >> 5;
+//     uint32_t bit   = page_number & 31;
+//     return (pmm_bitmap[index] & (1 << bit));
+// }
 
 void init_pmm(multiboot_info* mbi) {
     if (!(mbi->flags & (1 << 6))) return;

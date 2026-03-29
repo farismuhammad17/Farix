@@ -20,6 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef SYSCALLS_H
 #define SYSCALLS_H
 
+// For avoiding unused argument compiler warnings cleanly
+#define UNUSED_ARG __attribute__((unused))
+
 #define SYS_WRITE 1
 #define SYS_READ  2
 #define SYS_EXIT  3

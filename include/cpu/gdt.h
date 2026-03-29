@@ -32,7 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define GDT_GRAN_4K    0x80 // Limit is in 4KB blocks
 #define GDT_GRAN_32BIT 0x40 // 32-bit protected mode
-#define GDT_GRAN_64BIT 0x20  // Not used in i386
+#define GDT_GRAN_64BIT 0x20 // Not used in i386
 
 typedef struct GDTEntry {
     uint16_t limit_low;

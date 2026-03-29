@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "architecture/io.h"
 #include "drivers/keyboard.h"
@@ -186,7 +187,7 @@ void save_cmd_to_history(const char* command) {
     TerminalCmd* newNode = (TerminalCmd*) kmalloc(sizeof(TerminalCmd));
     kmemset(newNode, 0, sizeof(TerminalCmd));
 
-    newNode->command = strdup(command);
+    newNode->command = (const char*) strdup(command);
     newNode->next    = NULL;
     newNode->prev    = cmd_history_tail;
 

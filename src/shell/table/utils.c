@@ -30,7 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "shell/commands.h"
 
-void cmd_help(const char* args) {
+void cmd_help(UNUSED_ARG const char* args) {
     for (size_t i = 0; command_table[i].name != NULL; i++) {
         sh_print("%-*s %s\n",
                 INDENT_LEN * 2, // *2 because some commands are longer than 4 characters
@@ -39,19 +39,19 @@ void cmd_help(const char* args) {
     }
 }
 
-void cmd_clear(const char* args) {
+void cmd_clear(UNUSED_ARG const char* args) {
     terminal_clear();
 }
 
-void cmd_echo(const char* args) {
+void cmd_echo(UNUSED_ARG const char* args) {
     sh_print("%s\n", args);
 }
 
-void cmd_memstat(const char* args) {
+void cmd_memstat(UNUSED_ARG const char* args) {
     print_memstat();
 }
 
-void cmd_tasks(const char* args) {
+void cmd_tasks(UNUSED_ARG const char* args) {
     size_t total_tasks = 0;
 
     // Disable interrupts to ensure atomicity
@@ -159,7 +159,7 @@ void cmd_grep(const char* args) {
 
 // TODO REMOVE
 
-void test_write(const char* args) {
+void test_write(UNUSED_ARG const char* args) {
     sh_print("--- HEAP BASIC TEST ---\n");
 
     uint32_t* ptr1 = (uint32_t*) kmalloc(128);
@@ -188,7 +188,7 @@ void test_write(const char* args) {
     sh_print("Blocks freed successfully.\n");
 }
 
-void test_read(const char* args) {
+void test_read(UNUSED_ARG const char* args) {
     sh_print("--- HEAP EXPANSION TEST ---\n");
 
     // Your init_heap only starts with 16 pages (64KB)

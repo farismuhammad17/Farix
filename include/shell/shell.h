@@ -23,6 +23,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdarg.h>
 #include <stdbool.h>
 
+// For avoiding unused argument compiler warnings cleanly
+#define UNUSED_ARG __attribute__((unused))
+
 #define MAX_DIRECTORY_PATH_LEN   256
 #define MAX_SHELL_BUFFER_LEN    1024
 #define MAX_LAST_CMD_OUTPUT_LEN 1024

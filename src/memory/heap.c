@@ -36,7 +36,7 @@ bool check_heap() {
     while (current != NULL) {
         // Magic Check
         if (current->magic != HEAP_MAGIC) {
-            printf("HEAP CORRUPTION: Bad Magic at %p (Val: %x)\n", current, current->magic);
+            printf("HEAP CORRUPTION: Bad Magic at %p (Val: %lx)\n", current, current->magic);
             return false;
         }
 
@@ -252,7 +252,7 @@ void print_memstat() {
 
     HeapSegment* current = first_segment;
     while (current != NULL) {
-        printf("%p | %-9u | %-6s | 0x%08X\n",
+        printf("%p | %-9lu | %-6s | 0x%08lX\n",
                 current,
                 current->size,
                 current->is_free ? "FREE" : "USED",
@@ -261,7 +261,7 @@ void print_memstat() {
     }
 
     printf("----------------------------------------------------------------------\n");
-    printf("Total Used: %u bytes\n", heap_used);
+    printf("Total Used: %lu bytes\n", heap_used);
     printf("----------------------------------------------------------------------\n\n");
 
     size_t total_kb = heap_total / 1024;
@@ -275,7 +275,7 @@ void print_memstat() {
 
     printf("Memory Statistics:\n");
     printf("------------------------\n");
-    printf("Total memory: %4u KiB\n", total_kb);
-    printf("Used memory:  %4u KiB [%d%%]\n", used_kb, usage_pct);
-    printf("Free memory:  %4u KiB\n", free_kb);
+    printf("Total memory: %4lu KiB\n", total_kb);
+    printf("Used memory:  %4lu KiB [%d%%]\n", used_kb, usage_pct);
+    printf("Free memory:  %4lu KiB\n", free_kb);
 }

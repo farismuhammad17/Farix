@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
@@ -113,16 +114,16 @@ void shell_parse(const char* input) {
     memset(pipe_buffer, 0, PIPE_BUFFER_SIZE);
 
     char* segments[2];
-    int num_segments = 0;
+    size_t num_segments = 0;
 
     char* pipe_ptr = strchr(input, '|');
     if (pipe_ptr != NULL) {
         *pipe_ptr = '\0';             // Split the string at '|'
-        segments[0] = input;          // First half
+        segments[0] = (char*) input;          // First half
         segments[1] = pipe_ptr + 1;   // Second half
         num_segments = 2;
     } else {
-        segments[0] = input;
+        segments[0] = (char*) input;
         num_segments = 1;
     }
 
