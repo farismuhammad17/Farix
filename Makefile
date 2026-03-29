@@ -46,6 +46,8 @@ LINKER = scripts/linker.ld
 CFLAGS = -ffreestanding -O2 -Wall -Wextra -Werror -fno-exceptions \
          -Iinclude -I$(LIBC_INC)
 LDFLAGS = -T $(LINKER) -ffreestanding -O2 -nostdlib
+QEMU_FLAGS = -drive format=raw,file=disk.img,index=0,media=disk \
+            -device virtio-mouse-pci
 
 # --- OBJECTS ---
 C_SOURCES := $(shell find src -name '*.c')
@@ -117,10 +119,10 @@ clean:
 	rm -rf build farix.bin disk.img
 
 run: farix.bin disk.img
-	qemu-system-i386 -kernel farix.bin -drive format=raw,file=disk.img,index=0,media=disk -device virtio-mouse-pci -full-screen
+	qemu-system-i386 -kernel farix.bin $(QEMU_FLAGS) -full-screen
 
 run_: farix.bin disk.img
-	qemu-system-i386 -kernel farix.bin -drive format=raw,file=disk.img,index=0,media=disk -device virtio-mouse-pci
+	qemu-system-i386 -kernel farix.bin $(QEMU_FLAGS)
 
 disk.img:
 	qemu-img create -f raw disk.img 64M

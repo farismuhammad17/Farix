@@ -71,7 +71,7 @@ typedef struct TerminalLine {
     struct TerminalLine* prev;
 } TerminalLine;
 
-inline uint8_t vga_entry_color(int fg, int bg) {
+inline uint8_t vga_entry_color(uint8_t fg, uint8_t bg) {
 	return fg | bg << 4;
 }
 inline uint16_t vga_entry(unsigned char uc, uint8_t color) {
@@ -82,6 +82,7 @@ void init_terminal();
 
 void update_cursor(size_t x, size_t y);
 void terminal_clear();
+void terminal_change_color(uint8_t color);
 void refresh_terminal_view();
 void new_line();
 

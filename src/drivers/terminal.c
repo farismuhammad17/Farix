@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/keyboard.h"
 #include "drivers/mouse.h"
 #include "memory/heap.h"
+#include "memory/vmm.h"
 #include "process/task.h"
 #include "shell/shell.h"
 
@@ -36,7 +37,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 size_t        cursor_x = 0;
 size_t        cursor_y = 0;
 uint8_t       terminal_color  = 0;
-uint16_t*     terminal_buffer = (uint16_t*) MEMORY;
+uint16_t*     terminal_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(MEMORY);
 
 TerminalCmd*  cmd_current_line  = NULL;
 TerminalCmd*  cmd_history_head  = NULL;
@@ -86,6 +87,14 @@ void terminal_clear() {
     cursor_x = 0;
     cursor_y = 0;
     update_cursor(0, 0);
+}
+
+void terminal_change_color(uint8_t color) {
+    terminal_color = color;
+
+    for (size_t i = 0; i < WIDTH * HEIGHT; i++) {
+        terminal_buffer[i] = (terminal_buffer[i] & 0x00FF) | ((uint16_t) color << 8);
+    }
 }
 
 void refresh_terminal_view() {

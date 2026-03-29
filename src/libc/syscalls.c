@@ -276,6 +276,9 @@ void syscall_handler(syscalls_registers_t* regs) {
 void exception_handler(syscalls_registers_t* regs) {
     asm volatile("cli");
 
+    // BSOD
+    terminal_change_color(vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLUE));
+
     printf("\n--- !!! KERNEL PANIC !!! ---");
 
     if (regs->int_no < 32) {

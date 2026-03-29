@@ -63,11 +63,11 @@ void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_gdt();
     init_idt();
 
-    init_terminal();
-
     init_pmm(mbi);
     init_vmm();
     init_heap();
+
+    init_terminal();
 
     _init();
 
