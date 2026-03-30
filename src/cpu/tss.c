@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "cpu/gdt.h"
 #include "memory/heap.h"
+#include "memory/vmm.h"
 
 #include "cpu/tss.h"
 
@@ -26,7 +27,7 @@ extern GDTEntry gdt[6];
 TSSEntry tss_entry;
 
 void init_tss(uint32_t idx, uint32_t kss, uint32_t kesp) {
-    uint32_t base = (uint32_t) &tss_entry;
+    uint32_t base = (uint32_t) PHYSICAL_TO_VIRTUAL(&tss_entry);
     uint32_t limit = sizeof(TSSEntry);
 
     // Access: 0x89 (Present, Executable, Accessed, Ring 0)

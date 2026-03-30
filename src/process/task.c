@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "cpu/tss.h"
 #include "memory/heap.h"
@@ -62,7 +63,7 @@ void init_multitasking() {
     main_task->next  = main_task;     // Point to itself for now
     main_task->name  = "init";
     main_task->page_directory = kernel_directory;
-    main_task->stack_origin   = &stack_bottom;
+    main_task->stack_origin   = PHYSICAL_TO_VIRTUAL(&stack_bottom);
 
     current_task = main_task;
 

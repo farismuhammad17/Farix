@@ -291,6 +291,17 @@ void echo_char(uint16_t c) {
     update_cursor(cursor_x, cursor_y);
 }
 
+// Terminal print:
+// Literally changes the VGA buffer directly
+// doesn't rely on heap on anything to print
+// anything, so is useful for anything that
+// needs to be debugged
+void t_print(char* text) {
+    for (size_t i = 0; i < WIDTH; i++) {
+        echo_at(text[i], VGA_COLOR_WHITE, i, 0);
+    }
+}
+
 bool handle_special_chars(uint16_t c) {
     if (c == '\n') {
         save_line_to_history(&terminal_buffer[cursor_y * WIDTH]);

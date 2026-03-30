@@ -50,20 +50,15 @@ void shell_thread() {
 
 extern void _init();
 
-/*
- * TODO:
- * - 'cd' doesn't work in ramdisk, but does on fat32
- */
-
 void kernel_main(uint32_t magic, multiboot_info* mbi) {
     pic_remap();
-
-    init_gdt();
-    init_idt();
 
     init_pmm(mbi);
     init_vmm();
     init_heap();
+
+    init_gdt();
+    init_idt();
 
     init_terminal();
 

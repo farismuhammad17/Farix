@@ -97,6 +97,7 @@ void cmd_history_down();
 
 void echo_at   (char c, uint8_t color, size_t x, size_t y);
 void echo_char (uint16_t c);
+void t_print   (char* text);
 
 bool handle_special_chars(uint16_t c);
 void handle_mouse();

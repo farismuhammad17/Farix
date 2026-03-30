@@ -33,7 +33,7 @@ typedef struct HeapSegment {
     bool is_free;
     uint32_t magic;
     uint32_t caller;
-} __attribute__((packed)) HeapSegment;
+} __attribute__((aligned(4))) HeapSegment;
 
 void   init_heap();
 void*  kmalloc(size_t size);

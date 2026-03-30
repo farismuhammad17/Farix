@@ -26,8 +26,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "process/task.h"
 #include "shell/shell.h"
 
-#include "memory/vmm.h" // TODOR REM
-
 #include "shell/commands.h"
 
 void cmd_help(UNUSED_ARG const char* args) {
@@ -154,64 +152,5 @@ void cmd_grep(const char* args) {
 
     if (*start != '\0' && strstr(start, args) != NULL) {
         sh_print("%s\n", start);
-    }
-}
-
-// TODO REMOVE
-
-void test_write(UNUSED_ARG const char* args) {
-    sh_print("--- HEAP BASIC TEST ---\n");
-
-    uint32_t* ptr1 = (uint32_t*) kmalloc(128);
-    uint32_t* ptr2 = (uint32_t*) kmalloc(256);
-
-    if (!ptr1 || !ptr2) {
-        sh_print("Error: kmalloc returned NULL\n");
-        return;
-    }
-
-    sh_print("Allocated ptr1 at %x, ptr2 at %x\n", ptr1, ptr2);
-
-    // 2. Test Write/Read to Heap
-    *ptr1 = 0xAAAA1111;
-    *ptr2 = 0xBBBB2222;
-
-    if (*ptr1 == 0xAAAA1111 && *ptr2 == 0xBBBB2222) {
-        sh_print("Heap Write/Read: SUCCESS\n");
-    } else {
-        sh_print("Heap Write/Read: FAILED! %x, %x\n", *ptr1, *ptr2);
-    }
-
-    kfree(ptr1);
-    kfree(ptr2);
-
-    sh_print("Blocks freed successfully.\n");
-}
-
-void test_read(UNUSED_ARG const char* args) {
-    sh_print("--- HEAP EXPANSION TEST ---\n");
-
-    // Your init_heap only starts with 16 pages (64KB)
-    // Let's force it to grow by allocating 128KB
-    size_t big_size = 128 * 1024;
-    sh_print("Allocating %u bytes (Should trigger expansion)...\n", big_size);
-
-    void* big_ptr = kmalloc(big_size);
-
-    if (big_ptr) {
-        sh_print("Expansion SUCCESS: Allocated at %x\n", big_ptr);
-
-        // Write to the end of the new memory to ensure it's actually mapped
-        uint32_t* end_check = (uint32_t*)((uint32_t)big_ptr + big_size - 4);
-        *end_check = 0xFEEDFACE;
-
-        if (*end_check == 0xFEEDFACE) {
-            sh_print("Integrity check passed at end of block.\n");
-        }
-
-        kfree(big_ptr);
-        sh_print("Big block freed.\n");
-    } else {
-        sh_print("Expansion FAILED: kmalloc returned NULL\n");
     }
 }

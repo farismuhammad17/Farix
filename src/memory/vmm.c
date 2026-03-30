@@ -64,8 +64,6 @@ void init_vmm() {
     }
 
     vmm_enable_paging(phys_pd);
-
-    update_gdt_to_virtual();
 }
 
 void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags) {

@@ -97,54 +97,25 @@ mouse_handler_stub:
     iret
 
 syscall_handler_stub:
-    pushl %eax
-    pushl %ecx
-    pushl %edx
-    pushl %ebx
-    pushl %esp                  # esp_dummy - current kernel stack pointer
-    pushl %ebp
-    pushl %esi
-    pushl %edi
+    pushl $0          # err_code
+    pushl $128        # int_no
+    pusha             # Pushes 8 registers at once
 
-    pushl $128                  # int_no (0x80)
-    pushl $0                    # err_code (syscalls don't have an error code from CPU, so 0)
+    pushl %ds         # Push current data segment
 
-    pushl %ds                   # ds - value of DS when syscall was called (user's DS)
-
-    # Switch to Kernel Data Segment (0x10)
-    movw $0x10, %ax
+    movw $0x10, %ax   # Load kernel data segment
     movw %ax, %ds
     movw %ax, %es
-    movw %ax, %fs
-    movw %ax, %gs
 
-    # Push the current ESP as the argument to syscall_handler(syscalls_registers_t* regs)
-    pushl %esp                  # ESP now points to the 'ds' field of the struct
+    pushl %esp        # Pointer to the stack for the C function
     call syscall_handler
-    addl $4, %esp               # Clean up the pushed argument
+    addl $4, %esp
 
-    # Restore segment registers for User Mode (0x23) before returning to user space
-    movw $0x23, %ax
-    movw %ax, %ds
-    movw %ax, %es
-    movw %ax, %fs
-    movw %ax, %gs
+    popl %ds          # Restore user data segment
+    popa              # Pop 8 registers at once
+    addl $8, %esp     # Clean up int_no and err_code
 
-    # Pop everything in reverse order of pushing (from stub)
-    popl %eax                   # Pop ds
-    popl %edi                   # Pop edi
-    popl %esi                   # Pop esi
-    popl %ebp                   # Pop ebp
-    popl %esp                   # Pop esp_dummy
-    popl %ebx                   # Pop ebx
-    popl %edx                   # Pop edx
-    popl %ecx                   # Pop ecx
-    popl %eax                   # Pop eax
-
-    # Clean up int_no and err_code
-    addl $8, %esp
-
-    iret                        # Return to Ring 3
+    iret              # Return to Ring 3
 
 .macro ISR_NOERRCODE num
 .global isr\num

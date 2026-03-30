@@ -287,7 +287,6 @@ int fat32_read(const char* name, void* buffer, size_t size) {
 
                     uint32_t file_size       = files[i].size;
                     uint32_t bytes_remaining = (size < file_size) ? size : file_size;
-                    // uint32_t cluster_size    = disk_info->sectors_per_cluster << 9; // * 512 TODO REMOVE
 
                     uint32_t total_to_read   = bytes_remaining;
 

@@ -22,6 +22,7 @@ This is more of a journal of how this project was built. It helps to keep track 
 - [4 Mar: ELF Executor](#elf-executor---4th-mar-2026)
 - [6 Mar: Error handling](#error-handling---6th-mar-2026)
 - [8 Mar: Pipe Shell Operator](#pipe-shell-operator---8th-mar-2026)
+- [30 Mar: Proper ELF Executor](#proper-elf-executor---30th-mar-2026)
 
 ## Initial commit - *16th Feb, 2026*
 
@@ -715,7 +716,7 @@ To take my mind off if it, and make some genuine progress, I decided to build a 
 
 Regarding the ELF, I think I know what's the problem - it's not executing the user syscall, but its executing the kernel syscall for somereason, even though the ELF was compiled with the user syscalls file, and I'm not sure why. Regardless, I don't even care, I am going to commit everything anyway, as, technically, the kernel works. Just the ELF doesn't, and I cannot be bothered to stall committing anymore (it's hurting the motivation to continue). I might just be hitting a wall of not understanding the stuff anymore; I just read, write notes, implement, and forget it, which seems to not be a good thing - I have to keep going back to my notes or code.
 
-## May have forgotten to change off the title
+## Proper ELF Executor - *30th Mar, 2026*
 
 There has to be some way to just see where the problem is. I realised a fault in my design - some places I use physical addresses, other places virtual addresses, and I was too stupid to realise they aren't the same. I went back and fixed those, but still nothing was working.
 
@@ -926,3 +927,72 @@ To be fair, I am relying on Gemini CLI to just find me the bugs (most of the cod
 ```
 
 Obviously, this doesn't change a thing.
+
+*30th Mar, 2026*
+
+Ok, so I haven't been journalling a lot, because I currently look like a mad-scientist who just figured out the correct recipe to some magic potion. For some reason, my problems this whole time was a set of stupid errors I had forgotten to fix. Since the ELF wouldn't execute, and I had no clue why, I deicided to create a new branch, `elf-fixing`, and fix it there, and merge back to main quickly. This took like a month, and I didn't expect it.
+
+First of all, I realised that the ELF wasn't executing right because the memory wasn't working at the VMM level. I went off to fixing it, and I think I mentioned it earlier, but I moved to direct mapping just to help myself out with the debugging. I don't mind it for now, I hope we can swap it out easily later for the recursive mapping we used to have. To verify the changes and to make the fixes actually fixed, I made shell commands that checked everything, so I can go and spot where anything went wrong. I may have committed some of them in some WIP commits, not sure.
+
+Unfortunately, changing out how the memory works completely messed up `std::string` and `std::map`, so I stopped using them, and realised - the whole code became C, so why keep using C++? So I spent 2 days of my life rewriting the kernel into C. But when I say how much I hit my head on the wall for this - I forgot to turn on paging this whole time! I am so STUPID, like I built all this, and just forgot paging completely. I want back and changed around everything, and made it all work.
+
+I then went back to the ELF and realised everything was finally not 0s, but it was like nothing was still working. I wasn't exactly sure, but I knew we were close. The summary of the problem for the ELF triple faulting was that I had updated the syscalls registers struct but had forgotten to update the assembly in [`boot.s`](../src/boot.s), so I was basically using the wrong registers, which was causing all the random triple faults, because `iret` wanted everything exact. When I fixed that, everything was working! I wrote a quick ELF:
+
+```c
+#include "farix.h"
+
+#define SYS_WRITE 1
+
+__attribute__((section(".text.prologue")))
+void _start() {
+    const char* msg = "Farix is alive!\n";
+    int len = 16;
+
+    asm volatile (
+        "mov %0, %%eax\n"  // SYS_WRITE
+        "mov %1, %%ebx\n"  // file descriptor 1 (stdout)
+        "mov %2, %%ecx\n"  // buffer pointer
+        "mov %3, %%edx\n"  // length
+        "int $0x80\n"
+        :
+        : "i"(SYS_WRITE), "i"(1), "r"(msg), "r"(len)
+        : "eax", "ebx", "ecx", "edx"
+    );
+
+    while(1);
+}
+```
+
+Then when I ran it, I cried:
+
+![ELF success](docs_assets/30_mar_2026_elf_exec_success.png)
+
+This was absolutely fantastic, I got the thing to run. Just to make sure, I did get it working earlier, but it wouldn't do any kernel panics if a user process did kernel stuff, and since the memory is good now, that shouldn't be the problem. So I wrote purposefully failing programs:
+
+```c
+#include "farix.h"
+
+__attribute__((section(".text.prologue")))
+void _start() {
+    asm volatile ("int $3");
+    while(1);
+}
+```
+
+So when I ran it, the other eye finally shed the tear:
+
+![ELF GPF](docs_assets/30_mar_2026_elf_exec_gpf.png)
+
+*(Yes, I made it look like a BSOD).* I loved it a LOT! To be fair, I have no clue if it perfectly works, but if it doens't... I will cry even more. It's literally 12 am right now, as I write this. I don't know when I'm committing it though, but I am going to test a bit more around, just to get me a bit more confident over it.
+
+I think it works, and I can finally merge the branches, it's been so long since I made a proper commit to `main`, there is so many changes. I want an HAL (Harware Abstraction Layer) at some point, but I feel I should, for my personal mental health, avoid fixing more kernel stuff, and start doing a bit more higher level components of it - like the shell.
+
+I realise I probably should have written everything here, but I just didn't feel like it was exactly worth coming back to this file to just put my frustrations over, and I am not sure why because that was exactly why I made this file in the first place. Regardless, I tried making a kernel, and I finally finished one step.
+
+It should be clear, I tried to use the big bad A-word (Articial Intelligence) to help me find the error in the ELF this whole time, and you know what happened? It sabotaged the entire thing. For some reason, AI just assumes a bunch of stuff. So everything written by AI had to be erased for my version of stuff. So, as of now, nothing in the kernel is AI.
+
+Just to cheer me up, I asked Chat GPT to tell me some bedtime stories:
+
+> *Tell me specific instances of components Linus Torvalds had troubles with while making Linux.*
+
+I am in my sadistic stage of kernel development, but with this, I slowly came to the realisation - Linus, and any other developer, were humans, and so me forgetting to enable paging is a human error. I feet smart and dumb at the same time. It also seems to me that Linux was going in a similar flow as my small kernel here. I think it's really prophetic the next commit is on line 1000 of this journal, whatever it is, better not take another month.

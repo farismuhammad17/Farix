@@ -27,7 +27,7 @@ GDTPointer gdt_ptr;
 
 void init_gdt() {
     gdt_ptr.limit = (sizeof(GDTEntry) * 6) - 1;
-    gdt_ptr.base  = (uint32_t) &gdt;
+    gdt_ptr.base  = (uint32_t) PHYSICAL_TO_VIRTUAL(&gdt);
 
     // 0x00: Null segment
     gdt_set_entry(0, 0, 0, 0, 0);
@@ -78,14 +78,4 @@ void gdt_set_entry(int num, uint32_t base, uint32_t limit, uint8_t access, uint8
     // Granularity and access flags
     gdt[num].granularity |= gran & 0xF0;
     gdt[num].access       = access;
-}
-
-void update_gdt_to_virtual() {
-    gdt_ptr.base = (uint32_t) PHYSICAL_TO_VIRTUAL(&gdt);
-
-    uint32_t tss_vaddr = (uint32_t) PHYSICAL_TO_VIRTUAL(&tss_entry);
-    gdt_set_entry(5, tss_vaddr, sizeof(TSSEntry), 0x89, 0x00);
-
-    gdt_flush((uint32_t) &gdt_ptr);
-    load_tss();
 }

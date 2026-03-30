@@ -149,7 +149,7 @@ File* ramdisk_get(const char* name) {
 FileNode* ramdisk_getall(const char* path) {
     FileNode* head  = NULL;
 
-    const char* search_path = (strcmp(path, "/") == 0) ? "" : path; // TODO CHECK IF THIS WORKS CUZ OF cstring, USE EVERYWHERE IF YES
+    const char* search_path = (strcmp(path, "/") == 0) ? "" : path;
     size_t search_len = strlen(search_path);
 
     for (int i = 0; i < RAMDISK_HASH_SIZE; i++) {

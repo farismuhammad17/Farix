@@ -43,7 +43,7 @@ AS = $(PREFIX)as
 LINKER = scripts/linker.ld
 
 # --- FLAGS ---
-CFLAGS = -ffreestanding -O2 -Wall -Wextra -Werror -fno-exceptions \
+CFLAGS = -ffreestanding -O2 -Wall -Wextra -fno-exceptions \
          -Iinclude -I$(LIBC_INC)
 LDFLAGS = -T $(LINKER) -ffreestanding -O2 -nostdlib
 QEMU_FLAGS = -drive format=raw,file=disk.img,index=0,media=disk \

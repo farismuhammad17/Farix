@@ -2,6 +2,18 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## Proper ELF Executor - *30th Mar, 2026*
+
+- Refactored entire Kernel from C++ to C.
+- Terminal
+  - BSOD upon kernel panic
+  - `t_print` for direct writing to VGA buffers
+- Memory
+  - VMM finally uses paging (forgot to enable)
+  - IDT and GDT use virtual addresses
+  - Fixed HeapSegment alignment
+- Fixed every compiler warning I got
+
 ## Pipe Shell Operator - *8th Mar, 2026*
 
 > [!WARNING]  

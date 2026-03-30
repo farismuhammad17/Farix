@@ -50,7 +50,4 @@ void cmd_rm(const char* args);
 void cmd_ls(const char* args);
 void cmd_exec(const char* args);
 
-void test_write(const char* args);
-void test_read(const char* args);
-
 #endif

@@ -87,7 +87,11 @@ bool exec(const char* path) {
     uint32_t* current_pd_virt     = (uint32_t*) PHYSICAL_TO_VIRTUAL(current_pd_phys);
     uint32_t* user_pd_virt_handle = (uint32_t*) PHYSICAL_TO_VIRTUAL(user_pd_phys);
 
-    for (int i = 768; i < 1024; i++) user_pd_virt_handle[i] = current_pd_virt[i] | PAGE_USER;
+    for (int i = 0; i < 1024; i++) {
+        if (current_pd_virt[i] != 0) {
+            user_pd_virt_handle[i] = current_pd_virt[i] | PAGE_USER;
+        }
+    }
 
     asm volatile("cli");
 

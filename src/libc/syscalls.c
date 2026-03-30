@@ -278,34 +278,40 @@ void exception_handler(syscalls_registers_t* regs) {
 
     // BSOD
     terminal_change_color(vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLUE));
-
-    printf("\n--- !!! KERNEL PANIC !!! ---");
+    terminal_clear();
 
     if (regs->int_no < 32) {
-        printf("\nException: %ld (%s)", regs->int_no, exception_messages[regs->int_no]);
+        printf("Exception: %ld (%s)\n", regs->int_no, exception_messages[regs->int_no]);
     } else {
-        printf("\nUnknown Exception: %ld", regs->int_no);
+        printf("Unknown Exception: %ld\n", regs->int_no);
     }
 
-    printf("\nEIP: %lx  CS: %lx  EFLAGS: %lx", regs->eip, regs->cs, regs->eflags);
-    printf("\nError Code: %lx", regs->err_code);
+    printf("Error Code: %lx\n", regs->err_code);
+    printf("EIP: %lx  CS: %lx  EFLAGS: %lx\n", regs->eip, regs->cs, regs->eflags);
 
     // Specifically for Page Faults
     if (regs->int_no == 14) {
         uint32_t faulting_address;
         asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
-        printf("\nFaulting Address (CR2): %lx", faulting_address);
+        printf("Faulting Address (CR2): %lx\n", faulting_address);
 
-        printf("\nReason: %s, %s, %s",
-            (regs->err_code & 0x1) ? "Page-level protection" : "Non-present page",
-            (regs->err_code & 0x2) ? "Write" : "Read",
-            (regs->err_code & 0x4) ? "User mode" : "Kernel mode");
+        printf("Reason: %s, %s, %s\n",
+            (regs->err_code & PAGE_PRESENT) ? "Page-level protection" : "Non-present page",
+            (regs->err_code & PAGE_RW)      ? "Write" : "Read",
+            (regs->err_code & PAGE_USER)    ? "User mode" : "Kernel mode");
     }
 
     // Dump general purpose registers for deeper debugging
-    printf("\n--- Register values ---");
-    printf("\nEAX: %lx  EBX: %lx  ECX: %lx  EDX: %lx", regs->eax, regs->ebx, regs->ecx, regs->edx);
-    printf("\nEDI: %lx  ESI: %lx  EBP: %lx  ESP: %lx", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
+    printf("--- Register values ---\n");
+    printf("EAX: %lx EBX: %lx ECX: %lx EDX: %lx\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
+    printf("EDI: %lx ESI: %lx EBP: %lx ESP: %lx\n", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
+
+    // Dump multitasking information in case of race condition errors
+    printf("--- Multitasking ---\n");
+    printf("Name:           %s (%lu)\n", current_task->name, current_task->id);
+    printf("Stack Pointer:  0x%08lx\n", current_task->stack_pointer);
+    printf("Stack Origin:   %p\n", (void*) current_task->stack_origin);
+    printf("Page Directory: %p (%lu)\n", (void*) current_task->page_directory, (uint32_t) current_task->privilege);
 
     while(1) asm volatile("hlt");
 }
