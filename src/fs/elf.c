@@ -108,7 +108,7 @@ bool exec(const char* path) {
 
             for (uint32_t v = start_vaddr; v < end_vaddr; v += PAGE_SIZE) {
                 void* phys = pmm_alloc_page();
-                vmm_map_page(user_pd_phys, phys, (void*) v, PAGE_PRESENT | PAGE_RW | PAGE_USER);
+                vmm_map_page(user_pd_phys, phys, (void*) v, PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_CACHE);
 
                 // Access the page via the Kernel's Direct Mapping
                 uint8_t* kernel_vaddr = (uint8_t*) PHYSICAL_TO_VIRTUAL(phys);
@@ -150,7 +150,7 @@ bool exec(const char* path) {
 
     // Map it into the USER Page Directory
     vmm_map_page(user_pd_phys, stack_phys, (void*) stack_virt_addr,
-                    PAGE_PRESENT | PAGE_RW | PAGE_USER);
+                    PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_CACHE);
 
     uint32_t* stack_ptr = (uint32_t*) PHYSICAL_TO_VIRTUAL(stack_phys);
     kmemset(stack_ptr, 0, PAGE_SIZE);

@@ -24,6 +24,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "memory/vmm.h"
 
+const uintptr_t PAGE_PRESENT = 0x1; // 01 in binary  - If page is in RAM
+const uintptr_t PAGE_RW      = 0x2; // 10 in binary  - 0 = Read-only,   1 = Read/Write
+const uintptr_t PAGE_USER    = 0x4; // 100 in binary - 0 = Kernel only, 1 = Everyone
+const uintptr_t PAGE_CACHE   = 0x0; // Not present in x86, does nothing, but required stub
+
+#define PAGING_BIT  0x80000000
+#define PAGE_WP_BIT 0x00010000
+
 uint32_t* kernel_directory = NULL;
 
 static void vmm_enable_paging(uint32_t pd_phys) {
@@ -147,17 +155,17 @@ uint32_t* vmm_get_current_directory() {
 }
 
 uint32_t vmm_get_phys(uint32_t* pd_phys, void* virt_addr) {
-    uint32_t v = (uint32_t)virt_addr;
+    uint32_t v = (uint32_t) virt_addr;
     uint32_t pd_idx = v >> 22;
     uint32_t pt_idx = (v >> 12) & 0x3FF;
 
-    // Get the Page Directory (Virtually)
+    // Get the Page Directory
     uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pd_phys);
 
     // Check if the Page Table exists
     if (!(pd_virt[pd_idx] & PAGE_PRESENT)) return 0;
 
-    // Get the Page Table (Virtually)
+    // Get the Page Table
     uint32_t pt_phys = pd_virt[pd_idx] & ~0xFFF;
     uint32_t* pt_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pt_phys);
 

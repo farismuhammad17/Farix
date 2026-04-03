@@ -58,8 +58,8 @@ void* _sbrk(int incr) {
 
         for (uint32_t v = start_page; v < end_page; v += 4096) {
             void* phys = pmm_alloc_page();
-            vmm_map_page(vmm_get_current_directory(), phys, (void*)v,
-                            PAGE_PRESENT | PAGE_RW | PAGE_USER);
+            vmm_map_page(vmm_get_current_directory(), phys, (void*) v,
+                            PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_CACHE);
 
             kmemset(PHYSICAL_TO_VIRTUAL(phys), 0, 4096);
         }
