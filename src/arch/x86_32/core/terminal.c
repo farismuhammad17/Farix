@@ -137,6 +137,27 @@ void new_line() {
     update_cursor(cursor_x, cursor_y);
 }
 
+void new_line_n(size_t n) {
+    if (n == 0) return;
+    if (n >= HEIGHT) n = HEIGHT;
+
+    size_t move_size = (HEIGHT - n) * WIDTH;
+    size_t clear_size = n * WIDTH;
+
+    // Shift valid lines up by N rows
+    if (move_size > 0) {
+        memmove(terminal_buffer,
+                terminal_buffer + (n * WIDTH),
+                move_size * sizeof(uint16_t));
+    }
+
+    // Fill the new bottom N lines with empty space
+    uint16_t blank = vga_entry(' ', terminal_color);
+    for (size_t i = 0; i < clear_size; i++) {
+        terminal_buffer[move_size + i] = blank;
+    }
+}
+
 void save_line_to_history(uint16_t* line_data) {
     TerminalLine* newNode = (TerminalLine*) kmalloc(sizeof(TerminalLine));
     kmemset(newNode, 0, sizeof(TerminalLine));
@@ -291,6 +312,41 @@ void echo_char(uint16_t c) {
     update_cursor(cursor_x, cursor_y);
 }
 
+void echo_raw(const char* data, size_t len) {
+    if (len == 0) return;
+
+    // Pre-calcualte the total lines required by data
+    size_t needed_lines = 0;
+    size_t tx = cursor_x;
+    for (size_t i = 0; i < len; i++) {
+        if (data[i] == '\n' || ++tx >= WIDTH) {
+            needed_lines++;
+            tx = 0;
+        }
+    }
+
+    size_t lines_available = HEIGHT - cursor_y - 1;
+    if (needed_lines > lines_available) {
+        size_t scroll_amount = needed_lines - lines_available;
+
+        new_line_n(scroll_amount);
+        cursor_y -= scroll_amount;
+    }
+
+    for (size_t i = 0; i < len; i++) {
+        char c = data[i];
+        if (!handle_special_chars(c)) {
+            echo_at(c, terminal_color, cursor_x, cursor_y);
+            if (++cursor_x >= WIDTH) {
+                cursor_x = 0;
+                cursor_y++;
+            }
+        }
+    }
+
+    update_cursor(cursor_x, cursor_y);
+}
+
 // Terminal print:
 // Literally changes the VGA buffer directly
 // doesn't rely on heap on anything to print
@@ -303,57 +359,54 @@ void t_print(char* text) {
 }
 
 bool handle_special_chars(uint16_t c) {
-    if (c == '\n') {
-        save_line_to_history(&terminal_buffer[cursor_y * WIDTH]);
+    switch (c) {
+        case '\n':
+            save_line_to_history(&terminal_buffer[cursor_y * WIDTH]);
 
-        cursor_x = 0;
-        cursor_y++;
-
-        return true;
-    }
-
-    else if (c == '\b') {
-        size_t prompt_len = strlen(shell_directory) + 2;
-
-        if (cursor_x <= prompt_len) {
-            return true;
-        }
-
-        if (cursor_x > 0) {
-            cursor_x--;
-        } else if (cursor_y > 0) {
-            // Wrap back to the previous line
-            cursor_y--;
-            cursor_x = WIDTH - 1;
-        }
-
-        echo_at(' ', terminal_color, cursor_x, cursor_y);
-
-        return true;
-    }
-
-    else if (c == '\t') {
-        cursor_x += INDENT_LEN - cursor_x % INDENT_LEN;
-
-        if (cursor_x >= WIDTH) {
             cursor_x = 0;
             cursor_y++;
-        }
 
-        return true;
+            return true;
+
+        case '\b':
+            size_t prompt_len = strlen(shell_directory) + 2;
+
+            if (cursor_x <= prompt_len) {
+                return true;
+            }
+
+            if (cursor_x > 0) {
+                cursor_x--;
+            } else if (cursor_y > 0) {
+                // Wrap back to the previous line
+                cursor_y--;
+                cursor_x = WIDTH - 1;
+            }
+
+            echo_at(' ', terminal_color, cursor_x, cursor_y);
+
+            return true;
+
+        case '\t':
+            cursor_x += INDENT_LEN - cursor_x % INDENT_LEN;
+
+            if (cursor_x >= WIDTH) {
+                cursor_x = 0;
+                cursor_y++;
+            }
+
+            return true;
+
+        case KEY_UP:
+            cmd_history_up();
+            return true;
+
+        case KEY_DOWN:
+            cmd_history_down();
+            return true;
+
+        default: return false;
     }
-
-    else if (c == KEY_UP) {
-        cmd_history_up();
-        return true;
-    }
-
-    else if (c == KEY_DOWN) {
-        cmd_history_down();
-        return true;
-    }
-
-    return false;
 }
 
 void handle_mouse() {

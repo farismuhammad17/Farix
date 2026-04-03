@@ -85,6 +85,7 @@ void terminal_clear();
 void terminal_change_color(uint8_t color);
 void refresh_terminal_view();
 void new_line();
+void new_line_n(size_t n);
 
 void save_line_to_history(uint16_t* line_data);
 void update_line_history_tail(uint16_t* line_data);
@@ -97,6 +98,7 @@ void cmd_history_down();
 
 void echo_at   (char c, uint8_t color, size_t x, size_t y);
 void echo_char (uint16_t c);
+void echo_raw  (const char* data, size_t len);
 void t_print   (char* text);
 
 bool handle_special_chars(uint16_t c);

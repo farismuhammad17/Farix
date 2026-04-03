@@ -48,5 +48,6 @@ void shell_update();
 void shell_parse(const char* input);
 
 void sh_print(const char* format, ...);
+void shell_flush();
 
 #endif

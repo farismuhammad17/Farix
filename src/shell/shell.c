@@ -18,11 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 // TODO
-// Stop using printf on every line
-// store everything at once and write
-// to terminal at once to avoid line-
-// by-line printing.
-//
 // Move memstat into shell
 
 #include <stdarg.h>
@@ -45,6 +40,9 @@ bool shell_buffer_ready = false;
 char  last_cmd_output[MAX_LAST_CMD_OUTPUT_LEN] = {0};
 char* pipe_buffer = NULL;
 bool  is_piping = false;
+
+static char shell_output_buffer[8192];
+static size_t shell_output_ptr = 0;
 
 static size_t shell_buffer_size = 0;
 
@@ -115,47 +113,40 @@ void shell_update() {
 }
 
 void shell_parse(const char* input) {
-    if (input == NULL || input[0] == '\0') return; // Empty
-
-    // Allocate the buffer once if it's null
-    if (!pipe_buffer) pipe_buffer = (char*) malloc(PIPE_BUFFER_SIZE);
-    memset(pipe_buffer, 0, PIPE_BUFFER_SIZE);
+    if (input == NULL || input[0] == '\0') return;
 
     char* segments[2];
     size_t num_segments = 0;
+    char* pipe_ptr = strchr((char*)input, '|');
 
-    char* pipe_ptr = strchr(input, '|');
     if (pipe_ptr != NULL) {
-        *pipe_ptr = '\0';             // Split the string at '|'
-        segments[0] = (char*) input;          // First half
-        segments[1] = pipe_ptr + 1;   // Second half
+        *pipe_ptr = '\0';
+        segments[0] = (char*)input;
+        segments[1] = pipe_ptr + 1;
         num_segments = 2;
     } else {
-        segments[0] = (char*) input;
+        segments[0] = (char*)input;
         num_segments = 1;
     }
 
-    last_cmd_output[0] = '\0'; // Reset for the new line
+    last_cmd_output[0] = '\0';
 
     for (size_t i = 0; i < num_segments; i++) {
         char* segment = trim(segments[i]);
         if (segment[0] == '\0') continue;
 
         is_piping = (i < num_segments - 1);
-        pipe_buffer[0] = '\0'; // Clear the C-string buffer
+        shell_output_ptr = 0; // Clear buffer for this segment's output
 
         char* cmd_name = segment;
         char* args = strchr(segment, ' ');
-
         if (args != NULL) {
-            *args = '\0'; // Terminate cmd_name
-            args++;       // Point to start of arguments
-            args = trim(args);
+            *args = '\0';
+            args = trim(args + 1);
         } else {
-            args = "";    // No arguments
+            args = "";
         }
 
-        // Execute command
         bool found = false;
         for (int j = 0; command_table[j].name != NULL; j++) {
             if (strcmp(cmd_name, command_table[j].name) == 0) {
@@ -171,25 +162,55 @@ void shell_parse(const char* input) {
             return;
         }
 
-        strncpy(last_cmd_output, pipe_buffer, MAX_LAST_CMD_OUTPUT_LEN - 1);
+        // Capture output for next pipe stage
+        strncpy(last_cmd_output, shell_output_buffer, MAX_LAST_CMD_OUTPUT_LEN - 1);
     }
 
-    is_piping = false; // Safety reset
+    // Final output to screen
+    shell_flush();
+    is_piping = false;
 }
 
 void sh_print(const char* format, ...) {
-    char local_buf[1024]; // Temporary buffer for this specific print
-
+    char local_buf[1024];
     va_list args;
     va_start(args, format);
-
-    // This function evaluates the %s, %d, etc., and puts it into local_buf
-    vsnprintf(local_buf, sizeof(local_buf), format, args);
+    int len = vsnprintf(local_buf, sizeof(local_buf), format, args);
     va_end(args);
 
-    if (is_piping) { // Append local_buf to our global pipe_buffer instead of printing
-        strcat(pipe_buffer, local_buf);
-    } else { // No pipe
-        printf("%s", local_buf);
+    if (len <= 0) return;
+
+    char* src = local_buf;
+    int remaining = len;
+
+    while (remaining > 0) {
+        size_t space_left = sizeof(shell_output_buffer) - shell_output_ptr - 1;
+
+        if (space_left == 0) {
+            shell_flush();
+            space_left = sizeof(shell_output_buffer) - 1;
+        }
+
+        size_t to_copy = (remaining < (int) space_left) ? (size_t) remaining : space_left;
+
+        memcpy(shell_output_buffer + shell_output_ptr, src, to_copy);
+
+        shell_output_ptr += to_copy;
+        shell_output_buffer[shell_output_ptr] = '\0';
+
+        src += to_copy;
+        remaining -= to_copy;
+
+        if (shell_output_ptr >= sizeof(shell_output_buffer) - 1) {
+            shell_flush();
+        }
+    }
+}
+
+void shell_flush() {
+    if (shell_output_ptr > 0) {
+        printf("%s", shell_output_buffer);
+        shell_output_ptr = 0;
+        shell_output_buffer[0] = '\0';
     }
 }
