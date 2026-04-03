@@ -35,6 +35,10 @@ typedef struct HeapSegment {
     uint32_t caller;
 } __attribute__((aligned(4))) HeapSegment;
 
+extern void*        heap_start;
+extern void*        heap_end;
+extern HeapSegment* first_segment;
+
 void   init_heap();
 void*  kmalloc(size_t size);
 void   kfree(void* ptr);

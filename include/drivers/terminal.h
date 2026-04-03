@@ -33,7 +33,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define INDENT_LEN 4
 
-#define MAX_TERMINAL_LINE_HISTORY_LEN 1000
+#define MAX_TERMINAL_LINE_HISTORY_LEN 100
 #define MAX_TERMINAL_CMD_HISTORY_LEN  50
 #define MAX_SPECIAL_CHAR_LEN          32
 

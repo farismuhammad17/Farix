@@ -139,22 +139,20 @@ void new_line() {
 
 void new_line_n(size_t n) {
     if (n == 0) return;
-    if (n >= HEIGHT) n = HEIGHT;
 
-    size_t move_size = (HEIGHT - n) * WIDTH;
-    size_t clear_size = n * WIDTH;
+    // If we need to scroll more than a screen, we still only move
+    // a maximum of HEIGHT-1 lines to keep the current "view"
+    size_t effective_n = (n >= HEIGHT) ? HEIGHT - 1 : n;
 
-    // Shift valid lines up by N rows
-    if (move_size > 0) {
-        memmove(terminal_buffer,
-                terminal_buffer + (n * WIDTH),
-                move_size * sizeof(uint16_t));
-    }
+    size_t move_size = (HEIGHT - effective_n) * WIDTH;
+    memmove(terminal_buffer,
+            terminal_buffer + (effective_n * WIDTH),
+            move_size * sizeof(uint16_t));
 
-    // Fill the new bottom N lines with empty space
+    // Clear the newly opened area at the bottom
     uint16_t blank = vga_entry(' ', terminal_color);
-    for (size_t i = 0; i < clear_size; i++) {
-        terminal_buffer[move_size + i] = blank;
+    for (size_t i = move_size; i < WIDTH * HEIGHT; i++) {
+        terminal_buffer[i] = blank;
     }
 }
 
@@ -325,18 +323,43 @@ void echo_raw(const char* data, size_t len) {
         }
     }
 
-    size_t lines_available = HEIGHT - cursor_y - 1;
+    // Early scroll
+    size_t lines_available = (HEIGHT - 1) - cursor_y;
+    size_t skip_lines = 0;
     if (needed_lines > lines_available) {
         size_t scroll_amount = needed_lines - lines_available;
 
+        if (needed_lines >= HEIGHT) {
+            skip_lines = needed_lines - (HEIGHT - 1);
+            scroll_amount = HEIGHT - 1;
+        }
+
         new_line_n(scroll_amount);
-        cursor_y -= scroll_amount;
+
+        if (scroll_amount >= cursor_y) cursor_y = 0;
+        else cursor_y -= scroll_amount;
     }
+
+    // Dump to VGA buffer
+    size_t current_line = 0;
+    tx = cursor_x;
 
     for (size_t i = 0; i < len; i++) {
         char c = data[i];
+
+        if (current_line < skip_lines) {
+            if (c == '\n' || ++tx >= WIDTH) {
+                current_line++;
+                tx = 0;
+            }
+            continue;
+        }
+
         if (!handle_special_chars(c)) {
-            echo_at(c, terminal_color, cursor_x, cursor_y);
+            if (cursor_y < HEIGHT) {
+                echo_at(c, terminal_color, cursor_x, cursor_y);
+            }
+
             if (++cursor_x >= WIDTH) {
                 cursor_x = 0;
                 cursor_y++;

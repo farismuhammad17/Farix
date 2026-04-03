@@ -28,9 +28,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "memory/heap.h"
 
-static void*        heap_start    = (void*) PHYSICAL_TO_VIRTUAL(0x1000000);
-static void*        heap_end      = NULL;
-static HeapSegment* first_segment = NULL;
+void*        heap_start    = (void*) PHYSICAL_TO_VIRTUAL(0x1000000);
+void*        heap_end      = NULL;
+HeapSegment* first_segment = NULL;
 
 bool check_heap() {
     HeapSegment* current = first_segment;
@@ -235,48 +235,4 @@ size_t get_heap_used() {
         current = current->next;
     }
     return used;
-}
-
-void print_memstat() {
-    printf("\n--- HEAP MAP ---\n");
-    printf("Start: %p | End: %p\n", heap_start, heap_end);
-    printf("----------------------------------------------------------------------\n");
-    printf("Address    | Size      | Status | Caller Address\n");
-    printf("----------------------------------------------------------------------\n");
-
-    // Disable interrupts to prevent the scheduler from
-    // switching tasks while we use the heap.
-    system_int_off();
-
-    size_t heap_total = get_heap_total();
-    size_t heap_used  = get_heap_used();
-
-    HeapSegment* current = first_segment;
-    while (current != NULL) {
-        printf("%p | %-9lu | %-6s | 0x%08lX\n",
-                current,
-                current->size,
-                current->is_free ? "FREE" : "USED",
-                current->caller);
-        current = current->next;
-    }
-
-    printf("----------------------------------------------------------------------\n");
-    printf("Total Used: %lu bytes\n", heap_used);
-    printf("----------------------------------------------------------------------\n\n");
-
-    size_t total_kb = heap_total >> 10;
-    size_t used_kb  = heap_used  >> 10;
-
-    system_int_on();
-
-    size_t free_kb  = total_kb - used_kb;
-
-    int usage_pct = (total_kb > 0) ? (int)((used_kb * 100) / total_kb) : 0;
-
-    printf("Memory Statistics:\n");
-    printf("------------------------\n");
-    printf("Total memory: %4lu KiB\n", total_kb);
-    printf("Used memory:  %4lu KiB [%d%%]\n", used_kb, usage_pct);
-    printf("Free memory:  %4lu KiB\n", free_kb);
 }
