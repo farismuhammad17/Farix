@@ -2,6 +2,23 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## Instant Shell Outputs - *3rd April, 2026*
+
+- Terminal
+  - Added `echo_raw`
+  - Added `new_line_n`
+  - Uses arrays to store lines instead of doubly linked list
+- Shell
+  - Moved `memstat` logic from heap to shell
+  - Implemented buffers and flushes to make outputs instant
+- Newlib
+  - `_write` uses `echo_raw` instead of printing line by line
+
+## Hardware Abstraction Layer - *3rd April, 2026*
+
+- Fully supports x86_32
+- Half supports arm32
+
 ## Proper ELF Executor - *30th Mar, 2026*
 
 - Refactored entire Kernel from C++ to C.

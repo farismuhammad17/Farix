@@ -24,6 +24,27 @@ import subprocess
 import sys
 import shutil
 
+HELP = """
+\033[1;36mFarix OS Build System\033[0m
+
+\033[90mTIP: Use 'source make.env' to alias build.py as 'm'\033[0m
+Usage: \033[1m m [target] [-arch <architecture>]\033[0m
+
+\033[1;36mTargets:\033[0m
+  \033[1;32mall\033[0m          Build the kernel and all dependencies \033[90m(default)\033[0m
+  \033[1;32mlibc\033[0m         Compile the internal C standard library
+  \033[1;32mdisk.img\033[0m     Generate the bootable disk image
+  \033[1;32mget_deps\033[0m     Fetch and verify build-tool dependencies
+  \033[1;32mrun\033[0m          Build and launch in QEMU \033[90m(Fullscreen mode)\033[0m
+  \033[1;32mrun_\033[0m         Build and launch in QEMU \033[90m(Windowed mode)\033[0m
+  \033[1;32mclean\033[0m        Remove all build artifacts and object files
+  \033[1;32mhelp\033[0m         Display this menu
+
+\033[1;36mArchitectures:\033[0m
+  \033[1mx86_32\033[0m       32-bit x86 \033[90m(default)\033[0m
+  \033[1marm32\033[0m        32-bit ARM \033[90m(Requires arm-none-eabi-gcc)\033[0m
+"""
+
 # --- UTILS ---
 
 def run(cmd, shell=True, check=True):
@@ -207,7 +228,9 @@ if __name__ == "__main__":
 
     arch = "x86_32"
     if "-arch" in sys.argv:
-        arch = sys.argv[sys.argv.find("-arch") + 1]
+        idx = sys.argv.index("-arch")
+        if idx + 1 < len(sys.argv):
+            arch = sys.argv[idx + 1]
 
     if   target == "all": farix_bin(arch)
     elif target == "clean": clean()
@@ -222,5 +245,7 @@ if __name__ == "__main__":
         if not os.path.exists("farix.bin"): farix_bin()
         if not os.path.exists("disk.img"): disk_img()
         run_qemu(fullscreen=False)
+    elif target == "help":
+        print(HELP)
     else:
         print("make: Unknown command")

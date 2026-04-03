@@ -12,33 +12,43 @@ Your system must be targeting the x86 architecture, since the OS is specifically
 
 ## Initialising environment
 
-Assuming you have cloned the GitHub repository, the program requries some external modules. You can download these easily with the [Makefile](../Makefile).
+Assuming you have cloned the GitHub repository, the program requries some external modules. You can download these easily with the [make.py](../make.py) (assuming you have python on your machine). You may run it directly with python, but for making it nicer to use, you can use an alias:
+
+```bash
+source make.env
+```
 
 [!NOTE]  
 > These commands may take some time to finish executing, so be sure to have coffee ready.
 
 ```bash
-make get_deps
-make libc
+m get_deps
+m libc
 ```
 
 ## Running the OS
 
-To run it, use either of the following, and the [Makefile](../Makefile) handles the rest:
+To run it, use either of the following, and the [make.py](../make.py) handles the rest:
 
 ```bash
-make run        # Full screen
-make run_nofs   # Runs in a window
+m run        # Full screen
+m run_       # Runs in a window
 ```
 
 Alternatively, if you want to compile the OS:
 
 ```bash
-make
+m -arch [ARCHITECTURE NAME]
 ```
 
 Create the disk image:
 
 ```bash
-make disk.img
+m disk.img
+```
+
+Additionally, you can use help with it:
+
+```bash
+m help
 ```
