@@ -19,11 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdio.h>
 
-#include "architecture/io.h"
-#include "architecture/multiboot.h"
-#include "cpu/gdt.h"
-#include "cpu/idt.h"
-#include "cpu/pic.h"
+#include "arch/stubs.h"
+#include "cpu/ints.h"
 #include "cpu/timer.h"
 #include "drivers/ata.h"
 #include "drivers/keyboard.h"
@@ -39,35 +36,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "process/task.h"
 #include "shell/shell.h"
 
-#define THREAD_HZ 100
+#include "arch/kernel.h"
 
 void shell_thread() {
     while (1) {
         shell_update();  // Check if a command is ready
-        asm volatile("hlt");
+        system_halt();
     }
 }
 
 extern void _init();
 
-void kernel_main(uint32_t magic, multiboot_info* mbi) {
-    pic_remap();
+void kernel_main() {
+    // Each architecture's boot.s calls this function independantly
+    // through a seperate arch_kmain, which does all the arch specific
+    // checks and iniinitializations before calling this function.
+    //
+    // This function is a general kernel_main function, and does not
+    // care about the architecture it's running on.
 
-    init_pmm(mbi);
-    init_vmm();
     init_heap();
-
-    init_gdt();
-    init_idt();
-
+    init_interrupts();
     init_terminal();
 
     _init();
-
-    if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
-        printf("OS Error: Invalid Multiboot Magic Number");
-        while(1) { asm volatile("hlt"); }
-    }
 
     init_keyboard();
     init_mouse();
@@ -76,7 +68,7 @@ void kernel_main(uint32_t magic, multiboot_info* mbi) {
     init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms
 
     // Enable interrupts
-    asm volatile("sti");
+    system_int_on();
 
     init_ata();
 
@@ -94,7 +86,5 @@ void kernel_main(uint32_t magic, multiboot_info* mbi) {
     // Interrupts take back control from this loop whenever
     // they are called, so the OS is never stuck in the
     // while loop forever.
-    while (1) {
-        asm volatile("hlt");
-    }
+    while (1) system_halt();
 }

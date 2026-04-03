@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <stdio.h>
 
+#include "arch/stubs.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
 
@@ -120,9 +121,9 @@ void* kmalloc(size_t size) {
             }
 
             current->is_free = false;
-            current->caller  = (uint32_t) __builtin_return_address(0);
+            current->caller  = (uint32_t) __builtin_return_address(0); // TODO VERIFY IS x86 SPECIFIC
 
-            return (void*)((uint32_t)current + sizeof(HeapSegment));
+            return (void*)((uint32_t) current + sizeof(HeapSegment));
         }
 
         current = current->next;
@@ -174,7 +175,7 @@ void kmemcpy(void* dest, const void* source, size_t n) {
     }
 
     // Ensure writes are finished
-    asm volatile("" : : : "memory");
+    cpu_mem_barrier();
 }
 
 void kmemset(void* s, int c, size_t n) {
@@ -245,7 +246,7 @@ void print_memstat() {
 
     // Disable interrupts to prevent the scheduler from
     // switching tasks while we use the heap.
-    asm volatile("cli");
+    system_int_off();
 
     size_t heap_total = get_heap_total();
     size_t heap_used  = get_heap_used();
@@ -264,10 +265,10 @@ void print_memstat() {
     printf("Total Used: %lu bytes\n", heap_used);
     printf("----------------------------------------------------------------------\n\n");
 
-    size_t total_kb = heap_total / 1024;
-    size_t used_kb  = heap_used  / 1024;
+    size_t total_kb = heap_total >> 10;
+    size_t used_kb  = heap_used  >> 10;
 
-    asm volatile("sti");
+    system_int_on();
 
     size_t free_kb  = total_kb - used_kb;
 

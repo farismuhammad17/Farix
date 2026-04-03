@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "architecture/io.h"
+#include "arch/stubs.h"
 #include "process/task.h"
 
 void init_timer(uint32_t frequency) {

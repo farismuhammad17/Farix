@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <string.h>
 
-#include "cpu/tss.h"
+#include "arch/stubs.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
 #include "memory/pmm.h"
@@ -93,7 +93,7 @@ bool exec(const char* path) {
         }
     }
 
-    asm volatile("cli");
+    system_int_off();
 
     uint32_t highest_vaddr = 0;
     elf_program_header_t* phdr = (elf_program_header_t*)(file_buffer + header->e_phoff);
@@ -137,7 +137,7 @@ bool exec(const char* path) {
         }
     }
 
-    asm volatile("sti");
+    system_int_on();
 
     task* elf_task = create_task((void(*)()) header->e_entry, path, 1);
 

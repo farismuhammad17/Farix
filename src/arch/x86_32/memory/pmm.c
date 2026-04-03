@@ -21,11 +21,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
+#include "arch/x86/multiboot.h"
+
 #include "memory/pmm.h"
 
 // Defined in scripts/linker.ld
 extern char _kernel_start;
 extern char _kernel_end;
+
+extern multiboot_info* mbi;
 
 static uint32_t pmm_bitmap[BITMAP_SIZE];
 
@@ -51,7 +55,7 @@ static void pmm_clear_bit(uint32_t page_number) {
 //     return (pmm_bitmap[index] & (1 << bit));
 // }
 
-void init_pmm(multiboot_info* mbi) {
+void init_pmm() {
     if (!(mbi->flags & (1 << 6))) return;
 
     // Start by marking everything as used (1)

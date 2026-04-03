@@ -73,7 +73,7 @@ static uint32_t find_free_fat_entry() {
 
             uint32_t entry = fat[i] & 0x0FFFFFFF;
             if (entry == 0x0000000) {
-                return (s * 128) + i; // This is the absolute Cluster Number
+                return (s << 7) + i; // This is the absolute Cluster Number
             }
         }
     }
@@ -411,7 +411,7 @@ bool fat32_create(const char* path) {
 
     if (parent_cluster == 0) return false;
 
-    uint8_t buffer[512];
+    uint8_t  buffer[512];
     uint32_t current_dir_cluster = parent_cluster;
     uint32_t last_cluster = parent_cluster;
 
@@ -497,7 +497,7 @@ bool fat32_mkdir(const char* path) {
 
     if (parent_cluster == 0) return false;
 
-    uint8_t buffer[512];
+    uint8_t  buffer[512];
     uint32_t current_dir_cluster = parent_cluster;
     uint32_t last_cluster = parent_cluster;
 
@@ -555,7 +555,7 @@ bool fat32_remove(const char* name) {
     if (parent_cluster == 0) return false;
 
     uint32_t cluster = parent_cluster;
-    uint8_t dir_buf[512];
+    uint8_t  dir_buf[512];
 
     while (cluster >= 2 && cluster < 0x0FFFFFF8) {
         uint32_t first_lba = get_lba_from_cluster(cluster, disk_info);

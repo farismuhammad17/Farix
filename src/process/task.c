@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <stdio.h>
 
-#include "cpu/tss.h"
+#include "arch/stubs.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
 
@@ -40,7 +40,7 @@ uint32_t next_pid  = 0;
 size_t total_tasks = 0;
 
 void task_trampoline() {
-    asm volatile("sti");
+    system_int_on();
 
     if (current_task && current_task->entry_func) {
         current_task->entry_func();
@@ -49,7 +49,7 @@ void task_trampoline() {
     current_task->state = TASK_DEAD;
 
     while(1) {
-        yield(); // Keep yielding until the scheduler deletes the task
+        task_yield(); // Keep yielding until the scheduler deletes the task
     }
 }
 
@@ -107,7 +107,7 @@ task* create_task(void (*entry_point)(), const char* name, const bool privilege)
 
 void kill_task(uint32_t id) {
     // Disable interrupts for safety
-    asm volatile("cli");
+    system_int_off();
 
     task* target = current_task;
 
@@ -118,10 +118,10 @@ void kill_task(uint32_t id) {
 
     if (target) target->state = TASK_DEAD;
 
-    asm volatile("sti");
+    system_int_on();
 
     if (target == current_task) {
-        yield();
+        task_yield();
         return;
     }
 }
@@ -161,8 +161,4 @@ void schedule() {
     vmm_switch_directory(next->page_directory);
 
     switch_task(&last->stack_pointer, next->stack_pointer);
-}
-
-void yield() {
-    asm volatile("int $0x20"); // Manually trigger the timer interrupt
 }

@@ -17,16 +17,58 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdint.h>
+
 #include "memory/vmm.h"
 
-#include "cpu/idt.h"
+#include "cpu/ints.h"
+
+#define IDT_GATE_KERNEL 0x8E  // 1000 1110: Present, Ring 0, Interrupt Gate
+#define IDT_GATE_USER   0xEE  // 1110 1110: Present, Ring 3, Interrupt Gate
+
+typedef struct idt_entry {
+    uint16_t base_low;    // Lower 16 bits of the handler address
+    uint16_t sel;         // Kernel Segment Selector (0x08)
+    uint8_t  always0;     // This byte must be 0
+    uint8_t  flags;       // That "Permission Slip" byte (0x8E)
+    uint16_t base_high;   // Upper 16 bits of the handler address
+} __attribute__((packed)) idt_entry;
+
+typedef struct idt_ptr {
+    uint16_t limit; // 2 bytes
+    uint32_t base;  // 4 bytes
+} __attribute__((packed)) idt_ptr;
+
+// Defined in idt.asm
+void default_handler_stub();
+void timer_handler_stub();
+void keyboard_handler_stub();
+void mouse_handler_stub();
+void syscall_handler_stub();
+void isr0();  void isr1();  void isr2();  void isr3();
+void isr4();  void isr5();  void isr6();  void isr7();
+void isr8();  void isr9();  void isr10(); void isr11();
+void isr12(); void isr13(); void isr14(); void isr15();
+void isr16(); void isr17(); void isr18(); void isr19();
+void isr20(); void isr21(); void isr22(); void isr23();
+void isr24(); void isr25(); void isr26(); void isr27();
+void isr28(); void isr29(); void isr30(); void isr31();
 
 struct idt_entry idt[256];
 struct idt_ptr   idtp;
 
-void init_idt() {
-    idtp.limit = (sizeof(struct idt_entry) * 256) - 1;  // Defines the IDT pointer's size how x86 likes
-    idtp.base  = (uint32_t) &idt;  // The memory address of the IDT array
+static void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
+    idt[num].base_low  = (base & 0xFFFF);        // Lower 16 bits
+    idt[num].base_high = (base >> 16) & 0xFFFF;  // Upper 16 bits
+
+    idt[num].sel     = sel;    // Usually 0x08 (Kernel Code Segment)
+    idt[num].always0 = 0;      // Always 0
+    idt[num].flags   = flags;
+}
+
+void init_interrupts() {
+    idtp.limit = (sizeof(struct idt_entry) << 8) - 1;  // Defines the IDT pointer's size how x86 likes
+    idtp.base  = (uint32_t) &idt;                      // The memory address of the IDT array
 
     for (int i = 0; i < 256; i++) {
         uint32_t base = (uint32_t) default_handler_stub;
@@ -76,13 +118,4 @@ void init_idt() {
     idt_set_gate(31, (uint32_t) isr31, 0x08, IDT_GATE_KERNEL);
 
     asm volatile("lidt %0" : : "m"(idtp));
-}
-
-void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
-    idt[num].base_low  = (base & 0xFFFF);        // Lower 16 bits
-    idt[num].base_high = (base >> 16) & 0xFFFF;  // Upper 16 bits
-
-    idt[num].sel     = sel;    // Usually 0x08 (Kernel Code Segment)
-    idt[num].always0 = 0;      // Always 0
-    idt[num].flags   = flags;
 }

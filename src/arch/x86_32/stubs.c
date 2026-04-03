@@ -17,7 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "architecture/io.h"
+#include <stdint.h>
+
+#include "memory/vmm.h"
+
+#include "arch/stubs.h"
 
 void outb(uint16_t port, uint8_t val) {
     asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
@@ -37,4 +41,42 @@ uint16_t inw(uint16_t port) {
     uint16_t ret;
     asm volatile ( "inw %1, %0" : "=a"(ret) : "Nd"(port) );
     return ret;
+}
+
+void system_halt() {
+    asm volatile("hlt");
+}
+
+void system_int_on() {
+    asm volatile("sti");
+}
+
+void system_int_off() {
+    asm volatile("cli");
+}
+
+void system_pause() {
+    asm volatile("pause" ::: "memory");
+}
+
+uint32_t asm_get_random(uint8_t *success) {
+    uint32_t random_val;
+
+    asm volatile(
+        "rdrand %0; "
+        "setc %1"
+        : "=r" (random_val), "=m" (*success)
+        :
+        : "cc"
+    );
+
+    return random_val;
+}
+
+void cpu_mem_barrier() {
+    asm volatile("" : : : "memory");
+}
+
+void task_yield() {
+    asm volatile("int $0x20");
 }

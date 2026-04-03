@@ -20,23 +20,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef SYSCALLS_H
 #define SYSCALLS_H
 
-// For avoiding unused argument compiler warnings cleanly
-#define UNUSED_ARG __attribute__((unused))
-
 #define SYS_WRITE 1
 #define SYS_READ  2
 #define SYS_EXIT  3
 #define SYS_SBRK 45
 
-#include <stdint.h>
+// For avoiding unused argument compiler warnings cleanly
+#define UNUSED_ARG __attribute__((unused))
 
-typedef struct syscalls_registers_t {
-    uint32_t ds;                                           // Data segment (pushed by us)
-    uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax; // Pushed by pusha
-    uint32_t int_no, err_code;                             // Pushed in stub
-    uint32_t eip, cs, eflags, useresp, ss;                 // Pushed by CPU
-} syscalls_registers_t;
-
-void syscall_handler(syscalls_registers_t* regs);
+void* _sbrk(int incr);
+void  _exit(UNUSED_ARG int status);
+int   _read(int file, char *ptr, int len);
+int   _write(int file, char *ptr, int len);
 
 #endif

@@ -17,14 +17,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef IO_H
-#define IO_H
+#include "cpu/ints.h"
 
-#include <stdint.h>
+extern uint32_t _vector_table;
 
-void     outb (uint16_t port, uint8_t val);
-void     outw (uint16_t port, uint16_t val);
-uint8_t  inb  (uint16_t port);
-uint16_t inw  (uint16_t port);
+void init_interrupts() {
+    uint32_t addr = (uint32_t) &_vector_table;
 
-#endif
+    // Set VBAR
+    asm volatile("mcr p15, 0, %0, c12, c0, 0" : : "r"(addr));
+
+    // Clear SCTLR.V (bit 13) to ensure we use VBAR, not 0xFFFF0000
+    uint32_t sctlr;
+    asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r"(sctlr));
+    sctlr &= ~(1 << 13);
+    asm volatile("mcr p15, 0, %0, c1, c0, 0" : : "r"(sctlr));
+}

@@ -17,19 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef PMM_H
-#define PMM_H
+#ifndef KERNEL_H
+#define KERNEL_H
 
-#include <stddef.h>
-#include <stdint.h>
+#define THREAD_HZ 100
 
-#define PAGE_SIZE    4096
-#define LOG2_PAGE_SIZE 12   // log_2(PAGE_SIZE)
-#define BITMAP_SIZE 32768   // 32768 integers * 32 bits * 4096 bytes = 4GB of RAM management.
-
-void init_pmm();
-
-void* pmm_alloc_page();
-void  pmm_free_page(void* addr);
+void kernel_main();
 
 #endif

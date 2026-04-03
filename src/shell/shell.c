@@ -17,6 +17,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+// TODO
+// Stop using printf on every line
+// store everything at once and write
+// to terminal at once to avoid line-
+// by-line printing.
+//
+// Move memstat into shell
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>

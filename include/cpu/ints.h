@@ -17,16 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef PIC_H
-#define PIC_H
+#ifndef INTS_H
+#define INTS_H
 
-#define PIC1    		0x20
-#define PIC1_COMMAND	PIC1
-#define PIC1_DATA   (PIC1+1)
-#define PIC2	    	0xA0
-#define PIC2_COMMAND	PIC2
-#define PIC2_DATA	(PIC2+1)
-
-void pic_remap();
+void init_interrupts();
 
 #endif

@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "arch/stubs.h"
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "fs/vfs.h"
@@ -32,41 +33,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "process/task.h"
 
 #include "libc/syscalls.h"
-
-const char* exception_messages[] = {
-    "Division By Zero",             // 0
-    "Debug",                        // 1
-    "Non Maskable Interrupt",       // 2
-    "Breakpoint",                   // 3
-    "Into Detected Overflow",       // 4
-    "Out of Bounds",                // 5
-    "Invalid Opcode",               // 6
-    "No Coprocessor",               // 7
-    "Double Fault",                 // 8
-    "Coprocessor Segment Overrun",  // 9
-    "Bad TSS",                      // 10
-    "Segment Not Present",          // 11
-    "Stack Fault",                  // 12
-    "General Protection Fault",     // 13
-    "Page Fault",                   // 14
-    "Unknown Interrupt",            // 15
-    "Floating Point Error",         // 16
-    "Alignment Check",              // 17
-    "Machine Check",                // 18
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved"
-};
 
 // A table of strings representing the names of open files
 static const char* fd_table[20] = {NULL};
@@ -114,9 +80,8 @@ int _read(int file, char *ptr, int len) {
     if (file == 0) { // stdin
         int i = 0;
         while (i < len) {
-            while (kbd_head == kbd_tail) {
-                __asm__("hlt");
-            }
+            while (kbd_head == kbd_tail)
+                system_halt();
 
             char c = kbd_buffer[kbd_tail];
             kbd_tail = (kbd_tail + 1) % KBD_BUFFER_LEN;
@@ -184,21 +149,17 @@ int getentropy(void *ptr, size_t len) {
     size_t i = 0;
 
     while (i < len) {
-        uint32_t random_val;
         unsigned char ok;
-
-        // RDRAND returns 1 on success (entropy available) or 0 on failure
-        __asm__ volatile ("rdrand %0; setc %1"
-            : "=r" (random_val), "=q" (ok));
+        uint32_t random_val = asm_get_random(&ok);
 
         if (ok) {
             // Copy bytes from the 32-bit result into the buffer
             for (int j = 0; j < 4 && i < len; j++) {
-                buf[i++] = (uint8_t)(random_val >> (j * 8));
+                buf[i++] = (uint8_t)(random_val >> (j << 3));
             }
         } else {
             // If the hardware pool is exhausted, pause briefly
-            __asm__ volatile ("pause");
+            system_pause();
         }
     }
     return 0;
@@ -235,83 +196,4 @@ void* memmove(void* dest, const void* src, size_t n) {
     const uint8_t* s = (const uint8_t*)src;
     for (size_t i = n; i > 0; i--) d[i-1] = s[i-1];
     return dest;
-}
-
-void syscall_handler(syscalls_registers_t* regs) {
-    switch (regs->eax) {
-        case SYS_WRITE: {
-            // ebx = file descriptor, ecx = buffer, edx = length
-            int len = regs->edx;
-            char* ptr = (char*)regs->ecx;
-            if (regs->ebx == 1 || regs->ebx == 2) { // stdout/stderr
-                for (int i = 0; i < len; i++) {
-                    echo_char(ptr[i]);
-                }
-                regs->eax = len; // Return the number of bytes written
-            } else {
-                // Handle file writing for other descriptors if needed
-                regs->eax = -1;
-            }
-            break;
-        }
-
-        case SYS_READ:
-            regs->eax = _read(regs->ebx, (char*) regs->ecx, regs->edx);
-            break;
-
-        case SYS_EXIT:
-            _exit(regs->ebx);
-            break;
-
-        case SYS_SBRK:
-            regs->eax = (uint32_t) _sbrk(regs->ebx);
-            break;
-
-        default:
-            printf("Unknown syscall: %ld\n", regs->eax);
-            break;
-    }
-}
-
-void exception_handler(syscalls_registers_t* regs) {
-    asm volatile("cli");
-
-    // BSOD
-    terminal_change_color(vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLUE));
-    terminal_clear();
-
-    if (regs->int_no < 32) {
-        printf("Exception: %ld (%s)\n", regs->int_no, exception_messages[regs->int_no]);
-    } else {
-        printf("Unknown Exception: %ld\n", regs->int_no);
-    }
-
-    printf("Error Code: %lx\n", regs->err_code);
-    printf("EIP: %lx  CS: %lx  EFLAGS: %lx\n", regs->eip, regs->cs, regs->eflags);
-
-    // Specifically for Page Faults
-    if (regs->int_no == 14) {
-        uint32_t faulting_address;
-        asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
-        printf("Faulting Address (CR2): %lx\n", faulting_address);
-
-        printf("Reason: %s, %s, %s\n",
-            (regs->err_code & PAGE_PRESENT) ? "Page-level protection" : "Non-present page",
-            (regs->err_code & PAGE_RW)      ? "Write" : "Read",
-            (regs->err_code & PAGE_USER)    ? "User mode" : "Kernel mode");
-    }
-
-    // Dump general purpose registers for deeper debugging
-    printf("--- Register values ---\n");
-    printf("EAX: %lx EBX: %lx ECX: %lx EDX: %lx\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
-    printf("EDI: %lx ESI: %lx EBP: %lx ESP: %lx\n", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
-
-    // Dump multitasking information in case of race condition errors
-    printf("--- Multitasking ---\n");
-    printf("Name:           %s (%lu)\n", current_task->name, current_task->id);
-    printf("Stack Pointer:  0x%08lx\n", current_task->stack_pointer);
-    printf("Stack Origin:   %p\n", (void*) current_task->stack_origin);
-    printf("Page Directory: %p (%lu)\n", (void*) current_task->page_directory, (uint32_t) current_task->privilege);
-
-    while(1) asm volatile("hlt");
 }

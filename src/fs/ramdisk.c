@@ -26,6 +26,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "fs/ramdisk.h"
 
+// TODO
+// The hash map currently doesn't have a solution for
+// hash collisions; will implement linked list form to
+// fix this, but I am very lazy, and don't really need
+// ramdisk yet.
+
 // djb2 hash
 // Source: https://www.cse.yorku.ca/~oz/hash.html
 static unsigned long hash(const char* name) {

@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "architecture/io.h"
+#include "arch/stubs.h"
 
 #include "drivers/keyboard.h"
 

@@ -42,13 +42,13 @@ extern uint32_t* kernel_directory;
 
 void init_vmm();
 
-void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags);
-uint32_t vmm_unmap_page(void* virt);
+void      vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags);
+uint32_t  vmm_unmap_page(void* virt);
 
 uint32_t* vmm_copy_kernel_directory();
-void vmm_switch_directory(uint32_t* page_directory);
+void      vmm_switch_directory(uint32_t* page_directory);
 
 uint32_t* vmm_get_current_directory();
-uint32_t vmm_get_phys(uint32_t* pd_phys, void* virt_addr);
+uint32_t  vmm_get_phys(uint32_t* pd_phys, void* virt_addr);
 
 #endif

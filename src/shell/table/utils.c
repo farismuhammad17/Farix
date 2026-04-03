@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 
+#include "arch/stubs.h"
 #include "drivers/terminal.h"
 #include "memory/heap.h"
 #include "process/task.h"
@@ -53,7 +54,7 @@ void cmd_tasks(UNUSED_ARG const char* args) {
     size_t total_tasks = 0;
 
     // Disable interrupts to ensure atomicity
-    asm volatile("cli");
+    system_int_off();
 
     task* head = current_task;
     task* curr = head;
@@ -75,7 +76,7 @@ void cmd_tasks(UNUSED_ARG const char* args) {
     } while (curr != head);
 
     // Re-enable interrupts
-    asm volatile("sti");
+    system_int_on();
 
     sh_print("Total Tasks: %ld\n", total_tasks);
 }
