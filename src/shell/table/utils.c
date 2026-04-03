@@ -47,20 +47,24 @@ void cmd_echo(UNUSED_ARG const char* args) {
 }
 
 void cmd_memstat(UNUSED_ARG const char* args) {
-    sh_print("\n--- HEAP MAP ---\n");
-    sh_print("Start: %p | End: %p\n", heap_start, heap_end);
-    sh_print("----------------------------------------------------------------------\n");
-    sh_print("Address    | Size      | Status | Caller Address\n");
-    sh_print("----------------------------------------------------------------------\n");
-
     // Disable interrupts to prevent the scheduler from
     // switching tasks while we use the heap.
     system_int_off();
 
-    size_t heap_total = get_heap_total();
-    size_t heap_used  = get_heap_used();
+    sh_print("Heap Start: %p | End: %p\n", heap_start, heap_end);
+    sh_print("----------------------------------------------------------------------\n");
+    sh_print("Address    | Size      | Status | Caller Address\n");
+    sh_print("----------------------------------------------------------------------\n");
+
+    size_t total_kb  = get_heap_total() >> 10;
+    size_t heap_used = get_heap_used();
+
+    size_t used_kb = heap_used >> 10;
+    size_t free_kb = total_kb - used_kb;
 
     HeapSegment* current = first_segment;
+
+    int usage_pct = (total_kb > 0) ? (int)((used_kb * 100) / total_kb) : 0;
     while (current != NULL) {
         sh_print("%p | %-9lu | %-6s | 0x%08lX\n",
                 current,
@@ -72,22 +76,13 @@ void cmd_memstat(UNUSED_ARG const char* args) {
 
     sh_print("----------------------------------------------------------------------\n");
     sh_print("Total Used: %lu bytes\n", heap_used);
-    sh_print("----------------------------------------------------------------------\n\n");
+    sh_print("----------------------------------------------------------------------\n");
 
-    size_t total_kb = heap_total >> 10;
-    size_t used_kb  = heap_used  >> 10;
-
-    system_int_on();
-
-    size_t free_kb  = total_kb - used_kb;
-
-    int usage_pct = (total_kb > 0) ? (int)((used_kb * 100) / total_kb) : 0;
-
-    sh_print("Memory Statistics:\n");
-    sh_print("------------------------\n");
     sh_print("Total memory: %4lu KiB\n", total_kb);
     sh_print("Used memory:  %4lu KiB [%d%%]\n", used_kb, usage_pct);
     sh_print("Free memory:  %4lu KiB\n", free_kb);
+
+    system_int_on();
 }
 
 void cmd_tasks(UNUSED_ARG const char* args) {

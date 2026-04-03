@@ -44,10 +44,10 @@ TerminalCmd*  cmd_history_head  = NULL;
 TerminalCmd*  cmd_history_tail  = NULL;
 int           cmd_history_count = 0;
 
-TerminalLine* line_history_head  = NULL;
-TerminalLine* line_history_tail  = NULL;
-int           line_history_count = 0;
-int           scroll_offset      = 0;
+uint16_t* line_history[MAX_TERMINAL_LINE_HISTORY_LEN] = {0};
+size_t    history_write_index = 0;
+size_t    history_total_count = 0;
+int       scroll_offset       = 0;
 
 bool is_scrolling = false;
 
@@ -65,6 +65,9 @@ void init_terminal() {
 			terminal_buffer[index] = vga_entry(' ', terminal_color);
 		}
 	}
+
+	uint16_t blank_line[WIDTH] = {0};
+    save_line_to_history(blank_line);
 }
 
 void update_cursor(size_t x, size_t y) {
@@ -77,11 +80,10 @@ void update_cursor(size_t x, size_t y) {
 }
 
 void terminal_clear() {
-    uint16_t* vga_buffer = VGA_MEMORY;
     uint16_t empty_char  = vga_entry(' ', terminal_color);
 
     for (int i = 0; i < WIDTH * HEIGHT; i++) {
-        vga_buffer[i] = empty_char;
+        terminal_buffer[i] = empty_char;
     }
 
     cursor_x = 0;
@@ -100,22 +102,24 @@ void terminal_change_color(uint8_t color) {
 void refresh_terminal_view() {
     is_scrolling = scroll_offset != 0;
 
-    TerminalLine* temp = line_history_tail;
-    for (int i = 0; i < scroll_offset; i++) {
-        if (temp->prev) temp = temp->prev;
-    }
+    for (int y = 0; y < HEIGHT; y++) {
+        int logical_index = (int) history_total_count - scroll_offset - HEIGHT + y + 1;
 
-    // Copy history directly into the screen buffer
-    for (int y = HEIGHT - 1; y >= 0; y--) {
-        if (temp) {
-            for (int x = 0; x < WIDTH; x++) {
-                terminal_buffer[y * WIDTH + x] = temp->data[x];
+        if (logical_index >= 0) {
+            size_t physical_index;
+            if (history_total_count < MAX_TERMINAL_LINE_HISTORY_LEN) {
+                physical_index = (size_t) logical_index;
+            } else {
+                physical_index = (history_write_index + logical_index) % MAX_TERMINAL_LINE_HISTORY_LEN;
             }
-            temp = temp->prev; // Walk backwards
+
+            if (line_history[physical_index]) {
+                memcpy(&terminal_buffer[y * WIDTH], line_history[physical_index], WIDTH * sizeof(uint16_t));
+            }
         } else {
-            // Fill top lines with spaces if not enough history
+            uint16_t blank = vga_entry(' ', terminal_color);
             for (int x = 0; x < WIDTH; x++) {
-                terminal_buffer[y * WIDTH + x] = vga_entry(' ', terminal_color);
+                terminal_buffer[y * WIDTH + x] = blank;
             }
         }
     }
@@ -157,56 +161,53 @@ void new_line_n(size_t n) {
 }
 
 void save_line_to_history(uint16_t* line_data) {
-    TerminalLine* newNode = (TerminalLine*) kmalloc(sizeof(TerminalLine));
-    kmemset(newNode, 0, sizeof(TerminalLine));
-
-    for(int i = 0; i < WIDTH; i++) {
-        newNode->data[i] = line_data[i];
+    // Check if we need to allocate this slot for the first time
+    if (line_history[history_write_index] == NULL) {
+        line_history[history_write_index] = (uint16_t*) kmalloc(WIDTH * sizeof(uint16_t));
+        if (!line_history[history_write_index]) return;
     }
 
-    newNode->next = NULL;
-    newNode->prev = line_history_tail;
+    // Copy the line data into our persistent buffer
+    memcpy(line_history[history_write_index], line_data, WIDTH * sizeof(uint16_t));
 
-    if (line_history_tail) {
-        line_history_tail->next = newNode;
-    } else {
-        line_history_head = newNode;
-    }
+    // Move the 'write head' forward
+    history_write_index = (history_write_index + 1) % MAX_TERMINAL_LINE_HISTORY_LEN;
 
-    line_history_tail = newNode;
-    line_history_count++;
-
-    if (line_history_count > MAX_TERMINAL_LINE_HISTORY_LEN) {
-        TerminalLine* toDelete = line_history_head;
-        line_history_head = line_history_head->next;
-
-        if (line_history_head != NULL) {
-            line_history_head->prev = NULL;
-        }
-
-        kfree(toDelete);
-        line_history_count--;
+    // Track how many total lines we actually have stored
+    if (history_total_count < MAX_TERMINAL_LINE_HISTORY_LEN) {
+        history_total_count++;
     }
 }
 
-void update_line_history_tail(uint16_t* line_data) {
-    for(int i = 0; i < WIDTH; i++) {
-        line_history_tail->data[i] = line_data[i];
+void update_line_history_current() {
+    if (line_history[history_write_index] == NULL) {
+        line_history[history_write_index] = (uint16_t*) kmalloc(WIDTH * sizeof(uint16_t));
+        if (!line_history[history_write_index]) return;
     }
+
+    memcpy(line_history[history_write_index], &terminal_buffer[cursor_y * WIDTH], WIDTH * sizeof(uint16_t));
+
+    if (history_total_count == 0) history_total_count = 1;
 }
 
 void scroll_up() {
-    if (!line_history_tail) return;
+    if (history_total_count == 0) return;
 
     scroll_offset++;
-    if (scroll_offset > line_history_count) scroll_offset = line_history_count;
+
+    if (scroll_offset > (int) history_total_count) {
+        scroll_offset = (int) history_total_count;
+    }
 
     refresh_terminal_view();
 }
 
 void scroll_down() {
     scroll_offset--;
-    if (scroll_offset < 0) scroll_offset = 0;
+
+    if (scroll_offset < 0) {
+        scroll_offset = 0;
+    }
 
     refresh_terminal_view();
 }
@@ -295,7 +296,7 @@ void echo_char(uint16_t c) {
 
     if (!handle_special_chars(c)) {
         echo_at((char) c, terminal_color, cursor_x, cursor_y);
-        update_line_history_tail(&terminal_buffer[cursor_y * WIDTH]);
+        update_line_history_current();
 
         if (++cursor_x == WIDTH) {
             cursor_x = 0;
@@ -367,6 +368,7 @@ void echo_raw(const char* data, size_t len) {
         }
     }
 
+    update_line_history_current();
     update_cursor(cursor_x, cursor_y);
 }
 
@@ -496,7 +498,12 @@ void handle_ansi_char(uint16_t c) {
                     terminal_buffer[i] = vga_entry(' ', terminal_color);
                 break;
             case '2': terminal_clear(); break;
-            case '3': terminal_clear(); break; // TODO: \033[3J should also delete the scrollback buffer
+            case '3':
+                terminal_clear();
+                history_total_count = 0;
+                history_write_index = 0;
+                scroll_offset = 0;
+                break;
         }
     } else if (c == 'K') {
         switch (special_char_buffer[0]) {

@@ -17,9 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-// TODO
-// Move memstat into shell
-
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -100,6 +97,10 @@ void shell_update() {
             // TODO: This causes heap corruptions,
             // will be implemented later, it's literally
             // 1:27 am as I write this.
+            //
+            // This is like a month old, I am still lazy
+            // to fix this some day.
+            //
             // save_cmd_to_history(shell_buffer.c_str());
             shell_parse(shell_buffer);
         }

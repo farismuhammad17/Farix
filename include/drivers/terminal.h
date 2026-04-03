@@ -65,12 +65,6 @@ typedef struct TerminalCmd {
     struct TerminalCmd* prev;
 } TerminalCmd;
 
-typedef struct TerminalLine {
-    uint16_t data[WIDTH]; // Store the characters AND the colors
-    struct TerminalLine* next;
-    struct TerminalLine* prev;
-} TerminalLine;
-
 inline uint8_t vga_entry_color(uint8_t fg, uint8_t bg) {
 	return fg | bg << 4;
 }
@@ -88,7 +82,7 @@ void new_line();
 void new_line_n(size_t n);
 
 void save_line_to_history(uint16_t* line_data);
-void update_line_history_tail(uint16_t* line_data);
+void update_line_history_current();
 void scroll_up();
 void scroll_down();
 
