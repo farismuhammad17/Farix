@@ -17,27 +17,33 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef ASM_STUBS_H
-#define ASM_STUBS_H
-
 #include <stdint.h>
 
-void     outb(uint32_t port, uint8_t  val);
-void     outw(uint32_t port, uint16_t val);
-uint8_t  inb (uint32_t port);
-uint16_t inw (uint32_t port);
+#include "arch/x86/gdt.h"
+#include "memory/heap.h"
+#include "memory/vmm.h"
 
-void system_halt();
-void system_int_on();  // Enable interrupts
-void system_int_off(); // Disable interrupts
-void system_pause();
+#include "arch/x86/tss.h"
 
-uint32_t asm_get_random(uint8_t *success);
+TSSEntry tss_entry;
 
-void cpu_mem_barrier();
+void init_tss(uint32_t idx, uint32_t kss, uint32_t kesp) {
+    uint32_t base = (uint32_t) PHYSICAL_TO_VIRTUAL(&tss_entry);
+    uint32_t limit = sizeof(TSSEntry);
 
-void task_yield();
+    // Access: 0x89 (Present, Executable, Accessed, Ring 0)
+    gdt_set_entry(idx, base, limit, 0x89, 0x00);
 
-void set_kernel_stack(uint32_t stack);
+    kmemset(&tss_entry, 0, sizeof(TSSEntry));
 
-#endif
+    tss_entry.ss0  = kss;     // Usually 0x10 (Kernel Data)
+    tss_entry.esp0 = kesp;
+
+    // Set the I/O map base to the size of the TSS to disable it
+    tss_entry.iomap_base = sizeof(TSSEntry);
+}
+
+// Defined in stubs.h:
+void set_kernel_stack(uint32_t stack) {
+    tss_entry.esp0 = stack;
+}

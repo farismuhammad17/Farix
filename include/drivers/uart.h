@@ -17,27 +17,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef ASM_STUBS_H
-#define ASM_STUBS_H
+#ifndef UART_H
+#define UART_H
 
-#include <stdint.h>
+void init_uart();
 
-void     outb(uint32_t port, uint8_t  val);
-void     outw(uint32_t port, uint16_t val);
-uint8_t  inb (uint32_t port);
-uint16_t inw (uint32_t port);
-
-void system_halt();
-void system_int_on();  // Enable interrupts
-void system_int_off(); // Disable interrupts
-void system_pause();
-
-uint32_t asm_get_random(uint8_t *success);
-
-void cpu_mem_barrier();
-
-void task_yield();
-
-void set_kernel_stack(uint32_t stack);
+int  is_uart_transmit_empty();
+int  is_uart_received();
+char uart_getc();
+void uart_putc(char c);
 
 #endif

@@ -17,27 +17,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef ASM_STUBS_H
-#define ASM_STUBS_H
-
 #include <stdint.h>
 
-void     outb(uint32_t port, uint8_t  val);
-void     outw(uint32_t port, uint16_t val);
-uint8_t  inb (uint32_t port);
-uint16_t inw (uint32_t port);
+#include "arch/kernel.h"
 
-void system_halt();
-void system_int_on();  // Enable interrupts
-void system_int_off(); // Disable interrupts
-void system_pause();
+// For avoiding unused argument compiler warnings cleanly
+#define UNUSED_ARG __attribute__((unused))
 
-uint32_t asm_get_random(uint8_t *success);
-
-void cpu_mem_barrier();
-
-void task_yield();
-
-void set_kernel_stack(uint32_t stack);
-
-#endif
+void arch_kmain(UNUSED_ARG uint32_t r0, UNUSED_ARG uint32_t r1, UNUSED_ARG uint32_t dtb_ptr) {
+    kernel_main();
+}

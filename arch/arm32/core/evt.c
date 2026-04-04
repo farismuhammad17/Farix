@@ -17,27 +17,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef ASM_STUBS_H
-#define ASM_STUBS_H
-
 #include <stdint.h>
 
-void     outb(uint32_t port, uint8_t  val);
-void     outw(uint32_t port, uint16_t val);
-uint8_t  inb (uint32_t port);
-uint16_t inw (uint32_t port);
+#include "cpu/ints.h"
 
-void system_halt();
-void system_int_on();  // Enable interrupts
-void system_int_off(); // Disable interrupts
-void system_pause();
+extern uint32_t _vector_table;
 
-uint32_t asm_get_random(uint8_t *success);
+void init_interrupts() {
+    uint32_t addr = (uint32_t) &_vector_table;
 
-void cpu_mem_barrier();
+    // Set VBAR
+    asm volatile("mcr p15, 0, %0, c12, c0, 0" : : "r"(addr));
 
-void task_yield();
-
-void set_kernel_stack(uint32_t stack);
-
-#endif
+    // Clear SCTLR.V (bit 13) to ensure we use VBAR, not 0xFFFF0000
+    uint32_t sctlr;
+    asm volatile("mrc p15, 0, %0, c1, c0, 0" : "=r"(sctlr));
+    sctlr &= ~(1 << 13);
+    asm volatile("mcr p15, 0, %0, c1, c0, 0" : : "r"(sctlr));
+}

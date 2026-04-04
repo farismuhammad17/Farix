@@ -25,10 +25,11 @@ import sys
 import shutil
 
 HELP = """
-\033[1;36mFarix OS Build System\033[0m
+\033[1;36mFarix Build System\033[0m
+\033[90mhttps://github.com/farismuhammad17/Farix\033[0m
 
-\033[90mTIP: Use 'source make.env' to alias build.py as 'm'\033[0m
-Usage: \033[1m m [target] [-arch <architecture>]\033[0m
+\033[90mTIP: Use 'source make.env' to alias make.py as 'm'\033[0m
+Usage: \033[1m m [target] <architecture>\033[0m
 
 \033[1;36mTargets:\033[0m
   \033[1;32mall\033[0m          Build the kernel and all dependencies \033[90m(default)\033[0m
@@ -47,18 +48,22 @@ Usage: \033[1m m [target] [-arch <architecture>]\033[0m
 
 # --- UTILS ---
 
-def run(cmd, shell=True, check=True):
+def run(cmd, shell=True, check=True, capture_output=True):
     try:
         result = subprocess.run(
             cmd,
             shell=shell,
             check=check,
-            capture_output=True,
+            capture_output=capture_output,
             text=True,
             encoding='utf-8',
             errors='replace'
         )
-        return result.stdout.strip()
+
+        if not capture_output:
+            return ""
+
+        return result.stdout.strip() if result.stdout else ""
     except subprocess.CalledProcessError as e:
         print(f"\n\x1b[1;31m--- BUILD ERROR ---\x1b[0m")
         print(f"Command: {e.cmd}\n")
@@ -73,43 +78,9 @@ def run(cmd, shell=True, check=True):
 def shell_which(cmd):
     return subprocess.run(f"which {cmd}", shell=True, capture_output=True).returncode == 0
 
-# --- INITIALIZATION ---
-
-OS = run("uname -s")
-
-if shell_which("i686-elf-gcc"):
-    PREFIX = "i686-elf-"
-elif shell_which("i386-elf-gcc"):
-    PREFIX = "i386-elf-"
-else:
-    print("Error: i686-elf nor i386-elf found")
-    sys.exit(1)
-
-TARGET_DIR = PREFIX.rstrip('-')
-
-PROJECT_ROOT = os.getcwd()
-NEWLIB_SRC = os.path.join(PROJECT_ROOT, "newlib-cygwin")
-NEWLIB_TARGET = PREFIX.rstrip('-')
-LIBC_INSTALL_DIR = os.path.join(os.getcwd(), "libc_build")
-LIBC_DIR = os.path.join(LIBC_INSTALL_DIR, TARGET_DIR)
-LIBC_INC = os.path.join(LIBC_DIR, "include")
-LIBC_LIB = os.path.join(LIBC_DIR, "lib")
-
-NASM = "nasm"
-CC = f"{PREFIX}gcc"
-AS = f"{PREFIX}as"
-
-CFLAGS = f"-ffreestanding -O2 -Wall -Wextra -Werror -fno-exceptions -fdiagnostics-color=always -Iinclude -I{LIBC_INC}"
-QEMU_FLAGS = "-drive format=raw,file=disk.img,index=0,media=disk -device virtio-mouse-pci"
-
-BOOT_OBJECT = "build/boot.o"
-CRTI_OBJ = "build/asm/boot/crti.o"
-CRTN_OBJ = "build/asm/boot/crtn.o"
-
-CRTBEGIN = run(f"{CC} {CFLAGS} -print-file-name=crtbegin.o")
-CRTEND   = run(f"{CC} {CFLAGS} -print-file-name=crtend.o")
-
-# --- TARGET FUNCTIONS ---
+def get_obj_path(src_path):
+    ext = src_path.rsplit('.', 1)[-1]
+    return src_path.replace(f".{ext}", f".{ext}.o").replace("kernel/", "build/kernel/").replace("arch/", "build/arch/")
 
 def build_object(src, obj, cmd_template):
     # Create the directory if it doesn't exist
@@ -125,61 +96,154 @@ def build_object(src, obj, cmd_template):
             return
 
     cmd = cmd_template.format(src=src, obj=obj)
-    print(f"\x1b[1;34mCompiling:\x1b[0m {src}")
+    print(f"\x1b[1;34mCompiling:\x1b[0m {src}\x1b[60G{obj}")
     run(cmd)
 
 def get_sources(arch):
     c_sources   = []
     asm_sources = []
 
-    for root, dirs, files in os.walk("src"):
-        # If we are inside src/arch, remove all dirs except the one we want
-        # This is for the HAL so that we can segregate based on the arch
-        if root == "src/arch":
-            dirs[:] = [d for d in dirs if d == arch]
-
+    for root, _, files in os.walk("kernel"):
         for f in files:
             path = os.path.join(root, f)
             if f.endswith(".c"):
                 c_sources.append(path)
-            elif f.endswith(".asm"):
+            # ASM in kernel is rare, but we'll check just in case
+            elif (f.endswith(".asm") or f.endswith(".s")) and f != "boot.s":
                 asm_sources.append(path)
+
+    arch_path = os.path.join("arch", arch)
+    if os.path.exists(arch_path):
+        for root, _, files in os.walk(arch_path):
+            for f in files:
+                path = os.path.join(root, f)
+                if f.endswith(".c"):
+                    c_sources.append(path)
+                elif (f.endswith(".asm") or f.endswith(".s")) and f != "boot.s":
+                    asm_sources.append(path)
 
     return c_sources, asm_sources
 
-def farix_bin(target_arch="x86_32"):
-    c_srcs, asm_srcs = get_sources(target_arch)
+# --- INITIALIZATION ---
 
-    # Generate object paths
-    c_objs         = [f.replace("src/", "build/").replace(".c", ".c.o") for f in c_srcs]
-    other_asm_srcs = [f for f in asm_srcs if "crti.asm" not in f and "crtn.asm" not in f]
-    other_asm_objs = [f.replace("src/", "build/").replace(".asm", ".asm.o") for f in other_asm_srcs]
+OS = run("uname -s")
 
-    # Compile assembly boot files
-    build_object(f"src/arch/{target_arch}/boot.s", BOOT_OBJECT, f"{AS} {{src}} -o {{obj}}")
-    build_object("src/asm/boot/crti.asm", CRTI_OBJ, f"{NASM} -f elf32 {{src}} -o {{obj}}")
-    build_object("src/asm/boot/crtn.asm", CRTN_OBJ, f"{NASM} -f elf32 {{src}} -o {{obj}}")
+arch = "x86_32"
+if "arm32" in sys.argv:
+    arch = "arm32"
 
-    # Compile C sources
+if arch == "x86_32":
+    QEMU_BIN = "qemu-system-i386"
+    QEMU_FLAGS = "-drive format=raw,file=disk.img,index=0,media=disk -device virtio-mouse-pci -serial stdio"
+    if shell_which("i686-elf-gcc"):
+        PREFIX = "i686-elf-"
+    elif shell_which("i386-elf-gcc"):
+        PREFIX = "i386-elf-"
+    else:
+        print("Error: x86 cross-compiler not found")
+        sys.exit(1)
+elif arch == "arm32":
+    PREFIX = "arm-none-eabi-"
+    QEMU_BIN = "qemu-system-arm"
+    QEMU_FLAGS = "-drive format=raw,file=disk.img,index=0,media=disk -serial stdio -M raspi2b"
+    ASM_ASSEMBLER = "arm-none-eabi-as"
+else:
+    print("\x1b[31mInvalid architecture\x1b[0m")
+    sys.exit(1)
+
+TARGET_DIR = PREFIX.rstrip('-')
+
+PROJECT_ROOT = os.getcwd()
+NEWLIB_SRC = os.path.join(PROJECT_ROOT, "newlib-cygwin")
+NEWLIB_TARGET = PREFIX.rstrip('-')
+LIBC_INSTALL_DIR = os.path.join(os.getcwd(), f"libc_build_{arch}")
+LIBC_DIR = os.path.join(LIBC_INSTALL_DIR, TARGET_DIR)
+LIBC_INC = os.path.join(LIBC_DIR, "include")
+LIBC_LIB = os.path.join(LIBC_DIR, "lib")
+
+CC = f"{PREFIX}gcc"
+AS = f"{PREFIX}as"
+
+CFLAGS = f"-ffreestanding -O2 -Wall -Wextra -Werror -fno-exceptions -fdiagnostics-color=always -Iinclude -I{LIBC_INC}"
+
+BOOT_OBJ = "build/boot.o"
+
+CRTBEGIN = run(f"{CC} {CFLAGS} -print-file-name=crtbegin.o")
+CRTEND   = run(f"{CC} {CFLAGS} -print-file-name=crtend.o")
+
+# --- TARGET FUNCTIONS ---
+
+def farix_bin_x86_32():
+    CRTI_SRC = "arch/x86_32/asm/boot/crti.asm"
+    CRTN_SRC = "arch/x86_32/asm/boot/crtn.asm"
+    BOOT_SRC = "arch/x86_32/boot.s"
+
+    CRTI_OBJ = "build/asm/boot/crti.o"
+    CRTN_OBJ = "build/asm/boot/crtn.o"
+
+    c_srcs, asm_srcs = get_sources("x86_32")
+
+    c_objs = [get_obj_path(s) for s in c_srcs]
+    other_asm_srcs = [s for s in asm_srcs if "crti.asm" not in s and "crtn.asm" not in s]
+    other_asm_objs = [get_obj_path(s) for s in other_asm_srcs]
+
+    build_object(BOOT_SRC, BOOT_OBJ, f"{AS} {{src}} -o {{obj}}")
+    build_object(CRTI_SRC, CRTI_OBJ, f"nasm -f elf32 {{src}} -o {{obj}}")
+    build_object(CRTN_SRC, CRTN_OBJ, f"nasm -f elf32 {{src}} -o {{obj}}")
+
+    for s, o in zip(other_asm_srcs, other_asm_objs):
+        build_object(s, o, f"nasm -f elf32 {{src}} -o {{obj}}")
     for s, o in zip(c_srcs, c_objs):
         build_object(s, o, f"{CC} -c {{src}} -o {{obj}} {CFLAGS}")
 
-    # Compile ASM sources (.asm) using nasm
-    for s, o in zip(other_asm_srcs, other_asm_objs):
-        build_object(s, o, f"{NASM} -f elf32 {{src}} -o {{obj}}")
+    ld_flags = "-T arch/x86_32/linker.ld -ffreestanding -O2 -nostdlib"
 
-    ld_flags = f"-T src/arch/{target_arch}/linker.ld -ffreestanding -O2 -nostdlib"
-    all_objs = [BOOT_OBJECT, CRTI_OBJ, CRTBEGIN] + c_objs + other_asm_objs
-
-    # Link everything
+    all_objs = [BOOT_OBJ, CRTI_OBJ, CRTBEGIN] + c_objs + other_asm_objs
     objs = " ".join(all_objs)
     libs = f"-L{LIBC_LIB} -lc -lm -lgcc"
-    cmd  = f"{CC} {ld_flags} -o farix.bin {objs} {libs} {CRTEND} {CRTN_OBJ}"
 
-    print(f"\x1b[3;33mLinking farix.bin for {target_arch}...\x1b[0m")
+    cmd = f"{CC} {ld_flags} -o farix.bin {objs} {libs} {CRTEND} {CRTN_OBJ}"
+
+    print("\x1b[3;33mLinking farix.bin for x86_32...\x1b[0m")
+    run(cmd)
+    print("\x1b[1;32mProcess completed\x1b[0m")
+
+def farix_bin_arm32():
+    BOOT_SRC = "arch/arm32/boot.s"
+
+    c_srcs, asm_srcs = get_sources("arm32")
+
+    c_objs   = [get_obj_path(s) for s in c_srcs]
+    asm_objs = [get_obj_path(s) for s in asm_srcs]
+
+    build_object(BOOT_SRC, BOOT_OBJ, f"{AS} {{src}} -o {{obj}}")
+
+    for s, o in zip(asm_srcs, asm_objs):
+        build_object(s, o, f"{AS} {{src}} -o {{obj}}")
+    for s, o in zip(c_srcs, c_objs):
+        cpu_flag = "-mcpu=cortex-a7" if "raspi2b" in QEMU_FLAGS else "-mcpu=cortex-a53"
+        build_object(s, o, f"{CC} -c {{src}} -o {{obj}} {CFLAGS} {cpu_flag} -marm")
+
+    ld_flags = f"-T arch/arm32/linker.ld -ffreestanding -O2 -nostdlib"
+    all_objs = [BOOT_OBJ] + c_objs + asm_objs
+
+    objs = " ".join(all_objs)
+    libs = f"-L{LIBC_LIB} -lc -lm -lgcc"
+
+    cmd = f"{CC} {ld_flags} -o farix.bin {objs} {libs}"
+
+    print("\x1b[3;33mLinking farix.bin for arm32...\x1b[0m")
     run(cmd)
 
+    # 7. Create the raw binary for QEMU -kernel or SD card
+    run(f"{PREFIX}objcopy farix.bin -O binary farix.img")
+
     print("\x1b[1;32mProcess completed\x1b[0m")
+
+def farix_bin():
+    match arch:
+        case "x86_32": farix_bin_x86_32()
+        case "arm32": farix_bin_arm32()
 
 def get_deps():
     if not os.path.exists("newlib-cygwin"):
@@ -187,18 +251,44 @@ def get_deps():
         run("git clone --depth 1 https://sourceware.org/git/newlib-cygwin.git")
     print("Installed dependencies.")
 
-def libc():
-    os.makedirs("build/newlib-build", exist_ok=True)
+def libc_x86_32():
+    # Ensure we use the i686-elf prefix and the arch-specific build folder
+    build_dir = "build/newlib-x86_32-build"
+    os.makedirs(build_dir, exist_ok=True)
+
     config_cmd = (
-        f"cd build/newlib-build && "
+        f"cd {build_dir} && "
         f"CC_FOR_TARGET={PREFIX}gcc AS_FOR_TARGET={PREFIX}as "
         f"LD_FOR_TARGET={PREFIX}ld RANLIB_FOR_TARGET={PREFIX}ranlib "
         f"{NEWLIB_SRC}/configure --target={NEWLIB_TARGET} --prefix={LIBC_INSTALL_DIR} "
         f"--disable-newlib-supplied-syscalls --with-newlib --enable-languages=c,c++"
     )
-    run(config_cmd)
-    run("make -C build/newlib-build")
-    run("make -C build/newlib-build install")
+    print(f"\x1b[1;33mBuilding LibC for x86_32... (This may take a while)\x1b[0m")
+    run(config_cmd, capture_output=False)
+    run(f"make -C {build_dir} -j$(nproc)", capture_output=False)
+    run(f"make -C {build_dir} install", capture_output=False)
+
+def libc_arm32():
+    build_dir = "build/newlib-arm32-build"
+    os.makedirs(build_dir, exist_ok=True)
+
+    config_cmd = (
+        f"cd {build_dir} && "
+        f"CC_FOR_TARGET={CC} AS_FOR_TARGET={AS} "
+        f"LD_FOR_TARGET={PREFIX}ld RANLIB_FOR_TARGET={PREFIX}ranlib "
+        f"{NEWLIB_SRC}/configure --target={NEWLIB_TARGET} --prefix={LIBC_INSTALL_DIR} "
+        f"--disable-newlib-supplied-syscalls --with-newlib --enable-languages=c"
+    )
+
+    print(f"\x1b[1;33mBuilding LibC for arm32... (This may take a while)\x1b[0m")
+    run(config_cmd, capture_output=False)
+    run(f"make -C {build_dir} -j$(nproc)", capture_output=False)
+    run(f"make -C {build_dir} install", capture_output=False)
+
+def libc():
+    match arch:
+        case "x86_32": libc_x86_32()
+        case "arm32": libc_arm32()
 
 def disk_img():
     if OS == "Darwin":
@@ -217,22 +307,14 @@ def clean():
 def run_qemu(fullscreen=False):
     suffix = "-full-screen" if fullscreen else ""
 
-    try:
-        run(f"qemu-system-i386 -kernel farix.bin {QEMU_FLAGS} {suffix}")
-    except KeyboardInterrupt:
-        print("\nProcess exited (KeyboardInterrupt)\n")
+    cmd = f"{QEMU_BIN} -kernel farix.bin {QEMU_FLAGS} {suffix}"
+    os.system(cmd)
 
 # --- MAIN ---
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else "all"
+    target = sys.argv[1] if len(sys.argv) > 1 else arch
 
-    arch = "x86_32"
-    if "-arch" in sys.argv:
-        idx = sys.argv.index("-arch")
-        if idx + 1 < len(sys.argv):
-            arch = sys.argv[idx + 1]
-
-    if   target == "all": farix_bin(arch)
+    if   target == arch: farix_bin()
     elif target == "clean": clean()
     elif target == "libc": libc()
     elif target == "get_deps": get_deps()
@@ -248,4 +330,4 @@ if __name__ == "__main__":
     elif target == "help":
         print(HELP)
     else:
-        print("make: Unknown command")
+        print("\x1b[31mUnknown command\x1b[0m")

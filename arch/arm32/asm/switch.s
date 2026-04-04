@@ -17,27 +17,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef ASM_STUBS_H
-#define ASM_STUBS_H
+.section .text
+.global switch_task
 
-#include <stdint.h>
+switch_task:
+    /* Save the context of the old task */
+    push {r4-r11, lr}
 
-void     outb(uint32_t port, uint8_t  val);
-void     outw(uint32_t port, uint16_t val);
-uint8_t  inb (uint32_t port);
-uint16_t inw (uint32_t port);
+    /* Save the current Stack Pointer into the 'old_sp' pointer */
+    str sp, [r0]
 
-void system_halt();
-void system_int_on();  // Enable interrupts
-void system_int_off(); // Disable interrupts
-void system_pause();
+    /* Load the new Stack Pointer from 'next_sp' */
+    mov sp, r1
 
-uint32_t asm_get_random(uint8_t *success);
-
-void cpu_mem_barrier();
-
-void task_yield();
-
-void set_kernel_stack(uint32_t stack);
-
-#endif
+    /* Restore the context of the new task */
+    pop {r4-r11, pc}

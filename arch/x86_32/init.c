@@ -17,27 +17,40 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef ASM_STUBS_H
-#define ASM_STUBS_H
-
 #include <stdint.h>
+#include <stdio.h>
 
-void     outb(uint32_t port, uint8_t  val);
-void     outw(uint32_t port, uint16_t val);
-uint8_t  inb (uint32_t port);
-uint16_t inw (uint32_t port);
+#include "arch/kernel.h"
+#include "arch/stubs.h"
+#include "arch/x86/pic.h"
+#include "arch/x86/gdt.h"
+#include "arch/x86/tss.h"
+#include "arch/x86/multiboot.h"
+#include "memory/heap.h"
+#include "memory/pmm.h"
+#include "memory/vmm.h"
 
-void system_halt();
-void system_int_on();  // Enable interrupts
-void system_int_off(); // Disable interrupts
-void system_pause();
+multiboot_info* mbi = NULL;
 
-uint32_t asm_get_random(uint8_t *success);
+// Defined in asm/boot/crti.asm
+extern void _init();
 
-void cpu_mem_barrier();
+void arch_kmain(uint32_t magic, multiboot_info* _mbi) {
+    if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
+        printf("OS Error: Invalid Multiboot Magic Number");
+        while(1) asm volatile("hlt");
+    }
 
-void task_yield();
+    mbi = _mbi;
 
-void set_kernel_stack(uint32_t stack);
+    pic_remap();
 
-#endif
+    init_pmm();
+    init_vmm();
+
+    init_gdt();
+
+    _init();
+
+    kernel_main();
+}

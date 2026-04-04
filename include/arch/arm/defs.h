@@ -17,27 +17,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef ASM_STUBS_H
-#define ASM_STUBS_H
+#ifndef ARM_DEFS_H
+#define ARM_DEFS_H
+
+#define TIMER_BASE      0x3F003000
+#define TIMER_CS        (TIMER_BASE + 0x00) // Control/Status
+#define TIMER_CLO       (TIMER_BASE + 0x04) // Counter Low 32-bits
+#define TIMER_C1        (TIMER_BASE + 0x10) // Compare register 1
 
 #include <stdint.h>
 
-void     outb(uint32_t port, uint8_t  val);
-void     outw(uint32_t port, uint16_t val);
-uint8_t  inb (uint32_t port);
-uint16_t inw (uint32_t port);
-
-void system_halt();
-void system_int_on();  // Enable interrupts
-void system_int_off(); // Disable interrupts
-void system_pause();
-
-uint32_t asm_get_random(uint8_t *success);
-
-void cpu_mem_barrier();
-
-void task_yield();
-
-void set_kernel_stack(uint32_t stack);
+extern uint32_t timer_interval;
 
 #endif

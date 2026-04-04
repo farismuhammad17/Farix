@@ -17,27 +17,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef ASM_STUBS_H
-#define ASM_STUBS_H
+#ifndef PIC_H
+#define PIC_H
 
-#include <stdint.h>
+#define PIC1    		0x20
+#define PIC1_COMMAND	PIC1
+#define PIC1_DATA   (PIC1+1)
+#define PIC2	    	0xA0
+#define PIC2_COMMAND	PIC2
+#define PIC2_DATA	(PIC2+1)
 
-void     outb(uint32_t port, uint8_t  val);
-void     outw(uint32_t port, uint16_t val);
-uint8_t  inb (uint32_t port);
-uint16_t inw (uint32_t port);
-
-void system_halt();
-void system_int_on();  // Enable interrupts
-void system_int_off(); // Disable interrupts
-void system_pause();
-
-uint32_t asm_get_random(uint8_t *success);
-
-void cpu_mem_barrier();
-
-void task_yield();
-
-void set_kernel_stack(uint32_t stack);
+void pic_remap();
 
 #endif

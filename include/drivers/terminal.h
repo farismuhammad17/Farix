@@ -42,37 +42,16 @@ extern size_t    cursor_y;
 extern uint8_t   terminal_color;
 extern uint16_t* terminal_buffer;
 
-#define VGA_COLOR_BLACK         0
-#define VGA_COLOR_BLUE          1
-#define VGA_COLOR_GREEN         2
-#define VGA_COLOR_CYAN          3
-#define VGA_COLOR_RED           4
-#define VGA_COLOR_MAGENTA       5
-#define VGA_COLOR_BROWN         6
-#define VGA_COLOR_LIGHT_GREY    7
-#define VGA_COLOR_DARK_GREY     8
-#define VGA_COLOR_LIGHT_BLUE    9
-#define VGA_COLOR_LIGHT_GREEN   10
-#define VGA_COLOR_LIGHT_CYAN    11
-#define VGA_COLOR_LIGHT_RED     12
-#define VGA_COLOR_LIGHT_MAGENTA 13
-#define VGA_COLOR_LIGHT_BROWN   14
-#define VGA_COLOR_WHITE         15
-
 typedef struct TerminalCmd {
     const char* command;
     struct TerminalCmd* next;
     struct TerminalCmd* prev;
 } TerminalCmd;
 
-inline uint8_t vga_entry_color(uint8_t fg, uint8_t bg) {
-	return fg | bg << 4;
-}
-inline uint16_t vga_entry(unsigned char uc, uint8_t color) {
-	return (uint16_t) uc | (uint16_t) color << 8;
-}
-
 void init_terminal();
+
+uint8_t  terminal_entry_color(uint8_t fg, uint8_t bg);
+uint16_t terminal_entry(unsigned char uc, uint8_t color);
 
 void update_cursor(size_t x, size_t y);
 void terminal_clear();

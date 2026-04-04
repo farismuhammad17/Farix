@@ -34,6 +34,7 @@ extern ShellCommand command_table[];
 void cmd_help(const char* args);
 void cmd_clear(const char* args);
 void cmd_echo(const char* args);
+void cmd_secho(const char* args);
 void cmd_memstat(const char* args);
 void cmd_tasks(const char* args);
 void cmd_kill(const char* args);

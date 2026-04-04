@@ -24,3 +24,7 @@ This is more of a journal of how this project was built. It helps to keep track 
 - [8 Mar: Pipe Shell Operator](journal_entries/8-mar-2026.md)
 - [30 Mar: Proper ELF Executor](journal_entries/30-mar-2026.md)
 - [3 Apr: Hardware Abstraction Layer](journal_entries/3-apr-2026.md)
+- [4 Apr: Universal Asynchronous Receiver-Transmitter](journal_entries/4-apr-2026.md)
+
+> [!NOTE]  
+> Links to certain files may lead nowhere due to later changes.

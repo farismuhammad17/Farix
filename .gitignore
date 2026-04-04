@@ -1,6 +1,6 @@
 .DS_Store
 build/
-libc_build/
+libc_build*/
 newlib-cygwin/
 pending/
 test/
@@ -8,4 +8,5 @@ disk.img
 TODO.md
 test.*
 *.bin
+*.img
 *.log

@@ -2,6 +2,22 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## Universal Asynchronous Receiver-Transmitter - *4th April, 2026*
+
+> [!WARNING]  
+> The ARM32 implementation is wrong, even though it compiles. x86_32 is perfectly functional though.
+
+- UART implementation
+- Moved `arch` to root folder
+- Renamed `src` to `kernel`
+- Documentation in header files
+- x86_32
+  - Cleaned init file
+- ARM32
+  - Fixed compile time errors in ARM32
+- Makefile
+  - Configured `make.py` to compile arm32, as well as any future architecture relatively easily.
+
 ## Instant Shell Outputs - *3rd April, 2026*
 
 - Terminal
