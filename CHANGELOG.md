@@ -2,10 +2,24 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## Universal Asynchronous Receiver-Transmitter - *4th April, 2026*
+## Improved Scheduler Algorithm - *5th April, 2026*
 
 > [!WARNING]  
 > The ARM32 implementation is wrong, even though it compiles. x86_32 is perfectly functional though.
+
+- Renamed `shell/table` to `shell/cmds`
+- Split shell commands into cleaner files
+- Multitasking
+  - An improved algorithm from the Robin-Round scheduler.
+  - Store tasks in arrays linked to one another.
+  - `get_task` function
+- Terminal
+  - Fixed BSOD miscoloring
+  - Renamed `terminal_entry_color` to `terminal_color_entry`
+- UART
+  - Arch independant `print_uart`
+
+## Universal Asynchronous Receiver-Transmitter - *4th April, 2026*
 
 - UART implementation
 - Moved `arch` to root folder

@@ -96,7 +96,7 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
     asm volatile("cli");
 
     // BSOD
-    terminal_change_color(0x31); // Blue background, White foreground
+    terminal_change_color(0x1F); // Blue background, White foreground
     terminal_clear();
 
     if (regs->int_no < 32) {

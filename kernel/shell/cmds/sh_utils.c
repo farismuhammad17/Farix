@@ -18,14 +18,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <stddef.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "arch/stubs.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "memory/heap.h"
-#include "process/task.h"
 #include "shell/shell.h"
 
 #include "shell/commands.h"
@@ -98,80 +96,6 @@ void cmd_memstat(UNUSED_ARG const char* args) {
     sh_print("Free memory:  %4lu KiB\n", free_kb);
 
     system_int_on();
-}
-
-void cmd_tasks(UNUSED_ARG const char* args) {
-    size_t total_tasks = 0;
-
-    // Disable interrupts to ensure atomicity
-    system_int_off();
-
-    task* head = current_task;
-    task* curr = head;
-
-    do {
-        char* state_str = "READY";
-        if (curr->state == TASK_RUNNING) state_str = "RUNNING";
-        if (curr->state == TASK_SLEEPING) state_str = "SLEEPING";
-        if (curr->state == TASK_DEAD) state_str = "DEAD";
-
-        sh_print("%-4ld %-10s %s\n",
-            curr->id,
-            state_str,
-            curr->name
-        );
-        curr = curr->next;
-
-        total_tasks++;
-    } while (curr != head);
-
-    // Re-enable interrupts
-    system_int_on();
-
-    sh_print("Total Tasks: %ld\n", total_tasks);
-}
-
-void cmd_kill(const char* args) {
-    if (args[0] == '\0') {
-        sh_print("Usage: kill <pid>\n");
-        return;
-    }
-
-    uint32_t pid = atoi(args);
-    kill_task(pid);
-}
-
-void cmd_peek(const char* args) {
-    if (args[0] == '\0') {
-        sh_print("Usage: peek <pid>\n");
-        return;
-    }
-
-    task* t = current_task;
-    uint32_t target_pid = atoi(args);
-
-    for (size_t i = 0; i < total_tasks; i++) {
-        if(t->id == target_pid) {
-            task_registers_t* regs = (task_registers_t*) t->stack_pointer;
-
-            sh_print("--- Task Inspection: %s (PID: %d) ---\n", t->name, t->id);
-            sh_print("State:           %d\n", t->state);
-            sh_print("Next task:       %s\n", t->next->name);
-            sh_print("Page directory:  %p\n", t->page_directory);
-            sh_print("Stack base:      %p\n", t->stack_base);
-            sh_print("Stack origin:    %p\n", t->stack_origin);
-            sh_print("ELF Entry Point: %d\n", t->elf_entry_point);
-            sh_print("--- Stack dump ---\n");
-            sh_print("EAX: %08x   EBX: %08x   ECX: %08x\n", regs->eax, regs->ebx, regs->ecx);
-            sh_print("EDX: %08x   ESI: %08x   EDI: %08x\n", regs->edx, regs->esi, regs->edi);
-            sh_print("EIP: %08x   EBP: %08x   ESP: %08x\n", regs->eip, regs->ebp, t->stack_pointer);
-
-            return;
-        }
-        t = t->next;
-    }
-
-    sh_print("Task not found\n");
 }
 
 void cmd_grep(const char* args) {

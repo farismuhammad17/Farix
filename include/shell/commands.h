@@ -20,6 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef SHELL_COMMANDS_H
 #define SHELL_COMMANDS_H
 
+// For avoiding unused argument compiler warnings cleanly
+#define UNUSED_ARG __attribute__((unused))
+
 typedef void (*command_func_t)(const char* args);
 
 typedef struct ShellCommand {

@@ -81,14 +81,6 @@ void kernel_main() {
     create_task(shell_thread, "Shell", 0);
     create_task(handle_mouse, "Terminal mouse handler", 0);
 
-    // const char* text = "Booted";
-
-    // while (*text) {
-    //     if (*text == '\n')
-    //         uart_putc('\r');
-    //     uart_putc(*text++);
-    // }
-
     // The OS must NEVER die.
     // Interrupts take back control from this loop whenever
     // they are called, so the OS is never stuck in the

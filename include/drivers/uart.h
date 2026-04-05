@@ -27,4 +27,12 @@ int  is_uart_received();
 char uart_getc();
 void uart_putc(char c);
 
+static inline void print_uart(const char* data) {
+    while (*data) {
+        if (*data == '\n')
+            uart_putc('\r');
+        uart_putc(*data++);
+    }
+}
+
 #endif

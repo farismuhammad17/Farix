@@ -35,9 +35,12 @@ extern uint32_t stack_top;
 extern uint32_t stack_bottom;
 extern void switch_task(uint32_t* old_esp, uint32_t new_esp);
 
+task* main_task    = NULL;
 task* current_task = NULL;
 uint32_t next_pid  = 0;
-size_t total_tasks = 0;
+
+static task_list* first_task_list   = NULL;
+static task_list* current_task_list = NULL;
 
 void task_trampoline() {
     system_int_on();
@@ -55,19 +58,29 @@ void task_trampoline() {
 
 void init_multitasking() {
     // Create the first task (the one we are currently in)
-    task* main_task = (task*) kmalloc(sizeof(task));
+    main_task = (task*) kmalloc(sizeof(task));
     kmemset(main_task, 0, sizeof(task));
 
     main_task->id    = next_pid++;
     main_task->state = TASK_READY;
-    main_task->next  = main_task;     // Point to itself for now
     main_task->name  = "init";
     main_task->page_directory = kernel_directory;
     main_task->stack_origin   = PHYSICAL_TO_VIRTUAL(&stack_bottom);
 
+    main_task->next     = NULL;
+    main_task->parent   = NULL;
+    main_task->neighbor = NULL;
+
     current_task = main_task;
 
-    total_tasks++;
+    current_task_list = (task_list*) kmalloc(sizeof(task_list));
+    kmemset(current_task_list, 0, sizeof(task_list));
+
+    current_task_list->tasks[0]  = main_task;
+    current_task_list->mask     |= 1;
+    current_task_list->next      = NULL;
+
+    first_task_list = current_task_list;
 }
 
 task* create_task(void (*entry_point)(), const char* name, const bool privilege) {
@@ -81,6 +94,24 @@ task* create_task(void (*entry_point)(), const char* name, const bool privilege)
     new_task->page_directory = kernel_directory;
     new_task->heap_break     = 0;
     new_task->privilege      = privilege;
+    new_task->parent         = current_task;
+    new_task->next           = NULL;
+
+    // I feel this can be made better, but i'm prototyping
+    if (current_task->next == NULL) {
+        new_task->neighbor = new_task;
+        current_task->next = new_task;
+    } else {
+        task* head = current_task->next;
+        task* last = head;
+
+        while (last->neighbor != head) {
+            last = last->neighbor;
+        }
+
+        last->neighbor = new_task;
+        new_task->neighbor = head;
+    }
 
     uint32_t* stack = (uint32_t*) kmalloc(4096);
     uint32_t* esp = stack + 1024; // High address
@@ -97,61 +128,98 @@ task* create_task(void (*entry_point)(), const char* name, const bool privilege)
     new_task->stack_pointer = (uint32_t) esp;
     new_task->stack_origin  = stack;
 
-    new_task->next     = current_task->next;
-    current_task->next = new_task;
+    if (current_task_list->mask == TASK_LIST_MASK_FULL) {
+        task_list* new_task_list = (task_list*) kmalloc(sizeof(task_list));
+        kmemset(new_task_list, 0, sizeof(task_list));
 
-    total_tasks++;
+        current_task_list->next = new_task_list;
+        current_task_list = new_task_list;
+    }
+
+    // Add new task to current_task_list
+    task_list_mask_t free_slots = ~current_task_list->mask;
+    int slot = __builtin_ctz(free_slots); // I found out this exists today
+    current_task_list->tasks[slot] = new_task;
+    current_task_list->mask |= (1 << slot);
 
     return new_task;
 }
 
 void kill_task(uint32_t id) {
-    // Disable interrupts for safety
     system_int_off();
 
-    task* target = current_task;
+    task_list* list = first_task_list;
+    task* target = NULL;
+    int slot_index = -1;
+    task_list* target_list = NULL;
 
-    for (size_t i = 0; i < total_tasks; i++) {
-        if (target->id == id) break;
-        target = target->next;
+    // Walk the lists
+    while (list != NULL) {
+        if (list->mask == 0) { // TODO: Do something here, delete it, fix the linked list, etc.
+            list = list->next;
+            continue;
+        }
+
+        for (int i = 0; i < TASKS_LIST_LEN; i++) {
+            // Check the mask to see if the slot is even occupied
+            if (list->mask & (1 << i) && list->tasks[i]->id == id) {
+                target = list->tasks[i];
+                target_list = list;
+                slot_index = i;
+                break;
+            }
+        }
+
+        if (target) break;
+        list = list->next;
     }
 
-    if (target) target->state = TASK_DEAD;
+    if (target) {
+        target->state = TASK_DEAD;
+
+        task* p = target->parent;
+        if (p) {
+            // Move pointer from parent if this was next
+            if (p->next == target) {
+                if (target->neighbor == target) {
+                    p->next = NULL; // No more children
+                } else {
+                    p->next = target->neighbor;
+                }
+            }
+
+            // Unlink from neighbor linked list
+            task* prev = target->neighbor;
+            while (prev->neighbor != target) {
+                prev = prev->neighbor;
+            }
+            prev->neighbor = target->neighbor;
+        }
+
+        target_list->mask &= ~(1 << slot_index);
+        target_list->tasks[slot_index] = NULL;
+
+        if (target->stack_origin) kfree(target->stack_origin);
+        kfree(target);
+    }
 
     system_int_on();
 
-    if (target == current_task) {
-        task_yield();
-        return;
-    }
+    if (target == current_task) task_yield();
 }
 
-// I have thought up of an algorithm much more efficient
-// that works in O(1) time, and genuinely works significantly
-// better than any other kernel's (as far as I have seen).
-// Got it right before sleeping at night (yes, that occasionally
-// happens from time-to-time), but I'm scared to changing this rn
-// and leave some small error in here that I have no clue about
-// and mess up the entire kernel in the future because of some
-// weird scheduler reason. As a result, this circular singly linked
-// list will do, and will later be swapped out for the different
-// algorithm in my head.
 void schedule() {
-    if (!current_task || current_task->next == current_task) return;
-
     task* last = current_task;
+    task* next = current_task->next;
 
-    while (last->next->state == TASK_DEAD && last->next != current_task) {
-        task* zombie = last->next;
-        last->next = zombie->next;
-
-        kfree(zombie->stack_origin);
-        kfree(zombie);
-
-        total_tasks--;
+    if (next == NULL || next->state == TASK_DEAD) {
+        next = main_task;
+    } else {
+        current_task->next = next->neighbor;
     }
 
-    task* next = last->next;
+    if (last == next) return;
+
     current_task = next;
 
     if (next->stack_origin) {
@@ -161,4 +229,25 @@ void schedule() {
     vmm_switch_directory(next->page_directory);
 
     switch_task(&last->stack_pointer, next->stack_pointer);
+}
+
+task* get_task(uint32_t id) {
+    task_list* list = first_task_list;
+
+    while (list != NULL) {
+        if (list->mask == 0) {
+            list = list->next;
+            continue;
+        }
+
+        for (int i = 0; i < TASKS_LIST_LEN; i++) {
+            if (list->mask & (1 << i) && list->tasks[i]->id == id) {
+                return list->tasks[i];
+            }
+        }
+
+        list = list->next;
+    }
+
+    return NULL;
 }

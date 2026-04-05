@@ -50,7 +50,7 @@ typedef struct TerminalCmd {
 
 void init_terminal();
 
-uint8_t  terminal_entry_color(uint8_t fg, uint8_t bg);
+uint8_t  terminal_color_entry(uint8_t fg, uint8_t bg);
 uint16_t terminal_entry(unsigned char uc, uint8_t color);
 
 void update_cursor(size_t x, size_t y);

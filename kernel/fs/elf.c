@@ -36,7 +36,7 @@ void elf_user_trampoline() {
     task* t = current_task;
 
     uint32_t entry_point = (uint32_t) t->entry_func;
-    uint32_t user_stack  = (uint32_t) t->stack_base;
+    uint32_t user_stack  = (uint32_t) t->stack_origin;
 
     elf_user_trampoline_stub(entry_point, user_stack);
 
@@ -143,7 +143,7 @@ bool exec(const char* path) {
 
     elf_task->page_directory = user_pd_phys; // Switch from default kernel_directory
     elf_task->heap_break     = highest_vaddr;
-    elf_task->stack_base     = (uint32_t*) USER_STACK_TOP;
+    elf_task->stack_origin   = (uint32_t*) USER_STACK_TOP;
 
     void* stack_phys = pmm_alloc_page();
     uint32_t stack_virt_addr = USER_STACK_TOP - PAGE_SIZE;

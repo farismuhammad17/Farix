@@ -74,7 +74,7 @@ char special_char_buffer[MAX_SPECIAL_CHAR_LEN] = "";
 void init_terminal() {
 	update_cursor(0, 0);
 
-	terminal_color = terminal_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
+	terminal_color = terminal_color_entry(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
 
 	for (size_t y = 0; y < HEIGHT; y++) {
 		for (size_t x = 0; x < WIDTH; x++) {
@@ -87,7 +87,7 @@ void init_terminal() {
     save_line_to_history(blank_line);
 }
 
-uint8_t terminal_entry_color(uint8_t fg, uint8_t bg) {
+uint8_t terminal_color_entry(uint8_t fg, uint8_t bg) {
 	return fg | bg << 4;
 }
 
@@ -336,6 +336,8 @@ void echo_char(uint16_t c) {
     update_cursor(cursor_x, cursor_y);
 }
 
+// TODO
+// This does not handle ANSI escape codes
 void echo_raw(const char* data, size_t len) {
     if (len == 0) return;
 
@@ -483,15 +485,15 @@ void handle_ansi_char(uint16_t c) {
     if (c == ESC_CODE || (c == '[' && special_char_mode)) return;
 
     if (c == 'm') { // TODO: Only supports foreground, should implement background later, as well as letting ';' be used as a seperator
-             if (strcmp(special_char_buffer, "0") == 0)  terminal_color = terminal_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
-        else if (strcmp(special_char_buffer, "30") == 0) terminal_color = terminal_entry_color(VGA_COLOR_BLACK, VGA_COLOR_BLACK);
-        else if (strcmp(special_char_buffer, "31") == 0) terminal_color = terminal_entry_color(VGA_COLOR_RED, VGA_COLOR_BLACK);
-        else if (strcmp(special_char_buffer, "32") == 0) terminal_color = terminal_entry_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
-        else if (strcmp(special_char_buffer, "33") == 0) terminal_color = terminal_entry_color(VGA_COLOR_BROWN, VGA_COLOR_BLACK);
-        else if (strcmp(special_char_buffer, "34") == 0) terminal_color = terminal_entry_color(VGA_COLOR_BLUE, VGA_COLOR_BLACK);
-        else if (strcmp(special_char_buffer, "35") == 0) terminal_color = terminal_entry_color(VGA_COLOR_MAGENTA, VGA_COLOR_BLACK);
-        else if (strcmp(special_char_buffer, "36") == 0) terminal_color = terminal_entry_color(VGA_COLOR_CYAN, VGA_COLOR_BLACK);
-        else if (strcmp(special_char_buffer, "37") == 0) terminal_color = terminal_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+             if (strcmp(special_char_buffer, "0") == 0)  terminal_color = terminal_color_entry(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "30") == 0) terminal_color = terminal_color_entry(VGA_COLOR_BLACK, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "31") == 0) terminal_color = terminal_color_entry(VGA_COLOR_RED, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "32") == 0) terminal_color = terminal_color_entry(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "33") == 0) terminal_color = terminal_color_entry(VGA_COLOR_BROWN, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "34") == 0) terminal_color = terminal_color_entry(VGA_COLOR_BLUE, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "35") == 0) terminal_color = terminal_color_entry(VGA_COLOR_MAGENTA, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "36") == 0) terminal_color = terminal_color_entry(VGA_COLOR_CYAN, VGA_COLOR_BLACK);
+        else if (strcmp(special_char_buffer, "37") == 0) terminal_color = terminal_color_entry(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
 
         special_char_mode   = false;
         special_char_buffer[0] = '\0';
