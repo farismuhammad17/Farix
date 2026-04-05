@@ -39,8 +39,8 @@ task* main_task    = NULL;
 task* current_task = NULL;
 uint32_t next_pid  = 0;
 
-static task_list* first_task_list   = NULL;
-static task_list* current_task_list = NULL;
+task_list* first_task_list = NULL;
+task_list* current_task_list = NULL;
 
 void task_trampoline() {
     system_int_on();

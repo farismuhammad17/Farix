@@ -1,3 +1,22 @@
+/*
+-----------------------------------------------------------------------
+Copyright (C) 2026 Faris Muhammad
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-----------------------------------------------------------------------
+*/
+
 #include <stdlib.h>
 
 #include "arch/stubs.h"
@@ -93,13 +112,62 @@ void cmd_peek(const char* args) {
 
     sh_print("Name            %s\n", t->name);
     sh_print("State:          %d\n", t->state);
-    if (t->next)
-        sh_print("Next task:      %s (%d)\n", t->next->name, t->next->id);
     if (t->parent)
         sh_print("Parent:         %s (%d)\n", t->parent->name, t->parent->id);
+    if (t->next)
+        sh_print("Next task:      %s (%d)\n", t->next->name, t->next->id);
     sh_print("Page directory: %p\n", t->page_directory);
     sh_print("Stack origin:   %p\n", t->stack_origin);
     sh_print("EAX: %08x   EBX: %08x   ECX: %08x\n", regs->eax, regs->ebx, regs->ecx);
     sh_print("EDX: %08x   ESI: %08x   EDI: %08x\n", regs->edx, regs->esi, regs->edi);
     sh_print("EIP: %08x   EBP: %08x   ESP: %08x\n", regs->eip, regs->ebp, t->stack_pointer);
+}
+
+void cmd_tlist(const char* args) {
+    task_list* list = first_task_list;
+
+    if (args[0] == '\0') {
+        size_t list_id = 0;
+
+        do {
+            sh_print("%d ", list_id);
+
+            for (int i = TASKS_LIST_LEN - 1; i >= 0; i--) {
+                sh_print("%d", (list->mask >> i) & 1);
+                if (i > 0 && i % 8 == 0) sh_print(" ");
+            }
+
+            sh_print("\n");
+            list_id++;
+        } while (list->next != NULL);
+    } else {
+        size_t target = atoi(args);
+
+        for (size_t i = 0; i < target; i++) {
+            list = list->next;
+
+            if (list == NULL) {
+                sh_print("tlist: Only %d total lists\n", i + 1);
+                return;
+            }
+            else if (i == target) break;
+        }
+
+        for (int i = 0; i < TASKS_LIST_LEN; i++) {
+            if (list->mask & (1 << i)) {
+                task* t = list->tasks[i];
+
+                char* state_str = "READY";
+                if (t->state == TASK_RUNNING) state_str = "RUNNING";
+                if (t->state == TASK_SLEEPING) state_str = "SLEEPING";
+                if (t->state == TASK_DEAD) state_str = "DEAD";
+
+                sh_print("%-4ld%-10s%s\n",
+                    t->id,
+                    state_str,
+                    t->name
+                );
+            }
+        }
+    }
 }

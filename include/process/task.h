@@ -79,7 +79,7 @@ back up slowly.
 #define TASK_DEAD     3
 
 // Ensure this is a proper power of 2, no more than 64
-#define TASKS_LIST_LEN 16
+#define TASKS_LIST_LEN 8
 
 #if TASKS_LIST_LEN == 8
     typedef uint8_t task_list_mask_t;
@@ -127,6 +127,8 @@ typedef struct task_registers_t {
 extern task* main_task;
 extern task* current_task;
 extern uint32_t next_pid;
+
+extern task_list* first_task_list;
 
 void init_multitasking();
 

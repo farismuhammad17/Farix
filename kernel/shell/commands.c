@@ -27,9 +27,6 @@ ShellCommand command_table[] = {
     {"echo", cmd_echo, "Echoes to the terminal"},
     {"secho", cmd_secho, "Write text to the serial port (COM1)"},
     {"memstat", cmd_memstat, "Memory statistics"},
-    {"tasks", cmd_tasks, "List of running tasks"},
-    {"kill", cmd_kill, "Kill a task given the process ID"},
-    {"peek", cmd_peek, "Inspect a task"},
     {"grep", cmd_grep, "Searches text for matching patterns"},
     {"cd", cmd_cd, "Change directory"},
     {"cat", cmd_cat, "Read file"},
@@ -39,6 +36,10 @@ ShellCommand command_table[] = {
     {"rm", cmd_rm, "Delete file"},
     {"ls", cmd_ls, "List directory contents"},
     {"exec", cmd_exec, "Execute ELF file"},
+    {"tasks", cmd_tasks, "List of running tasks"},
+    {"kill", cmd_kill, "Kill a task given the process ID"},
+    {"peek", cmd_peek, "Inspect a task"},
+    {"tlist", cmd_tlist, "Bit map of every task list"},
 
     {NULL, NULL, NULL} // to mark the end
 };

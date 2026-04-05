@@ -2,10 +2,17 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## Improved Scheduler Algorithm - *5th April, 2026*
+## tlist Shell command - *5th April, 2026*
 
-> [!WARNING]  
+> [!WARNING]
 > The ARM32 implementation is wrong, even though it compiles. x86_32 is perfectly functional though.
+
+- Shell
+  - `tlist` command to see bit-maps and tasks inside each list.
+- Multitasking
+  - Reduces list sizes from 16 to 8.
+
+## Improved Scheduler Algorithm - *5th April, 2026*
 
 - Renamed `shell/table` to `shell/cmds`
 - Split shell commands into cleaner files
