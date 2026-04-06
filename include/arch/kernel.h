@@ -22,6 +22,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define THREAD_HZ 100
 
-void kernel_main();
+void kmain();
 
 #endif

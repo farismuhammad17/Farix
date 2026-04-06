@@ -52,5 +52,5 @@ void arch_kmain(uint32_t magic, multiboot_info* _mbi) {
 
     _init();
 
-    kernel_main();
+    kmain();
 }

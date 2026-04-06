@@ -19,11 +19,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include "memory/pmm.h"
+#include "memory/vmm.h"
+
 #include "arch/kernel.h"
 
 // For avoiding unused argument compiler warnings cleanly
 #define UNUSED_ARG __attribute__((unused))
 
 void arch_kmain(UNUSED_ARG uint32_t r0, UNUSED_ARG uint32_t r1, UNUSED_ARG uint32_t dtb_ptr) {
-    kernel_main();
+    init_pmm();
+    init_vmm();
+
+    kmain();
 }

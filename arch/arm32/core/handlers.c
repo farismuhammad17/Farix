@@ -45,6 +45,8 @@ static void dump_register_info(syscalls_registers_arm32_t* regs) {
 
 // Dumps multitasking information in case of race condition errors
 static void dump_multitasking_info() {
+    if (current_task == NULL) return;
+
     printf("--- Multitasking ---\n");
     printf("Name:           %s (%lu)\n", current_task->name, current_task->id);
     printf("Stack Pointer:  0x%08lx\n", current_task->stack_pointer);
@@ -123,6 +125,10 @@ void exception_data_abort_handler(syscalls_registers_arm32_t* regs) {
     asm volatile("mrc p15, 0, %0, c6, c0, 0" : "=r"(dfar));
     // MRC p15, 0, <reg>, c5, c0, 0 -> Read Data Fault Status Register (DFSR)
     asm volatile("mrc p15, 0, %0, c5, c0, 0" : "=r"(dfsr));
+
+    if ((dfsr & 0x1) || (dfsr & 0xF) == 1) {
+        printf("Alignment fault detected\n");
+    }
 
     printf("Exception: DATA ABORT (Memory Access Fault)\n");
     printf("Faulting Address (DFAR): 0x%08lx\n", dfar);

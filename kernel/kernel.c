@@ -40,13 +40,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "arch/kernel.h"
 
 void shell_thread() {
+    init_shell();
     while (1) {
         shell_update();  // Check if a command is ready
         system_halt();
     }
 }
 
-void kernel_main() {
+void kmain() {
     // Each architecture's boot.s calls this function independantly
     // through a seperate arch_kmain, which does all the arch specific
     // checks and initializations before calling this function.
@@ -57,6 +58,7 @@ void kernel_main() {
     init_uart();
 
     init_heap();
+
     init_interrupts();
     init_terminal();
 
@@ -75,8 +77,6 @@ void kernel_main() {
     init_fat32();
 
     vfs_mount(&fat32_ops);    // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
-
-    init_shell();
 
     create_task(shell_thread, "Shell", 0);
     create_task(handle_mouse, "Terminal mouse handler", 0);

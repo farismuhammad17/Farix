@@ -29,7 +29,9 @@ SECTIONS
     /* The Code Section */
     .text : ALIGN(4K)
     {
-        *(.text.boot)  /* Custom section for your ARM startup assembly */
+        _vector_table_start = .;
+        *(.vectors)
+        *(.text.boot)
         *(.text)
     }
 

@@ -22,7 +22,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/ata.h"
 #include "drivers/keyboard.h"
 #include "drivers/mouse.h"
-#include "drivers/terminal.h"
 
 // Future implementation
 
@@ -33,12 +32,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 char kbd_buffer[KBD_BUFFER_LEN];
 volatile int kbd_head;
 volatile int kbd_tail;
-void init_terminal() {}
 void init_keyboard() {}
 void handle_mouse() {}
-void echo_char (UNUSED_ARG uint16_t c) {}
-void echo_raw  (UNUSED_ARG const char* data, UNUSED_ARG size_t len) {}
-void terminal_clear() {}
 void init_mouse() {}
 void init_ata() {}
 void ata_read_sector(UNUSED_ARG uint32_t lba, UNUSED_ARG uint8_t* buffer) {}
