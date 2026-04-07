@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 
 #include "drivers/terminal.h"
+#include "drivers/uart.h"
 #include "libc/syscalls.h"
 #include "memory/vmm.h"
 #include "process/task.h"
@@ -112,6 +113,8 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
 
 void exception_handler(syscalls_registers_x86_32_t* regs) {
     asm volatile("cli");
+
+    uart_printf("Exception: %ld (%s)\n", regs->int_no, exception_messages[regs->int_no]);
 
     // BSOD
     terminal_change_color(0x1F); // Blue background, White foreground

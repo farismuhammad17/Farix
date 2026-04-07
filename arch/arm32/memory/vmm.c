@@ -24,25 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "memory/vmm.h"
 
-#include "drivers/uart.h" // TODO REM
-
 /*
-TODO: The 4 KB and 1 KB mismatch causes a ton (75%) of memory wastage.
-
-init_vmm, vmm_copy_kernel_directory:
-    ARM L1 Table (16KB) wastes 3 pages if PMM only tracks 4KB frames.
-    Consider a dedicated 16KB-aligned allocator for Page Directories.
-
-vmm_map_page:
-    ARM L2 Page Tables (256 entries * 4B = 1KB) are currently
-    allocated via pmm_alloc_page() (4KB). This wastes 3KB per allocation.
-    Optimize by implementing a 1KB-slab sub-allocator or pooling 4 tables
-    per 4KB physical frame to improve memory efficiency.
-     Currently, this causes no errors, it's just memory inefficient, so I
-    will fix this on a later day; as of now, we are just implementing the
-    basic functions to get through with the HAL.
-
-I thought of a fix to this problem:
 
 Allocation method
 
@@ -91,6 +73,10 @@ Same 64 sized array, except index 0 is last_page, and we don't store it separete
 treat it as unique. From index [1-21] is every page 1 KB full, [22-42] is 2 KB, [43-63] is
 3 KB. Thus, we have a clean array of 20 pages per filled size, and when we are using any of
 these subsets of the array, we can just use the first one we get, because it doesn't matter.
+
+TODO: The array is, of course, finite, but because it is rare, I decided to store all the pages
+that didn't find their place in the array into a linked list, and we can just pop them
+into the array whenever we want.
 
 */
 

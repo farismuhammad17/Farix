@@ -45,7 +45,7 @@ that child task for its time, then the scheduler moves its first child, and so o
 while labelling every task that we move through as has_passed = true. We determine
 the task to move to from the parent to the child simply by the "next" pointer.
 
-When we reach a leaf node, i.e. a task with no chlid task, we set the parent's
+When we reach a leaf node, i.e. a task with no child task, we set the parent's
 "next" task to be this leaf task's "neighbor" task, then move up to the parent.
 At the scheduler, just check if the current task is "has_passed", if so, set the
 parent's task to the neighbor's task, and move up, and repeat this process till

@@ -28,8 +28,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "memory/heap.h"
 
-#include "drivers/uart.h" // TODO REM
-
 void*        heap_start    = (void*) PHYSICAL_TO_VIRTUAL(0x1000000);
 void*        heap_end      = NULL;
 HeapSegment* first_segment = NULL;
@@ -70,8 +68,6 @@ bool check_heap() {
 
 void init_heap() {
     uint32_t initial_pages = 16;
-
-    uart_printf("%x\n", heap_start);
 
     for (uint32_t i = 0; i < initial_pages; i++) {
         void* phys = pmm_alloc_page();

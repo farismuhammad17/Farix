@@ -20,8 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef UART_H
 #define UART_H
 
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 void init_uart();
 

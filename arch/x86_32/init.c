@@ -22,10 +22,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "arch/kernel.h"
 #include "arch/stubs.h"
-#include "arch/x86/pic.h"
 #include "arch/x86/gdt.h"
-#include "arch/x86/tss.h"
 #include "arch/x86/multiboot.h"
+#include "arch/x86/pic.h"
+#include "arch/x86/tss.h"
 #include "memory/heap.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
