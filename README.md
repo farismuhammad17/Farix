@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="readme-assets/banner.png" style="border-radius: 10px; width: 80%; height: 80%;">
+    <img src="readme-assets/flowchart.svg">
 </p>
 
 > *"I'm doing a (free) operating system, (just a Hobby, won't be big and professional like gnu)"* - Linus Torvalds, 1991
