@@ -17,43 +17,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#ifndef PCI_H
+#define PCI_H
+
 #include <stdint.h>
-#include <stdio.h>
 
-#include "arch/kernel.h"
-#include "arch/stubs.h"
-#include "arch/x86/gdt.h"
-#include "arch/x86/multiboot.h"
-#include "arch/x86/pci.h"
-#include "arch/x86/pic.h"
-#include "arch/x86/tss.h"
-#include "memory/heap.h"
-#include "memory/pmm.h"
-#include "memory/vmm.h"
+typedef struct {
+    uint16_t vendor_id;
+    uint16_t device_id;
+    uint8_t  bus;
+    uint8_t  device;
+    uint8_t  function;
+    uint8_t  class_code;
+    uint8_t  subclass;
+} pci_device_t;
 
-multiboot_info* mbi = NULL;
+extern pci_device_t pci_devices[32];
+extern int pci_device_count;
 
-// Defined in asm/boot/crti.asm
-extern void _init();
+void init_pci();
 
-void arch_kmain(uint32_t magic, multiboot_info* _mbi) {
-    if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
-        printf("OS Error: Invalid Multiboot Magic Number");
-        while(1) asm volatile("hlt");
-    }
-
-    mbi = _mbi;
-
-    pic_remap();
-
-    init_pmm();
-    init_vmm();
-
-    init_pci();
-
-    init_gdt();
-
-    _init();
-
-    kmain();
-}
+#endif

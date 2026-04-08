@@ -6,7 +6,7 @@ pending/
 test/
 disk.img
 TODO.md
-test.*
+*test*
 *.bin
 *.img
 *.log

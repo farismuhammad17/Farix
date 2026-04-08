@@ -24,8 +24,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void     outb(uint32_t port, uint8_t  val);
 void     outw(uint32_t port, uint16_t val);
+void     outl(uint16_t port, uint32_t val);
 uint8_t  inb (uint32_t port);
 uint16_t inw (uint32_t port);
+uint32_t inl(uint16_t port);
 
 void system_halt();
 void system_int_on();  // Enable interrupts

@@ -2,10 +2,16 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## tlist Shell command - *5th April, 2026*
+## PCI Implementation - *8th April, 2026*
 
 > [!WARNING]
 > The ARM32 implementation is wrong, even though it compiles. x86_32 is perfectly functional though.
+
+- `lint.py` to ensure the code is clean.
+- PCI
+  - Basic PCI implementation
+
+## tlist Shell command - *5th April, 2026*
 
 - Shell
   - `tlist` command to see bit-maps and tasks inside each list.

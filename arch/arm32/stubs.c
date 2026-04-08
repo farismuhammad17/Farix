@@ -56,6 +56,8 @@ uint16_t inw(uint32_t port) {
     return *(volatile uint16_t*) port;
 }
 
+// TODO: inl, outl
+
 void system_halt() {
     asm volatile("wfi");
 }
