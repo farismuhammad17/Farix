@@ -1,3 +1,22 @@
+/*
+-----------------------------------------------------------------------
+Copyright (C) 2026 Faris Muhammad
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-----------------------------------------------------------------------
+*/
+
 #ifndef __ACFARIX_H__
 #define __ACFARIX_H__
 
@@ -50,6 +69,11 @@ typedef void * ACPI_SPINLOCK;
 #define ACPI_EXTERNAL_XFACE
 #define ACPI_INTERNAL_XFACE
 #define ACPI_INTERNAL_VAR_XFACE
+
+#ifndef ACPI_OSD_HANDLER_DEFINED
+#define ACPI_OSD_HANDLER_DEFINED
+typedef UINT32 (ACPI_SYSTEM_XFACE *ACPI_OSD_HANDLER)(void *Context);
+#endif
 
 #define ACPI_EXTERNAL_RETURN_STATUS(p) p;
 #define ACPI_EXTERNAL_RETURN_OK(p)     p;
@@ -130,5 +154,10 @@ typedef void * ACPI_SPINLOCK;
 #ifndef ACPI_OFFSET
     #define ACPI_OFFSET(d, f)      __builtin_offsetof(d, f)
 #endif
+
+#define ACPI_FLUSH_CPU_CACHE() __asm__ volatile("wbinvd":::"memory")
+
+#define ACPI_ACQUIRE_GLOBAL_LOCK(GLptr, Acquired) (Acquired) = 1
+#define ACPI_RELEASE_GLOBAL_LOCK(GLptr, Pending) (Pending) = 0
 
 #endif

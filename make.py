@@ -28,8 +28,7 @@ IGNORES = (
     "kernel/drivers/acpi/common/",
     "kernel/drivers/acpi/components/debugger/",
     "kernel/drivers/acpi/components/disassembler/",
-    "kernel/drivers/acpi/components/resources/rsdump.c",
-    "kernel/drivers/acpi/components/resources/rsinfo.c"
+    "kernel/drivers/acpi/components/resources/rsdump.c"
 )
 
 HELP = """
@@ -109,7 +108,7 @@ def build_object(src, obj, cmd_template):
             return
 
     cmd = cmd_template.format(src=src, obj=obj)
-    print(f"\x1b[1;34mCompiling:\x1b[0m {src}\x1b[80G{obj}")
+    print(f"\x1b[1;34mCompiling:\x1b[0m {src} \x1b[90m({obj})\x1b[0m")
     run(cmd)
 
 def is_ignored(path):

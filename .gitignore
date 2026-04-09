@@ -4,6 +4,7 @@ libc_build*/
 newlib-cygwin/
 pending/
 test/
+hidden/
 disk.img
 TODO.md
 *test*
