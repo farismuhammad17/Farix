@@ -64,17 +64,13 @@ void kmain() {
     init_interrupts();
     init_terminal();
 
-    uart_print("1\n");
     AcpiInitializeSubsystem();
-    uart_print("2\n");
     AcpiLoadTables();
 
     init_keyboard();
     init_mouse();
 
-    uart_print("3\n");
     AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
-    uart_print("4\n");
     AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
 
     init_multitasking();

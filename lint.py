@@ -35,7 +35,7 @@ total_lines = 0
 
 for ext in extns:
     for file in root.rglob(f"*.{ext}"):
-        if "test" in file.name or any(p in file.parts for p in ("newlib-cygwin", "libc_build_x86_32", "libc_build_arm32", "test")):
+        if any(p in file.parts for p in ("newlib-cygwin", "libc_build_x86_32", "libc_build_arm32", "test", "acpi")):
             continue
 
         try:

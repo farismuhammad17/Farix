@@ -20,11 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef __ACFARIX_H__
 #define __ACFARIX_H__
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdarg.h>
-#include "string.h"
 #include "ctype.h"
+#include "string.h"
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
 
 typedef uint8_t   UINT8;
 typedef uint16_t  UINT16;
