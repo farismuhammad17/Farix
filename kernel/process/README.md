@@ -14,7 +14,7 @@ This creates a new task (and returns it). You pass in a function, a name, and th
 
 Each new task records the task that created it as its `parent`, and has no children at creation. Its neighbors are a circular singly linked list of all the children of its parent. Each parent is not informed of all the children, but has one pointer to a child, `next`. When a new task is created, we snuggle in the task into this parent-child tree strcture.
 
-<table align="right" style="margin-left: 20px;">
+<table align="right" style="margin-left: 25px; margin-bottom: 10px; border-collapse: collapse;">
   <tr>
     <th colspan="2">Scheduler Algorithm</th>
   </tr>

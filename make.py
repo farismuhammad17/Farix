@@ -24,6 +24,14 @@ import subprocess
 import sys
 import shutil
 
+IGNORES = (
+    "kernel/drivers/acpi/common/",
+    "kernel/drivers/acpi/components/debugger/",
+    "kernel/drivers/acpi/components/disassembler/",
+    "kernel/drivers/acpi/components/resources/rsdump.c",
+    "kernel/drivers/acpi/components/resources/rsinfo.c"
+)
+
 HELP = """
 \033[1;36mFarix Build System\033[0m
 \033[90mhttps://github.com/farismuhammad17/Farix\033[0m
@@ -48,6 +56,7 @@ Usage: \033[1m m [target] <architecture>\033[0m
 
 # --- UTILS ---
 
+err_len = None
 def run(cmd, shell=True, check=True, capture_output=True):
     try:
         result = subprocess.run(
@@ -71,7 +80,11 @@ def run(cmd, shell=True, check=True, capture_output=True):
         err_msg = e.stderr
         if isinstance(err_msg, bytes):
             err_msg = err_msg.decode('utf-8', errors='replace')
-        print(f"Error:\n{err_msg}")
+
+        if err_len:
+            print(f"Error:\n{'\n'.join(err_msg.splitlines()[:err_len])}")
+        else:
+            print(f"Error:\n{err_msg}")
 
         sys.exit(1)
 
@@ -96,8 +109,14 @@ def build_object(src, obj, cmd_template):
             return
 
     cmd = cmd_template.format(src=src, obj=obj)
-    print(f"\x1b[1;34mCompiling:\x1b[0m {src}\x1b[60G{obj}")
+    print(f"\x1b[1;34mCompiling:\x1b[0m {src}\x1b[80G{obj}")
     run(cmd)
+
+def is_ignored(path):
+    for ign in IGNORES:
+        if path.startswith(ign):
+            return True
+    return False
 
 def get_sources(arch):
     c_sources   = []
@@ -106,7 +125,9 @@ def get_sources(arch):
     for root, _, files in os.walk("kernel"):
         for f in files:
             path = os.path.join(root, f)
-            if f.endswith(".c"):
+            if is_ignored(path): continue
+
+            elif f.endswith(".c"):
                 c_sources.append(path)
             # ASM in kernel is rare, but we'll check just in case
             elif (f.endswith(".asm") or f.endswith(".s")) and f != "boot.s":
@@ -117,7 +138,9 @@ def get_sources(arch):
         for root, _, files in os.walk(arch_path):
             for f in files:
                 path = os.path.join(root, f)
-                if f.endswith(".c"):
+                if is_ignored(path): continue
+
+                elif f.endswith(".c"):
                     c_sources.append(path)
                 elif (f.endswith(".asm") or f.endswith(".s")) and f != "boot.s":
                     asm_sources.append(path)
@@ -154,6 +177,7 @@ else:
 TARGET_DIR = PREFIX.rstrip('-')
 
 PROJECT_ROOT = os.getcwd()
+
 NEWLIB_SRC = os.path.join(PROJECT_ROOT, "newlib-cygwin")
 NEWLIB_TARGET = PREFIX.rstrip('-')
 LIBC_INSTALL_DIR = os.path.join(os.getcwd(), f"libc_build_{arch}")
@@ -161,10 +185,15 @@ LIBC_DIR = os.path.join(LIBC_INSTALL_DIR, TARGET_DIR)
 LIBC_INC = os.path.join(LIBC_DIR, "include")
 LIBC_LIB = os.path.join(LIBC_DIR, "lib")
 
+ACPICA_ARCH_INDEPENDANT = os.path.join(PROJECT_ROOT, "include/drivers/acpi")
+ACPICA_ARCH_DEPENDANT   = os.path.join(PROJECT_ROOT, f"include/arch/{arch}/acpi")
+
 CC = f"{PREFIX}gcc"
 AS = f"{PREFIX}as"
 
-CFLAGS = f"-ffreestanding -O2 -Wall -Wextra -Werror -fno-exceptions -fdiagnostics-color=always -Iinclude -I{LIBC_INC}"
+CFLAGS = f"-ffreestanding -O2 -Wall -Wextra -fno-exceptions \
+    -fdiagnostics-color=always \
+    -Iinclude -I{LIBC_INC} -I{ACPICA_ARCH_INDEPENDANT} -I{ACPICA_ARCH_DEPENDANT}"
 
 BOOT_OBJ = "build/boot.o"
 
@@ -312,7 +341,13 @@ def run_qemu(fullscreen=False):
 
 # --- MAIN ---
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else arch
+    target = arch
+    for arg in sys.argv[1:]:
+        if arg[0] != '-' and not arg.isdigit():
+            target = arg
+            break
+
+    if "-elen" in sys.argv: err_len = int(sys.argv[sys.argv.index('-elen') + 1])
 
     if   target == arch: farix_bin()
     elif target == "clean": clean()

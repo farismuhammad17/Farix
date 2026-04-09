@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "arch/stubs.h"
 
-#include "arch/x86/pic.h"
+#include "arch/x86_32/pic.h"
 
 void pic_remap() {
     // ICW1

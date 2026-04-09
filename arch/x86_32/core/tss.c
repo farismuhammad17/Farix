@@ -19,11 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-#include "arch/x86/gdt.h"
+#include "arch/x86_32/gdt.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
 
-#include "arch/x86/tss.h"
+#include "arch/x86_32/tss.h"
 
 TSSEntry tss_entry;
 

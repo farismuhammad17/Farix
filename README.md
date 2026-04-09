@@ -8,8 +8,6 @@
 - [Changelog](CHANGELOG.md): Brief summary of changes
 - [Setup](docs/setup.md): To install and run/emulate the kernel
 
-
-
 ---
 
 *This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) for details.*
