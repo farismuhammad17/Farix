@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "arch/x86/pci.h"
 #include "arch/x86/pic.h"
 #include "arch/x86/tss.h"
+#include "drivers/uart.h"
 #include "memory/heap.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
@@ -37,8 +38,10 @@ multiboot_info* mbi = NULL;
 extern void _init();
 
 void arch_kmain(uint32_t magic, multiboot_info* _mbi) {
+    early_kmain();
+
     if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
-        printf("OS Error: Invalid Multiboot Magic Number");
+        uart_print("OS Error: Invalid Multiboot Magic Number");
         while(1) asm volatile("hlt");
     }
 

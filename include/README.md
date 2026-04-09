@@ -1,0 +1,1 @@
+The include folder is where I chose to store the header files for literally everything. In terms of documentation, there is hardly any specifics, and you will have to navigate to the exact folder where the C/Assembly file is present for the proper, clean, specific documentation. Otherwise, you can get a high-level understanding of the components here.

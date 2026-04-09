@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define THREAD_HZ 100
 
+void early_kmain();
 void kmain();
 
 #endif

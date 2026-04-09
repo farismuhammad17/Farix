@@ -47,6 +47,10 @@ void shell_thread() {
     }
 }
 
+void early_kmain() {
+    init_uart();
+}
+
 void kmain() {
     // Each architecture's boot.s calls this function independantly
     // through a seperate arch_kmain, which does all the arch specific
@@ -54,8 +58,6 @@ void kmain() {
     //
     // This function is a general kernel_main function, and does not
     // care about the architecture it's running on.
-
-    init_uart();
 
     init_heap();
 

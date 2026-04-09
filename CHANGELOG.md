@@ -10,6 +10,8 @@
 - `lint.py` to ensure the code is clean.
 - PCI
   - Basic PCI implementation
+- `early_kmain` to be called in arch init.
+- x86 32 will now UART Multiboot error
 
 ## tlist Shell command - *5th April, 2026*
 

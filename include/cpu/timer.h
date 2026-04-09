@@ -20,34 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef TIMER_H
 #define TIMER_H
 
-/*
-
-System Timer
-
-Without a hardware timer, the kernel has no concept of time passing. It wouldn't
-be able to multitask, as a single process could hold the CPU forever. To solve this,
-we use a hardware timer chip that acts like the heartbeat of the system.
-
-The timer is a hardware device that sends a periodic interrupt signal to the CPU at
-a fixed frequency. Every time this "tick" occurs, the CPU pauses current execution
-and jumps to the timer interrupt handler. This allows the kernel to regain control,
-update system uptime, and decide if it's time to switch to a different task
-(preemptive multitasking).
-
-Since timer hardware varies significantly between platforms (e.g., PIT on x86 vs.
-Generic Timer on ARM), the implementation is split:
-
-x86_32 : src/arch/x86_32/core/timer.c
-arm32 : src/arch/arm32/core/timer.c
-
-void init_timer:
-    This function calculates the necessary divisors for the hardware clock to
-    fire at the requested frequency (in Hz). It then registers the timer
-    interrupt handler so the kernel can begin tracking time and performing
-    context switches.
-
-*/
-
 #include <stdint.h>
 
 void init_timer(uint32_t frequency);
