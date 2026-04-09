@@ -14,6 +14,32 @@ This creates a new task (and returns it). You pass in a function, a name, and th
 
 Each new task records the task that created it as its `parent`, and has no children at creation. Its neighbors are a circular singly linked list of all the children of its parent. Each parent is not informed of all the children, but has one pointer to a child, `next`. When a new task is created, we snuggle in the task into this parent-child tree strcture.
 
+<table align="right" style="margin-left: 20px;">
+  <tr>
+    <th colspan="2">Scheduler Algorithm</th>
+  </tr>
+  <tr>
+    <td><img src="../../readme-assets/task1.svg" width="100" alt="Step 1"><br><sub>Step 1</sub></td>
+    <td><img src="../../readme-assets/task2.svg" width="100" alt="Step 2"><br><sub>Step 2</sub></td>
+  </tr>
+  <tr>
+    <td><img src="../../readme-assets/task3.svg" width="100" alt="Step 3"><br><sub>Step 3</sub></td>
+    <td><img src="../../readme-assets/task4.svg" width="100" alt="Step 4"><br><sub>Step 4</sub></td>
+  </tr>
+  <tr>
+    <td><img src="../../readme-assets/task5.svg" width="100" alt="Step 5"><br><sub>Step 5</sub></td>
+    <td><img src="../../readme-assets/task6.svg" width="100" alt="Step 6"><br><sub>Step 6</sub></td>
+  </tr>
+  <tr>
+    <td><img src="../../readme-assets/task7.svg" width="100" alt="Step 7"><br><sub>Step 7</sub></td>
+    <td><img src="../../readme-assets/task8.svg" width="100" alt="Step 8"><br><sub>Step 8</sub></td>
+  </tr>
+  <tr>
+    <td><img src="../../readme-assets/task9.svg" width="100" alt="Step 9"><br><sub>Step 9</sub></td>
+    <td><img src="../../readme-assets/task10.svg" width="100" alt="Step 10"><br><sub>Step 10</sub></td>
+  </tr>
+</table>
+
 ```c
 void schedule();
 ```
