@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "arch/stubs.h"
 #include "cpu/ints.h"
 #include "cpu/timer.h"
+#include "drivers/acpi/acpi.h"
 #include "drivers/ata.h"
 #include "drivers/keyboard.h"
 #include "drivers/mouse.h"
@@ -60,12 +61,21 @@ void kmain() {
     // care about the architecture it's running on.
 
     init_heap();
-
     init_interrupts();
     init_terminal();
 
+    uart_print("1\n");
+    AcpiInitializeSubsystem();
+    uart_print("2\n");
+    AcpiLoadTables();
+
     init_keyboard();
     init_mouse();
+
+    uart_print("3\n");
+    AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
+    uart_print("4\n");
+    AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
 
     init_multitasking();
     init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms

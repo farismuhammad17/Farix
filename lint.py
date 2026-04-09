@@ -60,6 +60,9 @@ for ext in extns:
             if "TODO REM" in clean_line:
                 print(f"\033[92mTODO REM\033[0m   {file}")
 
+            elif "TODO IMP" in clean_line:
+                print(f"\033[92mTODO IMP\033[0m   {file}")
+
             elif "TODO" in clean_line:
                 print(f"\033[92mTODO\033[0m       {file}")
                 print(f"    \033[90m{clean_line}\033[0m")
