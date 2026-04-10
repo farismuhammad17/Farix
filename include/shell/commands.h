@@ -39,6 +39,7 @@ void cmd_clear(const char* args);
 void cmd_echo(const char* args);
 void cmd_secho(const char* args);
 void cmd_memstat(const char* args);
+void cmd_heapstat(const char* args);
 void cmd_grep(const char* args);
 
 // fs

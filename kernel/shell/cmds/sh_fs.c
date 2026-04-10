@@ -105,6 +105,7 @@ void cmd_cd(const char* args) {
     strncpy(shell_directory, work_path, MAX_DIRECTORY_PATH_LEN - 1);
 }
 
+// TODO IMP: Certain large files don't print fully
 void cmd_cat(const char* args) {
     if (args == NULL || args[0] == '\0') {
         sh_print("Usage: cat <filename>\n");
@@ -129,7 +130,7 @@ void cmd_cat(const char* args) {
 
     memset(buffer, 0, f->size + 1);
 
-    if (fs_read(filename, (uint8_t*)buffer, f->size))
+    if (fs_read(filename, (uint8_t*) buffer, f->size))
         sh_print("%s\n", buffer);
 
     kfree(buffer);

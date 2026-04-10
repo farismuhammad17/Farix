@@ -172,8 +172,10 @@ void shell_parse(const char* input) {
     is_piping = false;
 }
 
+// TODO IMP: Memory fragile, messes the terminal up if
+// it has to flush or print too much
 void sh_print(const char* format, ...) {
-    char local_buf[1024];
+    static char local_buf[1024];
     va_list args;
     va_start(args, format);
     int len = vsnprintf(local_buf, sizeof(local_buf), format, args);

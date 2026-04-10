@@ -29,9 +29,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/vmm.h"
 #include "process/task.h"
 
+#include "arch/kernel.h"
 #include "drivers/acpi/acpi.h"
 
 #define OS_SLEEP_MAX_MICROSECONDS 3000000
+#define MAX_DEFERRED_UNMAPS 64
+
+static void*  unmap_queue[MAX_DEFERRED_UNMAPS];
+static size_t unmap_count = 0;
 
 static ACPI_PHYSICAL_ADDRESS AcpiRSDP = NULL;
 
@@ -81,7 +86,11 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
 // --- MULTITASKING ---
 
 ACPI_THREAD_ID AcpiOsGetThreadId(void) {
-    return current_task->id;
+    // init->id is 0
+    // 0 is reserved for "invalid"
+    // ACPICA will think we failed if we return 0
+    // doing +1 cheats out of this
+    return current_task->id + 1;
 }
 
 // --- TIME ---
@@ -140,12 +149,33 @@ void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length) {
 }
 
 void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
-    uintptr_t addr = (uintptr_t) LogicalAddress;
-    uintptr_t end  = addr + Length;
+    if (!LogicalAddress || Length == 0) return;
 
-    for (uintptr_t i = addr & ~0xFFF; i < end; i += 0x1000) {
-        vmm_unmap_page((void*) i);
+    uintptr_t addr = (uintptr_t) LogicalAddress;
+    uintptr_t base_page = addr & ~0xFFF;
+    uintptr_t last_page = (addr + Length - 1) & ~0xFFF;
+
+    for (uintptr_t pg = base_page; pg <= last_page; pg += 0x1000) {
+        uintptr_t phys = vmm_get_phys(vmm_get_current_directory(), (void*) pg);
+
+        // Never unmap the first 32MB (Initial Kernel/Identity Map)
+        if (phys < (VMM_INIT_MAP_SIZE << 20)) continue;
+
+        // Only unmap if it's NOT the page containing the RSDT or DSDT headers
+        // ACPICA often keeps these pointers cached internally.
+        if (phys == (AcpiRSDP & ~0xFFF)) continue;
+
+        unmap_queue[unmap_count++] = (void*) pg;
+        if (unmap_count >= MAX_DEFERRED_UNMAPS) uart_print("ACPI OSL: Unmap queue full");
     }
+}
+
+// Defined in arch/kernel.h
+void AcpiMappingCleanup() {
+    for (size_t i = 0; i < unmap_count; i++)
+        pmm_free_page(vmm_unmap_page(unmap_queue[i]));
+
+    unmap_count = 0;
 }
 
 void* AcpiOsAllocate(ACPI_SIZE Size) {

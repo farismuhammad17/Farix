@@ -60,6 +60,9 @@ void cmd_secho(const char* args) {
 }
 
 void cmd_memstat(UNUSED_ARG const char* args) {
+    sh_print("memstat: This function is unsupported in the current version due to bugs in sh_print.\n");
+    return;
+
     // Disable interrupts to prevent the scheduler from
     // switching tasks while we use the heap.
     system_int_off();
@@ -69,23 +72,33 @@ void cmd_memstat(UNUSED_ARG const char* args) {
     sh_print("Address    | Size      | Status | Caller Address\n");
     sh_print("----------------------------------------------------------------------\n");
 
-    size_t total_kb  = get_heap_total() >> 10;
-    size_t heap_used = get_heap_used();
-
-    size_t used_kb = heap_used >> 10;
-    size_t free_kb = total_kb - used_kb;
+    size_t total_kb  = 0;
+    size_t heap_used = 0;
 
     HeapSegment* current = first_segment;
 
-    int usage_pct = (total_kb > 0) ? (int)((used_kb * 100) / total_kb) : 0;
+    size_t total_segs = 0; // TODO REM
+
     while (current != NULL) {
         sh_print("%p | %-9lu | %-6s | 0x%08lX\n",
                 current,
                 current->size,
                 current->is_free ? "FREE" : "USED",
                 current->caller);
+
+        total_kb += current->size + sizeof(HeapSegment);
+        if (!current->is_free) heap_used += current->size;
+
         current = current->next;
+        total_segs++;
     }
+
+    total_kb >>= 10;
+
+    size_t used_kb = heap_used >> 10;
+    size_t free_kb = total_kb - used_kb;
+
+    int usage_pct = (total_kb > 0) ? (int)((used_kb * 100) / total_kb) : 0;
 
     sh_print("----------------------------------------------------------------------\n");
     sh_print("Total Used: %lu bytes\n", heap_used);
@@ -94,8 +107,46 @@ void cmd_memstat(UNUSED_ARG const char* args) {
     sh_print("Total memory: %4lu KiB\n", total_kb);
     sh_print("Used memory:  %4lu KiB [%d%%]\n", used_kb, usage_pct);
     sh_print("Free memory:  %4lu KiB\n", free_kb);
+    sh_print("Total segments: %d\n", total_segs);
 
     system_int_on();
+}
+
+void cmd_heapstat(UNUSED_ARG const char* args) {
+    HeapSegment* current = first_segment;
+    size_t count = 0;
+
+    while (current != NULL) {
+        // Magic Check
+        if (current->magic != HEAP_MAGIC) {
+            sh_print("HEAP CORRUPTION: Bad Magic at %p (Val: %lx)\n", current, current->magic);
+            return;
+        }
+
+        // Alignment Check
+        if (((uint32_t) current & 0x3) != 0) {
+            sh_print("HEAP CORRUPTION: Unaligned segment pointer %p\n", current);
+            return;
+        }
+
+        // Pointer Check
+        if (current->next != NULL) {
+            if (current->next <= current) {
+                sh_print("HEAP CORRUPTION: Circular or backwards link at %p -> %p\n", current, current->next);
+                return;
+            }
+            if (current->next->prev != current) {
+                sh_print("HEAP CORRUPTION: Broken backlink! %p->next is %p, but that block's prev is %p\n",
+                        current, current->next, current->next->prev);
+                return;
+            }
+        }
+
+        current = current->next;
+        count++;
+    }
+
+    sh_print("Heap status is OK; %d segments verified, no corruption detected.\n", count);
 }
 
 void cmd_grep(const char* args) {

@@ -104,6 +104,8 @@ int _read(int file, char *ptr, int len) {
 
 int _write(int file, char *ptr, int len) {
     if (file == 1 || file == 2) { // stdout/stderr
+        // For debugging:
+        // uart_print(ptr);
         echo_raw(ptr, len);
         return len;
     }

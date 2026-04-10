@@ -7,8 +7,14 @@
 - Timer
   - Implemented `timer_stall` in 32-bit x86
   - Implemented `get_timer_uptime_microseconds` in 32-bit x86
+- Shell
+  - Implemented `heapstat`
 - VMM
   - Implemented `vmm_is_mapped`
+- Heap
+  - `init_heap` now goes to 512 KB instead of 64 KB.
+- ACPICA
+  - `AcpiMappingCleanup` to clean up mappings if required later
 - Makefile
   - `-elen` flag
 

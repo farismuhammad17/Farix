@@ -25,4 +25,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void early_kmain();
 void kmain();
 
+void AcpiMappingCleanup();
+
 #endif

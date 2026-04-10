@@ -27,6 +27,7 @@ ShellCommand command_table[] = {
     {"echo", cmd_echo, "Echoes to the terminal"},
     {"secho", cmd_secho, "Write text to the serial port (COM1)"},
     {"memstat", cmd_memstat, "Memory statistics"},
+    {"heapstat", cmd_heapstat, "Verify heap health"},
     {"grep", cmd_grep, "Searches text for matching patterns"},
     {"cd", cmd_cd, "Change directory"},
     {"cat", cmd_cat, "Read file"},

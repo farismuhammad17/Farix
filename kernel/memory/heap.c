@@ -32,42 +32,8 @@ void*        heap_start    = (void*) PHYSICAL_TO_VIRTUAL(0x1000000);
 void*        heap_end      = NULL;
 HeapSegment* first_segment = NULL;
 
-bool check_heap() {
-    HeapSegment* current = first_segment;
-    while (current != NULL) {
-        // Magic Check
-        if (current->magic != HEAP_MAGIC) {
-            printf("HEAP CORRUPTION: Bad Magic at %p (Val: %lx)\n", current, current->magic);
-            return false;
-        }
-
-        // Alignment Check
-        if (((uint32_t) current & 0x3) != 0) {
-            printf("HEAP CORRUPTION: Unaligned segment pointer %p\n", current);
-            return false;
-        }
-
-        // Pointer Check
-        if (current->next != NULL) {
-            if (current->next <= current) {
-                printf("HEAP CORRUPTION: Circular or backwards link at %p -> %p\n", current, current->next);
-                return false;
-            }
-            if (current->next->prev != current) {
-                printf("HEAP CORRUPTION: Broken backlink! %p->next is %p, but that block's prev is %p\n",
-                        current, current->next, current->next->prev);
-                return false;
-            }
-        }
-
-        current = current->next;
-    }
-
-    return true;
-}
-
 void init_heap() {
-    uint32_t initial_pages = 16;
+    uint32_t initial_pages = HEAP_INIT_SIZE >> 2;
 
     for (uint32_t i = 0; i < initial_pages; i++) {
         void* phys = pmm_alloc_page();
@@ -86,12 +52,6 @@ void init_heap() {
 }
 
 void* kmalloc(size_t size) {
-    // Use only for debugging
-    // if (!check_heap()) {
-    //     printf("malloc: Heap corrupted for size %u\n", size);
-    //     while(1);
-    // }
-
     // Align size to 4 bytes
     size = (size + 3) & ~3;
 
@@ -135,12 +95,6 @@ void* kmalloc(size_t size) {
 }
 
 void kfree(void* ptr) {
-    // Use only for debugging
-    // if (!check_heap()) {
-    //     printf("free: Heap corrupted of %p\n", ptr);
-    //     while(1);
-    // }
-
     if (ptr == NULL) return;
     HeapSegment* current = (HeapSegment*) ((uint32_t) ptr - sizeof(HeapSegment));
     if (current->magic != HEAP_MAGIC) return;
@@ -214,8 +168,6 @@ void kheap_expand(size_t size) {
 }
 
 size_t get_heap_total() {
-    check_heap();
-
     size_t total = 0;
     HeapSegment* current = first_segment;
     while (current != NULL) {

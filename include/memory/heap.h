@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef HEAP_H
 #define HEAP_H
 
+#define HEAP_INIT_SIZE 512 // KB
+
 #define HEAP_MAGIC 0x12345678
 
 #include <stdbool.h>
@@ -40,6 +42,7 @@ extern void*        heap_end;
 extern HeapSegment* first_segment;
 
 void   init_heap();
+
 void*  kmalloc(size_t size);
 void   kfree(void* ptr);
 
@@ -50,7 +53,5 @@ void   kheap_expand(size_t size);
 
 size_t get_heap_total();
 size_t get_heap_used();
-
-void   print_memstat();
 
 #endif
