@@ -28,10 +28,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/heap.h"
 #include "memory/vmm.h"
 
-#define OS_SLEEP_MAX_MS 3000
+#define OS_SLEEP_MAX_MICROSECONDS 3000000
 
 ACPI_STATUS AcpiOsInitialize() { return AE_OK; }
 ACPI_STATUS AcpiOsTerminate() { return AE_OK; }
+ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine, void *Context) { return AE_OK; }
+ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine) { return AE_OK; }
 
 ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, void (*Function)(void *), void *Context) {
     if (Function) {
@@ -40,42 +42,33 @@ ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, void (*Function)(void *), void
     return AE_OK;
 }
 
-ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine, void *Context) {
-    return AE_OK;
-}
-
-ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine) {
-    return AE_OK;
-}
-
 void AcpiOsStall(UINT32 Microseconds) {
     timer_stall((uint32_t) Microseconds);
 }
 
-void AcpiOsSleep(UINT64 Milliseconds) {
+void AcpiOsSleep(UINT64 time) { // Comes in Milliseconds
+    time *= 1000; // Convert to microseconds
+
     // If it's a long sleep, do it in chunks to avoid bit overflow
-    while (Milliseconds > OS_SLEEP_MAX_MS) {
-        AcpiOsStall(OS_SLEEP_MAX_MS * 1000);
-        Milliseconds -= OS_SLEEP_MAX_MS;
+    while (time > OS_SLEEP_MAX_MICROSECONDS) {
+        AcpiOsStall(OS_SLEEP_MAX_MICROSECONDS);
+        time -= OS_SLEEP_MAX_MICROSECONDS;
     }
 
-    AcpiOsStall((uint32_t) Milliseconds * 1000);
+    AcpiOsStall((uint32_t) time);
 }
 
 void AcpiOsWaitEventsComplete() {
     return;
 }
 
-void* AcpiOsAllocate(ACPI_SIZE Size) {
-    void* ptr = kmalloc(Size);
-    if (ptr) kmemset(ptr, 0, Size);
-    return ptr;
+// Wants per 100-nanosecond as unit
+UINT64 AcpiOsGetTimer(void) {
+    return get_timer_uptime_microseconds() * 10;
 }
 
-void AcpiOsFree(void *Memory) {
-    kfree(Memory);
-}
-
+// If a page fault happens, make sure we didn't map a page we mapped
+// Might cause page faults as a result
 void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length) {
     uintptr_t start_addr = (uintptr_t) PhysicalAddress;
     uintptr_t end_addr   = start_addr + Length;
@@ -99,19 +92,31 @@ void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
     }
 }
 
+void* AcpiOsAllocate(ACPI_SIZE Size) {
+    void* ptr = kmalloc(Size);
+    if (ptr) kmemset(ptr, 0, Size);
+    return ptr;
+}
+
+void AcpiOsFree(void *Memory) {
+    kfree(Memory);
+}
+
+// These will crash us and not work if:
+// IN the future, if we ever have one thing and another, say keyboard and shell,
+// call the ACPI for something, at the same time, then the ACPI will get sad,
+// and this is REQUIRED to avoid that.
+// Currently, this is not a concern, hence is being skipped.
 ACPI_STATUS AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEMAPHORE *OutHandle) {
     *OutHandle = (ACPI_SEMAPHORE) 1;
     return AE_OK;
 }
-
 ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout) {
     return AE_OK;
 }
-
 ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units) {
     return AE_OK;
 }
-
 ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle) {
     return AE_OK;
 }
@@ -124,10 +129,28 @@ ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK *OutHandle) {
 void AcpiOsDeleteLock(ACPI_SPINLOCK Handle) { }
 
 ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle) {
-    return 0;
+    ACPI_CPU_FLAGS flags;
+    asm volatile(
+        "pushf\n\t"
+        "pop %0\n\t"
+        "cli"
+        : "=rm"(flags)
+        :
+        : "memory"
+    );
+    return flags;
 }
 
-void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags) { }
+void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags) {
+    // Restore the flags (this will re-enable interrupts IF they were on before)
+    asm volatile(
+        "push %0\n\t"
+        "popf"
+        :
+        : "rm"(Flags)
+        : "memory", "cc"
+    );
+}
 
 ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
     ACPI_PHYSICAL_ADDRESS Ret = 0;
@@ -153,10 +176,6 @@ ACPI_STATUS AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT32 Width)
         default: return AE_BAD_PARAMETER;
     }
     return AE_OK;
-}
-
-UINT64 AcpiOsGetTimer(void) {
-    return 0;
 }
 
 ACPI_THREAD_ID AcpiOsGetThreadId(void) {

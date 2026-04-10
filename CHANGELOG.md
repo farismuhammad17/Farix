@@ -2,6 +2,14 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## ACPICA Inclusion
+
+- Timer
+  - Implemented `timer_stall` in 32-bit x86
+  - Implemented `get_timer_uptime_microseconds` in 32-bit x86
+- Make file
+  - `-elen` flag
+
 ## PCI Implementation - *8th April, 2026*
 
 > [!WARNING]

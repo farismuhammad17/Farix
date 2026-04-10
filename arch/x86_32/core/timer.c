@@ -25,9 +25,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define PIT_FREQ_HZ  1193182
 #define PIT_FREQ_MHZ 1.193
 
+static uint64_t system_ticks = 0;
+static uint64_t timer_freq = NULL;
 static uint32_t divisor = NULL;
 
 void timer_handler() {
+    system_ticks++;
+
     // Send EOI to the PIC
     outb(0x20, 0x20);
     schedule(); // Swap tasks
@@ -35,6 +39,7 @@ void timer_handler() {
 
 void init_timer(uint32_t frequency) {
     divisor = PIT_FREQ_HZ / frequency;
+    timer_freq = frequency;
 
     outb(0x43, 0x36);
 
@@ -45,8 +50,12 @@ void init_timer(uint32_t frequency) {
     outb(0x40, high);
 }
 
+uint64_t get_timer_uptime_microseconds() {
+    return (system_ticks * 1000000ULL) / timer_freq;
+}
+
 void timer_stall(uint32_t microseconds) {
-    if (microseconds == 0) return;
+    if (microseconds <= 0) return;
 
     uint32_t total_ticks = microseconds * PIT_FREQ_MHZ;
     uint32_t elapsed_ticks = 0;
