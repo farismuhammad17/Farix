@@ -64,14 +64,8 @@ void kmain() {
     init_interrupts();
     init_terminal();
 
-    AcpiInitializeSubsystem();
-    AcpiLoadTables();
-
     init_keyboard();
     init_mouse();
-
-    AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
-    AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
 
     init_multitasking();
     init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms
@@ -88,6 +82,12 @@ void kmain() {
 
     create_task(shell_thread, "Shell", 0);
     create_task(handle_mouse, "Terminal mouse handler", 0);
+
+    AcpiInitializeSubsystem();
+    AcpiLoadTables();
+
+    AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
+    AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
 
     // The OS must NEVER die.
     // Interrupts take back control from this loop whenever

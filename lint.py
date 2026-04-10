@@ -33,6 +33,9 @@ def check_block(block, file_path):
 total_files = 0
 total_lines = 0
 
+for file in root.rglob("README-UNFINISHED.md"):
+    print(f"\033[93mREADME     \033[0m{file}")
+
 for ext in extns:
     for file in root.rglob(f"*.{ext}"):
         if any(p in file.parts for p in ("newlib-cygwin", "libc_build_x86_32", "libc_build_arm32", "test", "acpi")):

@@ -21,14 +21,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "arch/stubs.h"
+#include "cpu/timer.h"
 #include "drivers/acpi/acpi.h"
 #include "drivers/uart.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
 
-ACPI_STATUS AcpiOsInitialize() {
-    return AE_OK;
-}
+#define OS_SLEEP_MAX_MS 3000
+
+ACPI_STATUS AcpiOsInitialize() { return AE_OK; }
+ACPI_STATUS AcpiOsTerminate() { return AE_OK; }
 
 ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, void (*Function)(void *), void *Context) {
     if (Function) {
@@ -45,8 +48,18 @@ ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLE
     return AE_OK;
 }
 
+void AcpiOsStall(UINT32 Microseconds) {
+    timer_stall((uint32_t) Microseconds);
+}
+
 void AcpiOsSleep(UINT64 Milliseconds) {
-    AcpiOsStall(Milliseconds * 1000);
+    // If it's a long sleep, do it in chunks to avoid bit overflow
+    while (Milliseconds > OS_SLEEP_MAX_MS) {
+        AcpiOsStall(OS_SLEEP_MAX_MS * 1000);
+        Milliseconds -= OS_SLEEP_MAX_MS;
+    }
+
+    AcpiOsStall((uint32_t) Milliseconds * 1000);
 }
 
 void AcpiOsWaitEventsComplete() {
@@ -123,10 +136,22 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
 }
 
 ACPI_STATUS AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32 *Value, UINT32 Width) {
+    switch (Width) {
+        case 8:  *Value = inb(Address); break;
+        case 16: *Value = inw(Address); break;
+        case 32: *Value = inl(Address); break;
+        default: return AE_BAD_PARAMETER;
+    }
     return AE_OK;
 }
 
 ACPI_STATUS AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT32 Width) {
+    switch (Width) {
+        case 8:  outb(Address, (uint8_t)  Value); break;
+        case 16: outw(Address, (uint16_t) Value); break;
+        case 32: outl(Address, (uint32_t) Value); break;
+        default: return AE_BAD_PARAMETER;
+    }
     return AE_OK;
 }
 
@@ -136,16 +161,6 @@ UINT64 AcpiOsGetTimer(void) {
 
 ACPI_THREAD_ID AcpiOsGetThreadId(void) {
     return 1;
-}
-
-void AcpiOsStall(UINT32 Microseconds) {
-    for (volatile uint32_t i = 0; i < Microseconds * 100; i++) {
-        __asm__ volatile("nop"); // TODO: Move to arch stubs
-    }
-}
-
-ACPI_STATUS AcpiOsTerminate() {
-    return AE_OK;
 }
 
 ACPI_STATUS AcpiOsTableOverride(ACPI_TABLE_HEADER *ExistingTable, ACPI_TABLE_HEADER **NewTable) {

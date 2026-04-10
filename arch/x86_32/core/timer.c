@@ -17,11 +17,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdint.h>
+
 #include "arch/stubs.h"
 #include "process/task.h"
 
+#define PIT_FREQ_HZ  1193182
+#define PIT_FREQ_MHZ 1.193
+
+static uint32_t divisor = NULL;
+
+void timer_handler() {
+    // Send EOI to the PIC
+    outb(0x20, 0x20);
+    schedule(); // Swap tasks
+}
+
 void init_timer(uint32_t frequency) {
-    uint32_t divisor = 1193182 / frequency;
+    divisor = PIT_FREQ_HZ / frequency;
 
     outb(0x43, 0x36);
 
@@ -32,8 +45,35 @@ void init_timer(uint32_t frequency) {
     outb(0x40, high);
 }
 
-void timer_handler() {
-    // Send EOI to the PIC
-    outb(0x20, 0x20);
-    schedule(); // Swap tasks
+void timer_stall(uint32_t microseconds) {
+    if (microseconds == 0) return;
+
+    uint32_t total_ticks = microseconds * PIT_FREQ_MHZ;
+    uint32_t elapsed_ticks = 0;
+
+    // Latch and read the initial counter value
+    outb(0x43, 0x00);
+    uint16_t last_value = inb(0x40);
+    last_value |= (inb(0x40) << 8);
+
+    while (elapsed_ticks < total_ticks) {
+        // Latch again to read the current value
+        outb(0x43, 0x00);
+        uint16_t current_value = inb(0x40);
+        current_value |= (inb(0x40) << 8);
+
+        // The PIT counts DOWN.
+        if (current_value < last_value) {
+            elapsed_ticks += (last_value - current_value);
+        }
+        else if (current_value > last_value) {
+            // The counter wrapped around (hit 0 and reset to your divisor)
+            elapsed_ticks += (last_value + (divisor - current_value));
+        }
+
+        last_value = current_value;
+
+        // Keep the CPU in a low-power "spin" while waiting
+        __asm__ volatile("pause");
+    }
 }

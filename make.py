@@ -25,6 +25,9 @@ import sys
 import shutil
 
 IGNORES = (
+    # These ACPI stuff come with ACPICA, having these make it easier to
+    # install newer versions of ACPICA without having to manually delete
+    # any of these.
     "kernel/drivers/acpi/common/",
     "kernel/drivers/acpi/components/debugger/",
     "kernel/drivers/acpi/components/disassembler/",
@@ -51,6 +54,9 @@ Usage: \033[1m m [target] <architecture>\033[0m
 \033[1;36mArchitectures:\033[0m
   \033[1mx86_32\033[0m       32-bit x86 \033[90m(default)\033[0m
   \033[1marm32\033[0m        32-bit ARM \033[90m(Requires arm-none-eabi-gcc)\033[0m
+
+\033[1;36mFlags:\033[0m
+  \033[1m-elen\033[0m        Maximum lines for error message
 """
 
 # --- UTILS ---

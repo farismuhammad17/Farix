@@ -24,4 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void init_timer(uint32_t frequency);
 
+void timer_stall(uint32_t microseconds);
+
 #endif
