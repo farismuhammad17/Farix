@@ -17,33 +17,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdint.h>
+
 #include "arch/stubs.h"
 
-#include "arch/x86_32/pci.h"
-
-#include <stdint.h>
+#include "cpu/pci.h"
 
 pci_device_t pci_devices[32];
 int pci_device_count = 0;
 
-static uint32_t read_config(uint8_t bus, uint8_t device, uint8_t func, uint8_t offset) {
-    // Port 0xCF8: CONFIG_ADDRESS
-    // Port 0xCFC: CONFIG_DATA
-
-    uint32_t address = (uint32_t)((bus << 16) | (device << 11) |
-                       (func << 8) | (offset & 0xFC) | ((uint32_t) 0x80000000));
-
-    // Write the address we want to read
-    outl(0xCF8, address);
-
-    // Read the data from the data port
-    return inl(0xCFC);
-}
-
 void init_pci() {
     for (int bus = 0; bus < 256; bus++) {
         for (int dev = 0; dev < 32; dev++) {
-            uint32_t data = read_config(bus, dev, 0, 0);
+            uint32_t data = pci_read(bus, dev, 0, 0);
 
             if ((data & 0xFFFF) != 0xFFFF) { // Found some device
                 if (pci_device_count < 32) {
@@ -55,11 +41,23 @@ void init_pci() {
                     d->function  = 0;
 
                     // Read class code (at offset 0x08) to know what it is
-                    uint32_t class_data = read_config(bus, dev, 0, 0x08);
+                    uint32_t class_data = pci_read(bus, dev, 0, 0x08);
                     d->class_code = (class_data >> 24) & 0xFF;
                     d->subclass   = (class_data >> 16) & 0xFF;
                 }
             }
         }
     }
+}
+
+uint32_t pci_read(uint8_t bus, uint8_t dev, uint8_t func, uint8_t reg) {
+    uint32_t addr = (1U << 31) | (bus << 16) | (dev << 11) | (func << 8) | (reg & 0xFC);
+    outl(0xCF8, addr);
+    return inl(0xCFC);
+}
+
+void pci_write(uint8_t bus, uint8_t dev, uint8_t func, uint8_t reg, uint32_t val) {
+    uint32_t addr = (1U << 31) | (bus << 16) | (dev << 11) | (func << 8) | (reg & 0xFC);
+    outl(0xCF8, addr);
+    outl(0xCFC, val);
 }

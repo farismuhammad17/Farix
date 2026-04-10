@@ -22,13 +22,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 
 #include "arch/stubs.h"
+#include "cpu/pci.h"
 #include "cpu/timer.h"
 #include "drivers/acpi/acpi.h"
 #include "drivers/uart.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
+#include "process/task.h"
 
 #define OS_SLEEP_MAX_MICROSECONDS 3000000
+
+// --- INITIALISATION ---
 
 ACPI_STATUS AcpiOsInitialize() { return AE_OK; }
 ACPI_STATUS AcpiOsTerminate() { return AE_OK; }
@@ -42,10 +46,27 @@ ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, void (*Function)(void *), void
     return AE_OK;
 }
 
+ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
+    ACPI_PHYSICAL_ADDRESS Ret = 0;
+    ACPI_STATUS status = AcpiFindRootPointer(&Ret);
+    return Ret;
+}
+
+// --- MULTITASKING ---
+
+ACPI_THREAD_ID AcpiOsGetThreadId(void) {
+    return current_task->id;
+}
+
+// --- TIME ---
+
+// ACPICA calls this for waits too short to deserve a task switch
 void AcpiOsStall(UINT32 Microseconds) {
     timer_stall((uint32_t) Microseconds);
 }
 
+// ACPICA calls this when it wants to take a nap and do nothing,
+// I'll make it switch task during this function later, but I'm lazy.
 void AcpiOsSleep(UINT64 time) { // Comes in Milliseconds
     time *= 1000; // Convert to microseconds
 
@@ -55,7 +76,13 @@ void AcpiOsSleep(UINT64 time) { // Comes in Milliseconds
         time -= OS_SLEEP_MAX_MICROSECONDS;
     }
 
-    AcpiOsStall((uint32_t) time);
+    timer_stall((uint32_t) time);
+}
+
+// Contrary to naming conventions, this is NOT for ACPICA to enter sleep,
+// but is called when the computer itself is going to shutdown.
+ACPI_STATUS AcpiOsEnterSleep(UINT8 SleepState, UINT32 RegaValue, UINT32 RegbValue) {
+    return AE_OK;
 }
 
 void AcpiOsWaitEventsComplete() {
@@ -66,6 +93,8 @@ void AcpiOsWaitEventsComplete() {
 UINT64 AcpiOsGetTimer(void) {
     return get_timer_uptime_microseconds() * 10;
 }
+
+// --- MEMORY ---
 
 // If a page fault happens, make sure we didn't map a page we mapped
 // Might cause page faults as a result
@@ -102,6 +131,52 @@ void AcpiOsFree(void *Memory) {
     kfree(Memory);
 }
 
+// TODO: Use proper slab allocation
+ACPI_STATUS AcpiOsCreateCache(char *CacheName, UINT16 ObjectSize,
+                              UINT16 MaxDepth, ACPI_CACHE_T **ReturnCache) {
+    *ReturnCache = (ACPI_CACHE_T*)(uintptr_t) ObjectSize;
+    return AE_OK;
+}
+
+ACPI_STATUS AcpiOsPurgeCache(ACPI_CACHE_T *Cache) {
+    return AE_OK;
+}
+
+ACPI_STATUS AcpiOsDeleteCache(ACPI_CACHE_T *Cache) {
+    return AE_OK;
+}
+
+// These override functions would not need any change until I find out some random
+// computer doesn't support this kernel, because it doesn't recognize it. If that
+// day comes, we have to fix these. Currently, these just mean "I have nothing to
+// fix," and that works for me.
+ACPI_STATUS AcpiOsTableOverride(ACPI_TABLE_HEADER *ExistingTable, ACPI_TABLE_HEADER **NewTable) {
+    *NewTable = NULL;
+    return AE_OK;
+}
+
+ACPI_STATUS AcpiOsPhysicalTableOverride(ACPI_TABLE_HEADER *ExistingTable,
+    ACPI_PHYSICAL_ADDRESS *NewAddress, UINT32 *NewTableLength) {
+    return AE_SUPPORT;
+}
+
+ACPI_STATUS AcpiOsPredefinedOverride(const ACPI_PREDEFINED_NAMES *InitVal,
+                                     ACPI_STRING *NewVal) {
+    *NewVal = NULL;
+    return AE_OK;
+}
+
+void * AcpiOsAcquireObject(ACPI_CACHE_T *Cache) {
+    return AcpiOsAllocate((uintptr_t) Cache);
+}
+
+ACPI_STATUS AcpiOsReleaseObject(ACPI_CACHE_T *Cache, void *Object) {
+    AcpiOsFree(Object);
+    return AE_OK;
+}
+
+// --- SEMAPHORES ---
+
 // These will crash us and not work if:
 // IN the future, if we ever have one thing and another, say keyboard and shell,
 // call the ACPI for something, at the same time, then the ACPI will get sad,
@@ -120,6 +195,8 @@ ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units) {
 ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle) {
     return AE_OK;
 }
+
+// --- SPINLOCKS ---
 
 ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK *OutHandle) {
     *OutHandle = (ACPI_SPINLOCK) 1;
@@ -152,11 +229,7 @@ void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags) {
     );
 }
 
-ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
-    ACPI_PHYSICAL_ADDRESS Ret = 0;
-    ACPI_STATUS status = AcpiFindRootPointer(&Ret);
-    return Ret;
-}
+// --- I/O ---
 
 ACPI_STATUS AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32 *Value, UINT32 Width) {
     switch (Width) {
@@ -178,22 +251,8 @@ ACPI_STATUS AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT32 Width)
     return AE_OK;
 }
 
-ACPI_THREAD_ID AcpiOsGetThreadId(void) {
-    return 1;
-}
-
-ACPI_STATUS AcpiOsTableOverride(ACPI_TABLE_HEADER *ExistingTable, ACPI_TABLE_HEADER **NewTable) {
-    *NewTable = NULL;
-    return AE_OK;
-}
-
-ACPI_STATUS AcpiOsPhysicalTableOverride(ACPI_TABLE_HEADER *ExistingTable,
-    ACPI_PHYSICAL_ADDRESS *NewAddress, UINT32 *NewTableLength) {
-    return AE_SUPPORT;
-}
-
 ACPI_STATUS AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 *Value, UINT32 Width) {
-    void* virt = AcpiOsMapMemory(Address, Width >> 3);
+    void* virt = AcpiOsMapMemory(Address, (Width + 7) >> 3);
     if (!virt) return AE_NO_MEMORY;
 
     switch (Width) {
@@ -204,12 +263,12 @@ ACPI_STATUS AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 *Value, UINT3
         default: return AE_BAD_PARAMETER;
     }
 
-    AcpiOsUnmapMemory(virt, Width >> 3);
+    AcpiOsUnmapMemory(virt, (Width + 7) >> 3);
     return AE_OK;
 }
 
 ACPI_STATUS AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT32 Width) {
-    void* virt = AcpiOsMapMemory(Address, Width >> 3);
+    void* virt = AcpiOsMapMemory(Address, (Width + 7) >> 3);
     if (!virt) return AE_NO_MEMORY;
 
     switch (Width) {
@@ -220,63 +279,53 @@ ACPI_STATUS AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT3
         default: return AE_BAD_PARAMETER;
     }
 
-    AcpiOsUnmapMemory(virt, Width >> 3);
-    return AE_OK;
-}
-
-ACPI_STATUS AcpiOsEnterSleep(UINT8 SleepState, UINT32 RegaValue, UINT32 RegbValue) {
+    AcpiOsUnmapMemory(virt, (Width + 7) >> 3);
     return AE_OK;
 }
 
 ACPI_STATUS AcpiOsReadPciConfiguration(ACPI_PCI_ID *PciId, UINT32 Register, UINT64 *Value, UINT32 Width) {
-    return AE_NOT_IMPLEMENTED;
+    uint32_t data = pci_read(PciId->Bus, PciId->Device, PciId->Function, Register);
+
+    uint32_t shift = (Register & 0x03) << 3;
+    if (Width == 8)       *Value = (data >> shift) & 0xFF;
+    else if (Width == 16) *Value = (data >> shift) & 0xFFFF;
+    else if (Width == 32) *Value = data;
+
+    return AE_OK;
 }
 
 ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID *PciId, UINT32 Register, UINT64 Value, UINT32 Width) {
-    return AE_NOT_IMPLEMENTED;
-}
+    if (Width == 32) {
+        pci_write(PciId->Bus, PciId->Device, PciId->Function, Register, (uint32_t) Value);
+    } else {
+        // Read-Modify-Write for 8/16 bit to avoid overwriting neighbors
+        uint32_t current = pci_read(PciId->Bus, PciId->Device, PciId->Function, Register);
+        uint32_t shift = (Register & 0x03) << 3;
+        uint32_t mask = (Width == 8) ? 0xFF : 0xFFFF;
 
-ACPI_STATUS AcpiOsCreateCache(char *CacheName, UINT16 ObjectSize,
-                              UINT16 MaxDepth, ACPI_CACHE_T **ReturnCache) {
-    *ReturnCache = (ACPI_CACHE_T*)(uintptr_t) ObjectSize;
+        current &= ~(mask << shift);
+        current |= ((uint32_t) Value & mask) << shift;
+
+        pci_write(PciId->Bus, PciId->Device, PciId->Function, Register, current);
+    }
+
     return AE_OK;
 }
 
-ACPI_STATUS AcpiOsPurgeCache(ACPI_CACHE_T *Cache) {
-    return AE_OK;
-}
-
-ACPI_STATUS AcpiOsDeleteCache(ACPI_CACHE_T *Cache) {
-    return AE_OK;
-}
-
-void * AcpiOsAcquireObject(ACPI_CACHE_T *Cache) {
-    return AcpiOsAllocate((uintptr_t) Cache);
-}
-
-ACPI_STATUS AcpiOsReleaseObject(ACPI_CACHE_T *Cache, void *Object) {
-    AcpiOsFree(Object);
-    return AE_OK;
-}
-
-ACPI_STATUS AcpiOsPredefinedOverride(const ACPI_PREDEFINED_NAMES *InitVal,
-                                     ACPI_STRING *NewVal) {
-    *NewVal = NULL;
-    return AE_OK;
-}
+// --- DEBUGGING ---
 
 ACPI_STATUS AcpiOsSignal(UINT32 Function, void *Info) {
-    AcpiOsPrintf("ACPI Signal: %d\n", Function);
+    uart_printf("ACPI Signal: %d\n", Function);
     return AE_OK;
 }
 
 void ACPI_INTERNAL_VAR_XFACE AcpiOsPrintf(const char *Format, ...) {
     va_list Args;
     va_start(Args, Format);
-    uart_printf(Format, Args);
+    uart_vprintf(Format, Args);
     va_end(Args);
 }
 
 void AcpiOsVprintf(const char *Format, va_list Args) {
-    uart_printf(Format, Args);
+    uart_vprintf(Format, Args);
 }

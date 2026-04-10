@@ -38,15 +38,18 @@ static inline void uart_print(const char* data) {
     }
 }
 
-static inline void uart_printf(const char* format, ...) {
-    char buffer[64];
-    va_list args;
-
-    va_start(args, format);
+static inline void uart_vprintf(const char* format, va_list args) {
+    char buffer[256];
     int len = vsnprintf(buffer, sizeof(buffer), format, args);
-    va_end(args);
 
     if (len > 0) uart_print(buffer);
+}
+
+static inline void uart_printf(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    uart_vprintf(format, args);
+    va_end(args);
 }
 
 #endif
