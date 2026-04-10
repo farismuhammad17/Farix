@@ -31,6 +31,9 @@ IGNORES = (
     "kernel/drivers/acpi/common/",
     "kernel/drivers/acpi/components/debugger/",
     "kernel/drivers/acpi/components/disassembler/",
+    "kernel/drivers/acpi/components/utilities/utclib.c",
+    "kernel/drivers/acpi/components/utilities/utprint.c",
+    "kernel/drivers/acpi/components/utilities/utcache.c",
     "kernel/drivers/acpi/components/resources/rsdump.c"
 )
 

@@ -20,11 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef __ACFARIX_H__
 #define __ACFARIX_H__
 
-#include "ctype.h"
-#include "string.h"
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "ctype.h"
+#include "string.h"
 
 typedef uint8_t   UINT8;
 typedef uint16_t  UINT16;
@@ -117,23 +117,20 @@ typedef UINT32 (ACPI_SYSTEM_XFACE *ACPI_OSD_HANDLER)(void *Context);
 #define ACPI_MACHINE_WIDTH 32
 
 #define ACPI_USE_SYSTEM_INTTYPES
-#define ACPI_USE_STANDARD_HEADERS
 
 #define ACPI_INLINE inline
 
 #define ACPI_EXPORT
 
-#define ACPI_USE_STANDARD_HEADERS
-
 #define ACPI_ARCHITECTURE_DEFINED
 #define ACPI_COMPILER_DEFINED
+
+#define ACPI_SINGLE_THREADED
+#define ACPI_USE_LOCAL_CACHE
 
 #ifndef __cdecl
     #define __cdecl
 #endif
-
-#define ACPI_USE_SYSTEM_INTTYPES
-#define ACPI_USE_STANDARD_HEADERS
 
 #define ACPI_TO_INTEGER(p)         ((uintptr_t)(p))
 
@@ -142,9 +139,16 @@ typedef UINT32 (ACPI_SYSTEM_XFACE *ACPI_OSD_HANDLER)(void *Context);
 #define ACPI_USE_NATIVE_MATH64
 #define ACPI_USE_NATIVE_DIVIDE
 
-#define ACPI_USE_SYSTEM_CLIBRARY
 #define ACPI_USE_DO_WHILE_0
 #define ACPI_IGNORE_PACKAGE_RESOLUTION_ERRORS
+
+#define ACPI_USE_SYSTEM_CLIBRARY
+#define ACPI_USE_STANDARD_HEADERS
+
+#define ACPI_STRSTR_DEFINED
+#define ACPI_MEMCMP_DEFINED
+#define ACPI_TOLOWER_DEFINED
+#define ACPI_TOUPPER_DEFINED
 
 #ifdef ACPI_DEBUG_DEFAULT
     #undef ACPI_DEBUG_DEFAULT

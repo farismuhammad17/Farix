@@ -24,17 +24,28 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "arch/stubs.h"
 #include "cpu/pci.h"
 #include "cpu/timer.h"
-#include "drivers/acpi/acpi.h"
 #include "drivers/uart.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
 #include "process/task.h"
 
+#include "drivers/acpi/acpi.h"
+
 #define OS_SLEEP_MAX_MICROSECONDS 3000000
 
 // --- INITIALISATION ---
 
-ACPI_STATUS AcpiOsInitialize() { return AE_OK; }
+ACPI_STATUS AcpiOsInitialize() {
+    ACPI_PHYSICAL_ADDRESS rsdp = AcpiOsGetRootPointer();
+
+    if (rsdp == 0) return AE_NOT_FOUND;
+
+    ACPI_PHYSICAL_ADDRESS found_rsdp = 0;
+    AcpiFindRootPointer(&found_rsdp);
+
+    return AE_OK;
+}
+
 ACPI_STATUS AcpiOsTerminate() { return AE_OK; }
 ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine, void *Context) { return AE_OK; }
 ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine) { return AE_OK; }
@@ -47,9 +58,23 @@ ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, void (*Function)(void *), void
 }
 
 ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
-    ACPI_PHYSICAL_ADDRESS Ret = 0;
-    ACPI_STATUS status = AcpiFindRootPointer(&Ret);
-    return Ret;
+    // Scan the BIOS memory for "RSD PTR "
+    for (uint32_t addr = 0x000E0000; addr < 0x000FFFFF; addr += 16) {
+        char* signature = (char*) PHYSICAL_TO_VIRTUAL(addr);
+
+        if (memcmp(signature, "RSD PTR ", 8) == 0) {
+            uint8_t sum = 0;
+            for (int i = 0; i < 20; i++) sum += signature[i];
+
+            if (sum == 0) {
+                uart_printf("Found %x\n", addr); // TODO REM
+                return (ACPI_PHYSICAL_ADDRESS) addr;
+            }
+        }
+    }
+
+    uart_printf("ACPI OSL: AcpiOsGetRootPointer: RSDP NOT FOUND\n");
+    return 0;
 }
 
 // --- MULTITASKING ---
