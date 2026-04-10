@@ -84,7 +84,9 @@ void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags) {
         uint32_t phys_table = (uint32_t) pmm_alloc_page();
 
         // Link it in the PD
-        pd_virt[pd_index] = phys_table | PAGE_PRESENT | PAGE_RW | PAGE_USER;
+        // Note: I removed PAGE_USER, if this causes some errors
+        // to the ELF executor, im gona crash out
+        pd_virt[pd_index] = phys_table | PAGE_PRESENT | PAGE_RW;
 
         // Zero out the new table
         uint32_t* table_ptr = (uint32_t*) PHYSICAL_TO_VIRTUAL(phys_table);
@@ -174,4 +176,22 @@ uint32_t vmm_get_phys(uint32_t* pd_phys, void* virt_addr) {
 
     // Return the physical address + page offset
     return (pt_virt[pt_idx] & ~0xFFF) | (v & 0xFFF);
+}
+
+// Very similar to vmm_get_phys
+int vmm_is_mapped(uint32_t* pd_phys, void* virt) {
+    uint32_t virt_addr = (uint32_t) virt;
+    uint32_t pd_index  = virt_addr >> 22;
+    uint32_t pt_index  = (virt_addr >> 12) & 0x3FF;
+
+    uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pd_phys);
+
+    if (!(pd_virt[pd_index] & PAGE_PRESENT)) return 0;
+
+    uint32_t pt_phys = pd_virt[pd_index] & ~0xFFF;
+    uint32_t* pt_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pt_phys);
+
+    if (!(pt_virt[pt_index] & PAGE_PRESENT)) return 0;
+
+    return 1;
 }

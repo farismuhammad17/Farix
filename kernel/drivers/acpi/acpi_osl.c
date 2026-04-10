@@ -33,12 +33,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define OS_SLEEP_MAX_MICROSECONDS 3000000
 
+static ACPI_PHYSICAL_ADDRESS AcpiRSDP = NULL;
+
 // --- INITIALISATION ---
 
 ACPI_STATUS AcpiOsInitialize() {
-    ACPI_PHYSICAL_ADDRESS rsdp = AcpiOsGetRootPointer();
+    AcpiRSDP = AcpiOsGetRootPointer();
 
-    if (rsdp == 0) return AE_NOT_FOUND;
+    if (AcpiRSDP == 0) return AE_NOT_FOUND;
 
     ACPI_PHYSICAL_ADDRESS found_rsdp = 0;
     AcpiFindRootPointer(&found_rsdp);
@@ -58,6 +60,8 @@ ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, void (*Function)(void *), void
 }
 
 ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
+    if (AcpiRSDP != NULL) return AcpiRSDP;
+
     // Scan the BIOS memory for "RSD PTR "
     for (uint32_t addr = 0x000E0000; addr < 0x000FFFFF; addr += 16) {
         char* signature = (char*) PHYSICAL_TO_VIRTUAL(addr);
@@ -66,10 +70,7 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
             uint8_t sum = 0;
             for (int i = 0; i < 20; i++) sum += signature[i];
 
-            if (sum == 0) {
-                uart_printf("Found %x\n", addr); // TODO REM
-                return (ACPI_PHYSICAL_ADDRESS) addr;
-            }
+            if (sum == 0) return (ACPI_PHYSICAL_ADDRESS) addr;
         }
     }
 
@@ -121,20 +122,21 @@ UINT64 AcpiOsGetTimer(void) {
 
 // --- MEMORY ---
 
-// If a page fault happens, make sure we didn't map a page we mapped
-// Might cause page faults as a result
 void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length) {
-    uintptr_t start_addr = (uintptr_t) PhysicalAddress;
-    uintptr_t end_addr   = start_addr + Length;
+    uintptr_t virt_start = (uintptr_t) PHYSICAL_TO_VIRTUAL(PhysicalAddress);
 
-    uintptr_t base_page  = start_addr & ~0xFFF;
-    uintptr_t last_page  = (end_addr - 1) & ~0xFFF;
+    // Calculate how many pages this request actually spans
+    uintptr_t base_page = (uintptr_t) PhysicalAddress & ~0xFFF;
+    uintptr_t last_page = ((uintptr_t) PhysicalAddress + Length - 1) & ~0xFFF;
 
     for (uintptr_t page = base_page; page <= last_page; page += 0x1000) {
-        vmm_map_page(kernel_directory, (void*)page, (void*) PHYSICAL_TO_VIRTUAL(page), PAGE_PRESENT | PAGE_RW);
+        void* virt_page = (void*) PHYSICAL_TO_VIRTUAL(page);
+
+        if (!vmm_is_mapped(kernel_directory, virt_page))
+            vmm_map_page(kernel_directory, (void*) page, virt_page, PAGE_PRESENT | PAGE_RW);
     }
 
-    return (void*)(uintptr_t) PHYSICAL_TO_VIRTUAL(start_addr);
+    return (void*) virt_start;
 }
 
 void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {

@@ -48,5 +48,6 @@ void      vmm_switch_directory(uint32_t* page_directory);
 
 uint32_t* vmm_get_current_directory();
 uint32_t  vmm_get_phys(uint32_t* pd_phys, void* virt_addr);
+int       vmm_is_mapped(uint32_t* pd_phys, void* virt);
 
 #endif

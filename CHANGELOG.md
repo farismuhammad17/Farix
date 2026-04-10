@@ -7,7 +7,9 @@
 - Timer
   - Implemented `timer_stall` in 32-bit x86
   - Implemented `get_timer_uptime_microseconds` in 32-bit x86
-- Make file
+- VMM
+  - Implemented `vmm_is_mapped`
+- Makefile
   - `-elen` flag
 
 ## PCI Implementation - *8th April, 2026*
