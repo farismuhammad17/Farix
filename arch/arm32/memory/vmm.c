@@ -74,7 +74,7 @@ treat it as unique. From index [1-21] is every page 1 KB full, [22-42] is 2 KB, 
 3 KB. Thus, we have a clean array of 20 pages per filled size, and when we are using any of
 these subsets of the array, we can just use the first one we get, because it doesn't matter.
 
-TODO: The array is, of course, finite, but because it is rare, I decided to store all the pages
+The array is, of course, finite, but because it is rare, I decided to store all the pages
 that didn't find their place in the array into a linked list, and we can just pop them
 into the array whenever we want.
 
@@ -88,6 +88,7 @@ into the array whenever we want.
 
 #define last_page partial_pages[0]
 
+// TODO: Use linked list to store pages that didn't get into the array
 static void* partial_pages[PARTIAL_PAGES_ARRAY_LEN] = {NULL};
 static uint64_t partial_pages_mask = 0;
 static uint8_t last_page_usage = 0; // 1 = 1 KB used, 2 = 2 KB used, 3 = 3 KB used

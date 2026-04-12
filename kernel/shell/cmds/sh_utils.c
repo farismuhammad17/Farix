@@ -77,7 +77,7 @@ void cmd_memstat(UNUSED_ARG const char* args) {
 
     HeapSegment* current = first_segment;
 
-    size_t total_segs = 0; // TODO REM
+    size_t total_segs = 0;
 
     while (current != NULL) {
         sh_print("%p | %-9lu | %-6s | 0x%08lX\n",

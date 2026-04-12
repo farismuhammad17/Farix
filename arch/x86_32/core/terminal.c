@@ -336,8 +336,7 @@ void echo_char(uint16_t c) {
     update_cursor(cursor_x, cursor_y);
 }
 
-// TODO
-// This does not handle ANSI escape codes
+// TODO: echo_raw does not handle ANSI escape codes
 void echo_raw(const char* data, size_t len) {
     if (len == 0) return;
 

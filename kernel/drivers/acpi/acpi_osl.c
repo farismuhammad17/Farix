@@ -42,6 +42,7 @@ static ACPI_PHYSICAL_ADDRESS AcpiRSDP = NULL;
 
 // --- INITIALISATION ---
 
+// This is the first init_acpi function
 ACPI_STATUS AcpiOsInitialize() {
     AcpiRSDP = AcpiOsGetRootPointer();
 
@@ -53,10 +54,28 @@ ACPI_STATUS AcpiOsInitialize() {
     return AE_OK;
 }
 
+// This is a cleanup function ACPICA uses once it is done, and is part
+// of the shutdown sequence.
 ACPI_STATUS AcpiOsTerminate() { return AE_OK; }
+
+// This function registers an OS-level interrupt handler for a specific
+// ACPI event. It maps the hardware InterruptNumber to the ServiceRoutine
+// function. When the interrupt fires, the kernel executes that routine
+// with the provided Context. It returns AE_OK if the mapping succeeds
+// or AE_ALREADY_EXISTS if the slot is taken.
 ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine, void *Context) { return AE_OK; }
+
+// This function uninstalls the interrupt handler previously registered for
+// InterruptNumber. It ensures the ServiceRoutine is no longer executed when
+// the hardware interrupt triggers. You must call this during driver unloading
+// or system shutdown to prevent the kernel from jumping to invalid memory
+// addresses when an ACPI interrupt occurs.
 ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine) { return AE_OK; }
 
+// AcpiOsExecute() schedules a function for deferred execution, typically by
+// placing it in a kernel work queue or a dedicated thread. It prevents long-running
+// ACPI tasks from blocking the main execution flow. Use it to run background service
+// routines or asynchronous callbacks without stalling the core interpreter.
 ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, void (*Function)(void *), void *Context) {
     if (Function) {
         (void) Function(Context);
@@ -64,6 +83,13 @@ ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, void (*Function)(void *), void
     return AE_OK;
 }
 
+// This function locates and returns the physical address of the Root System Description
+// Pointer (RSDP). The RSDP is the anchor for all ACPI tables. On EFI systems, the OSL
+// usually finds this via the EFI configuration table; on legacy BIOS systems, it scans
+// specific physical memory ranges (like the EBDA) for the "RSD PTR " signature.
+// In this implementation, we search for "RSD PTR ", and once found, store it at the
+// AcpiOsInitialize function, because the location of it is specific, and its not
+// going to move away from where it is.
 ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
     if (AcpiRSDP != NULL) return AcpiRSDP;
 
@@ -85,12 +111,12 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
 
 // --- MULTITASKING ---
 
-ACPI_THREAD_ID AcpiOsGetThreadId(void) {
-    // init->id is 0
-    // 0 is reserved for "invalid"
-    // ACPICA will think we failed if we return 0
-    // doing +1 cheats out of this
-    return current_task->id + 1;
+// AcpiOsGetThreadId() returns a unique identifier for the currently executing thread.
+// ACPICA uses this to track resource ownership, manage mutexes, and prevent deadlocks
+// within the interpreter. In a kernel, you typically return the address of the
+// current thread's control block or a unique ID from your task scheduler.
+ACPI_THREAD_ID AcpiOsGetThreadId() {
+    return current_task->id;
 }
 
 // --- TIME ---
@@ -101,7 +127,7 @@ void AcpiOsStall(UINT32 Microseconds) {
 }
 
 // ACPICA calls this when it wants to take a nap and do nothing,
-// I'll make it switch task during this function later, but I'm lazy.
+// TODO: I'll make it switch task during this function later, but I'm lazy.
 void AcpiOsSleep(UINT64 time) { // Comes in Milliseconds
     time *= 1000; // Convert to microseconds
 
@@ -120,17 +146,25 @@ ACPI_STATUS AcpiOsEnterSleep(UINT8 SleepState, UINT32 RegaValue, UINT32 RegbValu
     return AE_OK;
 }
 
+// This function blocks the execution of the calling thread until all asynchronous
+// events currently queued via AcpiOsExecute() have finished processing. It acts
+// as a synchronization barrier to ensure that no background ACPI tasks are pending
+// before the system proceeds with state changes or resource deallocation.
 void AcpiOsWaitEventsComplete() {
     return;
 }
 
 // Wants per 100-nanosecond as unit
-UINT64 AcpiOsGetTimer(void) {
+UINT64 AcpiOsGetTimer() {
     return get_timer_uptime_microseconds() * 10;
 }
 
 // --- MEMORY ---
 
+// This function maps a physical memory range containing ACPI tables into the kernel's
+// virtual address space. It accepts a physical start address and the region length,
+// returning a virtual pointer to the mapped memory. This allows the ACPICA interpreter
+// to read hardware-defined tables within a virtual memory environment.
 void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length) {
     uintptr_t virt_start = (uintptr_t) PHYSICAL_TO_VIRTUAL(PhysicalAddress);
 
@@ -148,6 +182,10 @@ void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length) {
     return (void*) virt_start;
 }
 
+// This function invalidates a previously established virtual mapping. It accepts the virtual
+// (logical) address and the length of the memory region to be released. It returns nothing
+// (void), but ensures the virtual address space is freed and any associated page table entries
+// are cleared by the kernel.
 void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
     if (!LogicalAddress || Length == 0) return;
 
@@ -178,16 +216,28 @@ void AcpiMappingCleanup() {
     unmap_count = 0;
 }
 
+// This function performs dynamic memory allocation for the ACPICA subsystem. It requires the
+// Size of the requested block in bytes and returns a virtual pointer to the allocated memory.
+// If the allocation fails due to insufficient heap space, it returns NULL. It must provide
+// 8-byte aligned memory.
 void* AcpiOsAllocate(ACPI_SIZE Size) {
     void* ptr = kmalloc(Size);
     if (ptr) kmemset(ptr, 0, Size);
     return ptr;
 }
 
+// This function releases a block of memory previously allocated via AcpiOsAllocate. It takes a
+// virtual pointer to the memory buffer as its argument and returns nothing (void). Its primary
+// purpose is to return the specified memory to the kernel's heap, preventing leaks within the
+// ACPI subsystem.
 void AcpiOsFree(void *Memory) {
     kfree(Memory);
 }
 
+// This function initializes a local memory cache for frequently allocated fixed-size objects.
+// It requires a name string, object size, and maximum depth. It returns an ACPI_STATUS code and
+// provides a handle to the new cache via a pointer. This optimization reduces fragmentation and
+// overhead during frequent interpreter allocations.
 // TODO: Use proper slab allocation
 ACPI_STATUS AcpiOsCreateCache(char *CacheName, UINT16 ObjectSize,
                               UINT16 MaxDepth, ACPI_CACHE_T **ReturnCache) {
@@ -195,10 +245,17 @@ ACPI_STATUS AcpiOsCreateCache(char *CacheName, UINT16 ObjectSize,
     return AE_OK;
 }
 
+// This function removes all entries currently residing in the specified memory cache. It takes
+// a pointer to the cache handle as input and returns an ACPI_STATUS code. This operation frees
+// the memory associated with unused objects in the cache without destroying the cache object itself.
 ACPI_STATUS AcpiOsPurgeCache(ACPI_CACHE_T *Cache) {
     return AE_OK;
 }
 
+// This function destroys a previously created memory cache and releases all associated resources.
+// It takes a pointer to the cache handle as its argument and returns an ACPI_STATUS code. Before
+// deletion, the function ensures all cached objects are freed to the system heap, invalidating
+// the cache handle.
 ACPI_STATUS AcpiOsDeleteCache(ACPI_CACHE_T *Cache) {
     return AE_OK;
 }
@@ -212,27 +269,48 @@ ACPI_STATUS AcpiOsTableOverride(ACPI_TABLE_HEADER *ExistingTable, ACPI_TABLE_HEA
     return AE_OK;
 }
 
+// This function allows the host operating system to override a specific ACPI hardware
+// table with a different version. It takes a pointer to the existing table header,
+// returning a new physical address and table length if an override is provided.
+// It returns AE_OK, regardless of whether an override occurs.
 ACPI_STATUS AcpiOsPhysicalTableOverride(ACPI_TABLE_HEADER *ExistingTable,
     ACPI_PHYSICAL_ADDRESS *NewAddress, UINT32 *NewTableLength) {
     return AE_SUPPORT;
 }
 
+// This function allows the operating system to override the default value of a predefined
+// ACPI object. It takes a pointer to the initial predefined name structure and returns a
+// new string value if an override is available. It returns AE_OK to indicate the check was
+// performed, facilitating platform-specific adjustments to standard ACPI names.
 ACPI_STATUS AcpiOsPredefinedOverride(const ACPI_PREDEFINED_NAMES *InitVal,
                                      ACPI_STRING *NewVal) {
     *NewVal = NULL;
     return AE_OK;
 }
 
+// This function retrieves a pre-allocated memory object from a specific cache. It takes a
+// pointer to the cache handle and returns a virtual pointer to an available object. If the
+// cache is empty, the function typically allocates a new object from the system heap to
+// fulfill the request.
 void * AcpiOsAcquireObject(ACPI_CACHE_T *Cache) {
     return AcpiOsAllocate((uintptr_t) Cache);
 }
 
+// This function returns a previously acquired memory object to the specified cache for future
+// reuse. It requires a pointer to the cache handle and the virtual pointer to the object being
+// released. It returns an ACPI_STATUS code to indicate whether the object was successfully
+// reintegrated into the cache pool.
 ACPI_STATUS AcpiOsReleaseObject(ACPI_CACHE_T *Cache, void *Object) {
     AcpiOsFree(Object);
     return AE_OK;
 }
 
 // --- SEMAPHORES ---
+
+// This function initializes a new counting semaphore for synchronization. It requires the
+// maximum unit count, the initial unit count, and a pointer to an output handle. It returns
+// an ACPI_STATUS code and populates the handle if successful. This is used by the interpreter
+// to manage shared resource access.
 
 // These will crash us and not work if:
 // IN the future, if we ever have one thing and another, say keyboard and shell,
@@ -243,25 +321,49 @@ ACPI_STATUS AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEM
     *OutHandle = (ACPI_SEMAPHORE) 1;
     return AE_OK;
 }
+
+// This function blocks the calling thread until the requested number of units is available in
+// the semaphore. It takes the semaphore handle, the number of units to acquire, and a timeout value
+// in milliseconds. It returns AE_OK on acquisition or AE_TIME if the timeout period expires before
+// units become available.
 ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout) {
     return AE_OK;
 }
+
+// This function increments the unit count of a semaphore, potentially unblocking waiting threads.
+// It requires the semaphore handle and the number of units to release. It returns an ACPI_STATUS code.
+// This is the primary mechanism for signaling that a shared resource or event is now available.
 ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units) {
     return AE_OK;
 }
+
+// This function destroys an existing semaphore and releases all kernel resources associated with it.
+// It takes the semaphore handle as input and returns an ACPI_STATUS code. This should only be called
+// when the semaphore is no longer needed and no threads are currently blocked waiting on it.
 ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle) {
     return AE_OK;
 }
 
 // --- SPINLOCKS ---
 
+// This function initializes a new spinlock for low-level synchronization in multi-core environments.
+// It requires a pointer to an output handle and returns an ACPI_STATUS code. This primitive is used
+// to protect small, critical sections of code where blocking is not permitted, ensuring mutual exclusion
+// at the hardware level.
 ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK *OutHandle) {
     *OutHandle = (ACPI_SPINLOCK) 1;
     return AE_OK;
 }
 
+// This function destroys a previously created spinlock and releases any associated kernel resources.
+// It takes the spinlock handle as its argument and returns nothing (void). This must only be called
+// when the lock is no longer required and is not currently held by any processor.
 void AcpiOsDeleteLock(ACPI_SPINLOCK Handle) { }
 
+// This function disables interrupts on the local processor and acquires the specified spinlock. It
+// takes the spinlock handle and returns the current CPU flags (interrupt state). This prevents the
+// current execution flow from being interrupted or preempted while holding a resource that other
+// cores may also attempt to access.
 ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle) {
     ACPI_CPU_FLAGS flags;
     asm volatile(
@@ -275,6 +377,10 @@ ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle) {
     return flags;
 }
 
+// This function releases a previously acquired spinlock and restores the processor to its previous
+// interrupt state. It requires the spinlock handle and the CPU flags returned by the initial acquisition.
+// This ensures that the local interrupt state is correctly balanced and the resource is made available
+// to other processors.
 void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags) {
     // Restore the flags (this will re-enable interrupts IF they were on before)
     asm volatile(
@@ -288,6 +394,9 @@ void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags) {
 
 // --- I/O ---
 
+// This function reads a value from a hardware I/O port. It accepts the port address, a pointer to
+// store the result, and the bit width (8, 16, or 32). It returns an ACPI_STATUS code. This is essential
+// for the interpreter to interact with legacy hardware mapped to the I/O space.
 ACPI_STATUS AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32 *Value, UINT32 Width) {
     switch (Width) {
         case 8:  *Value = inb(Address); break;
@@ -298,6 +407,9 @@ ACPI_STATUS AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32 *Value, UINT32 Width)
     return AE_OK;
 }
 
+// This function writes a specific value to a hardware I/O port. It requires the port address, the value to
+// write, and the bit width. It returns an ACPI_STATUS code. It allows the ACPI subsystem to send commands
+// or data to hardware devices through the processor's I/O instructions.
 ACPI_STATUS AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT32 Width) {
     switch (Width) {
         case 8:  outb(Address, (uint8_t)  Value); break;
@@ -308,6 +420,9 @@ ACPI_STATUS AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT32 Width)
     return AE_OK;
 }
 
+// This function reads data from a specified physical memory location. It takes the physical address, a pointer
+// for the value, and the bit width (up to 64). It returns an ACPI_STATUS code. This is typically used to read
+// memory-mapped I/O (MMIO) registers defined in the ACPI namespace.
 ACPI_STATUS AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 *Value, UINT32 Width) {
     void* virt = AcpiOsMapMemory(Address, (Width + 7) >> 3);
     if (!virt) return AE_NO_MEMORY;
@@ -324,6 +439,9 @@ ACPI_STATUS AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 *Value, UINT3
     return AE_OK;
 }
 
+// This function writes a value to a physical memory address. It requires the physical address, the value to be
+// written, and the bit width. It returns an ACPI_STATUS code. This enables the subsystem to configure hardware
+// components that utilize memory-mapped registers for control and status reporting.
 ACPI_STATUS AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT32 Width) {
     void* virt = AcpiOsMapMemory(Address, (Width + 7) >> 3);
     if (!virt) return AE_NO_MEMORY;
@@ -340,6 +458,9 @@ ACPI_STATUS AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT3
     return AE_OK;
 }
 
+// This function reads from the configuration space of a specific PCI device. It accepts a PCI ID structure (bus,
+// device, function), the register offset, a pointer for the data, and the width. It returns an ACPI_STATUS code,
+// facilitating hardware discovery and resource management within the PCI hierarchy.
 ACPI_STATUS AcpiOsReadPciConfiguration(ACPI_PCI_ID *PciId, UINT32 Register, UINT64 *Value, UINT32 Width) {
     uint32_t data = pci_read(PciId->Bus, PciId->Device, PciId->Function, Register);
 
@@ -351,6 +472,9 @@ ACPI_STATUS AcpiOsReadPciConfiguration(ACPI_PCI_ID *PciId, UINT32 Register, UINT
     return AE_OK;
 }
 
+// This function writes a value to the configuration space of a designated PCI device. It takes the PCI ID, the
+// register offset, the value, and the bit width. It returns an ACPI_STATUS code. This allows the ACPI interpreter
+// to modify PCI device states, such as power management registers or interrupt configurations.
 ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID *PciId, UINT32 Register, UINT64 Value, UINT32 Width) {
     if (Width == 32) {
         pci_write(PciId->Bus, PciId->Device, PciId->Function, Register, (uint32_t) Value);
@@ -371,11 +495,18 @@ ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID *PciId, UINT32 Register, UIN
 
 // --- DEBUGGING ---
 
+// This function allows the ACPICA interpreter to signal the host operating system regarding specific events
+// or fatal errors. It accepts a function code representing the signal type and a pointer to context-specific
+// information. It returns an ACPI_STATUS code. This is primarily used for debugger breakpoints or reporting
+// fatal ACPI errors to the kernel.
 ACPI_STATUS AcpiOsSignal(UINT32 Function, void *Info) {
-    uart_printf("ACPI Signal: %d\n", Function);
+    uart_printf("ACPI: %d\n", Function);
     return AE_OK;
 }
 
+// This function provides formatted string output for ACPICA, similar to the standard C printf. It accepts a
+// format string and a variable number of arguments. It returns nothing (void). The OSL must direct this output
+// to the appropriate kernel console, serial port, or log buffer for debugging and status reporting.
 void ACPI_INTERNAL_VAR_XFACE AcpiOsPrintf(const char *Format, ...) {
     va_list Args;
     va_start(Args, Format);
@@ -383,6 +514,9 @@ void ACPI_INTERNAL_VAR_XFACE AcpiOsPrintf(const char *Format, ...) {
     va_end(Args);
 }
 
+// This function serves as the underlying implementation for formatted output, handling variable argument lists.
+// It takes a format string and a va_list of arguments. It returns nothing (void). This allows the interpreter
+// to pass pre-processed argument lists from various internal diagnostic routines to the host's output hardware.
 void AcpiOsVprintf(const char *Format, va_list Args) {
     uart_vprintf(Format, Args);
 }

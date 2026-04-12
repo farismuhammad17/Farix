@@ -81,7 +81,7 @@ void* kmalloc(size_t size) {
             }
 
             current->is_free = false;
-            current->caller  = (uint32_t) __builtin_return_address(0); // TODO VERIFY IS x86 SPECIFIC
+            current->caller  = (uint32_t) __builtin_return_address(0);
 
             return (void*)((uint32_t) current + sizeof(HeapSegment));
         }

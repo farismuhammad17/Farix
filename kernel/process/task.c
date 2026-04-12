@@ -37,7 +37,7 @@ extern void switch_task(uint32_t* old_esp, uint32_t new_esp);
 
 task* main_task    = NULL;
 task* current_task = NULL;
-uint32_t next_pid  = 0;
+uint32_t next_pid  = 1;
 
 task_list* first_task_list = NULL;
 task_list* current_task_list = NULL;

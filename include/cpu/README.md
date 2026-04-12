@@ -27,3 +27,53 @@ void init_timer(uint32_t frequency);
 ```
 
 This function calculates the necessary divisors for the hardware clock to fire at the requested frequency (in Hz). It then registers the timer interrupt handler so the kernel can begin tracking time and performing context switches.
+
+```c
+uint64_t get_timer_uptime_microseconds();
+```
+
+This gets the number of microseconds that has passed since `init_timer`
+
+```c
+void timer_stall(uint32_t microseconds);
+```
+
+This stalls the entire computer by the given microseconds.
+
+# Peripheral Component Interconnect (PCI)
+
+The PCI bus is the primary way the kernel discovers and communicates with hardware peripherals like network cards, storage controllers, and graphics adapters. Without a PCI driver, the kernel cannot "see" the hardware attached to the motherboard.
+
+The system treats the PCI bus as a tree-like structure composed of **Buses**, **Devices**, and **Functions**. The kernel probes this structure to identify what is plugged in by reading unique Vendor and Device IDs from each device's configuration space. This process allows the kernel to map hardware to the correct software drivers.
+
+```c
+typedef struct {
+    uint16_t vendor_id;
+    uint16_t device_id;
+    uint8_t  bus;
+    uint8_t  device;
+    uint8_t  function;
+    uint8_t  class_code;
+    uint8_t  subclass;
+} pci_device_t;
+```
+
+This structure stores essential identification data for a discovered device. The `class_code` and `subclass` are used to determine the device type (e.g., Mass Storage or Network Controller).
+
+```c
+void init_pci();
+```
+
+This function scans the PCI bus for connected hardware. It iterates through possible bus/device/function combinations, populates the `pci_devices` array with found hardware, and updates `pci_device_count`.
+
+```c
+uint32_t pci_read(uint8_t bus, uint8_t dev, uint8_t func, uint8_t reg);
+```
+
+Reads a 32-bit value from a specific register in a device's configuration space. This is used to gather detailed hardware information or status.
+
+```c
+void pci_write(uint8_t bus, uint8_t dev, uint8_t func, uint8_t reg, uint32_t val);
+```
+
+Writes a 32-bit value to a device register. This is necessary for configuring hardware, such as enabling Bus Mastering or setting up Memory Mapped I/O (MMIO).
