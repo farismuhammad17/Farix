@@ -17,8 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef ARM_DEFS_H
-#define ARM_DEFS_H
+#ifndef ARM32_DEFS_H
+#define ARM32_DEFS_H
 
 #define TIMER_BASE      0x3F003000
 #define TIMER_CS        (TIMER_BASE + 0x00) // Control/Status

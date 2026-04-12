@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-#include "arch/arm/defs.h"
+#include "arch/arm32/defs.h"
 #include "arch/stubs.h"
 #include "process/task.h"
 
