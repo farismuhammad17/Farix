@@ -1,0 +1,4 @@
+# Ignore ACPICA from language statistics
+include/drivers/acpi/** linguist-vendored
+kernel/drivers/acpi/common/** linguist-vendored
+kernel/drivers/acpi/components/** linguist-vendored
