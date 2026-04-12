@@ -34,6 +34,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "drivers/terminal.h"
 
+#define MEMORY 0xB8000
+
 #define VGA_COLOR_BLACK         0
 #define VGA_COLOR_BLUE          1
 #define VGA_COLOR_GREEN         2
@@ -403,9 +405,10 @@ void echo_raw(const char* data, size_t len) {
 // doesn't rely on heap on anything to print
 // anything, so is useful for anything that
 // needs to be debugged
-void t_print(char* text) {
-    for (size_t i = 0; i < WIDTH; i++) {
-        echo_at(text[i], VGA_COLOR_WHITE, i, 0);
+void t_print(const char* data, uint8_t row) {
+    uint16_t* t_print_vga_buffer = (uint16_t*) MEMORY;
+    for (int i = 0; data[i] != '\0'; i++) {
+        t_print_vga_buffer[(row * WIDTH) + i] = (uint16_t) data[i] | (uint16_t) 0x0F << 8;
     }
 }
 

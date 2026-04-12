@@ -17,4 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-// This file serves no purpose currently, it will be implemented later
+#include "farix.h"
+
+extern int main(int argc, char** argv);

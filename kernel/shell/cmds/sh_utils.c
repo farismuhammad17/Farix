@@ -149,6 +149,22 @@ void cmd_heapstat(UNUSED_ARG const char* args) {
     sh_print("Heap status is OK; %d segments verified, no corruption detected.\n", count);
 }
 
+#define CASE(n) case n: asm volatile("int %0" :: "i"(n)); break;
+#define REP2(n)   CASE(n) CASE(n+1)
+#define REP4(n)   REP2(n) REP2(n+2)
+#define REP8(n)   REP4(n) REP4(n+4)
+#define REP16(n)  REP8(n) REP8(n+8)
+#define REP32(n)  REP16(n) REP16(n+16)
+#define REP64(n)  REP32(n) REP32(n+32)
+#define REP128(n) REP64(n) REP64(n+64)
+#define REP256(n) REP128(n) REP128(n+128)
+void cmd_int(const char *args) {
+    switch(atoi(args)) {
+        REP256(0)
+        default: break;
+    }
+}
+
 void cmd_grep(const char* args) {
     if (last_cmd_output[0] == '\0') {
         sh_print("grep: No input to search.\n");

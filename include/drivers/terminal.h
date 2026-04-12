@@ -26,8 +26,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define WIDTH  80
 #define HEIGHT 25
-#define MEMORY 0xB8000
-#define VGA_MEMORY (uint16_t*) 0xB8000
 
 #define ESC_CODE 0x1B
 
@@ -72,7 +70,7 @@ void cmd_history_down();
 void echo_at   (char c, uint8_t color, size_t x, size_t y);
 void echo_char (uint16_t c);
 void echo_raw  (const char* data, size_t len);
-void t_print   (char* text);
+void t_print   (const char* data, uint8_t row);
 
 bool handle_special_chars(uint16_t c);
 void handle_mouse();

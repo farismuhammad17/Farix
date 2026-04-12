@@ -48,6 +48,8 @@ void shell_thread() {
     }
 }
 
+// Called before the architecture initialisations. Everything here
+// must be so raw, it should not depend on literally anything else.
 void early_kmain() {
     init_uart();
 }
@@ -60,8 +62,8 @@ void kmain() {
     // This function is a general kernel_main function, and does not
     // care about the architecture it's running on.
 
-    init_heap();
     init_interrupts();
+    init_heap();
     init_terminal();
 
     init_keyboard();

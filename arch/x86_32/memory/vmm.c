@@ -86,7 +86,7 @@ void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags) {
         // Link it in the PD
         // Note: I removed PAGE_USER, if this causes some errors
         // to the ELF executor, im gona crash out
-        pd_virt[pd_index] = phys_table | PAGE_PRESENT | PAGE_RW;
+        pd_virt[pd_index] = phys_table | PAGE_PRESENT | PAGE_RW | PAGE_USER;
 
         // Zero out the new table
         uint32_t* table_ptr = (uint32_t*) PHYSICAL_TO_VIRTUAL(phys_table);

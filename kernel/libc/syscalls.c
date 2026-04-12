@@ -34,6 +34,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "libc/syscalls.h"
 
+// For debugging:
+// #include "drivers/uart.h"
+
 // A table of strings representing the names of open files
 static const char* fd_table[20] = {NULL};
 

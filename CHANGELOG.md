@@ -2,7 +2,22 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## ACPICA Inclusion
+## ELF Shell - *Work In Progress*
+
+*Move from kernel Shell into shell.elf*
+
+> [!WARNING]
+> The ARM32 implementation is wrong, even though it compiles. x86_32 is perfectly functional though.
+
+- Terminal
+  - Made `t_print` as raw as possible
+- Shell
+  - `int` command to go to specific interrupt
+- Makefile
+  - Compiles apps and puts into kernel disk
+  - Option to emulate in QEMU or write to USB
+
+## ACPICA Inclusion - *11th April, 2026*
 
 - Timer
   - Implemented `timer_stall` in 32-bit x86
@@ -19,9 +34,6 @@
   - `-elen` flag
 
 ## PCI Implementation - *8th April, 2026*
-
-> [!WARNING]
-> The ARM32 implementation is wrong, even though it compiles. x86_32 is perfectly functional though.
 
 - `lint.py` to ensure the code is clean.
 - PCI

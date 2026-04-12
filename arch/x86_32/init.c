@@ -48,11 +48,10 @@ void arch_kmain(uint32_t magic, multiboot_info* _mbi) {
     mbi = _mbi;
 
     pic_remap();
+    init_pci();
 
     init_pmm();
     init_vmm();
-
-    init_pci();
 
     init_gdt();
 
