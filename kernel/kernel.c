@@ -72,17 +72,18 @@ void kmain() {
     init_multitasking();
     init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms
 
-    AcpiInitializeSubsystem();
-    AcpiInitializeTables(NULL, 16, FALSE);
-    AcpiLoadTables();
+    // AcpiInitializeSubsystem();
+    // AcpiInitializeTables(NULL, 16, FALSE);
+    // AcpiLoadTables();
 
-    AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
-    AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
+    // AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
+    // AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
+
+    init_ata();
+
 
     // Enable interrupts
     system_int_on();
-
-    init_ata();
 
     init_ramdisk();
     init_fat32();

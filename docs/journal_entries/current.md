@@ -9,3 +9,11 @@ I decided to move from having a kernel shell, I wanted the shell to be seperate,
 I made changes to the makefile to accomodate these future changes, so I don't have to worry over it later. I tested it out, and it seems to function perfectly. One problem - I have no idea if the kernel actually works on a real computer or not.
 
 To test this, I made a feature in the makefile to put the compiled BIN file into a given USB. This USB file will be reformatted to be able to run with GRUB, assuming you set it up on the client device properly. Once this is done, I actually tested - it cutely failed. So, I am currently on a treasure hunt to find out where, and it seems it failed on `sti`... somehow, and I have no idea how. It is probably the timer, scheduler, or something assembly, the stack, whatever. It could be anywhere at this point.
+
+*13th April, 2026*
+
+Swapping USB in and out of two computers is starting to get annoying, so I decided I have to up my emulation system. Instead of using QEMU to emulate, the apparent "gold-standard" that is suggested literally anywhere I look, I decided to use bochs. Unfortunately, this required so much new makefile stuff, that I was getting annoyed with it all - it needed me to make a special ISO file and some more extra stuff, and I was not dealing with that.
+
+Instead, I just made QEMU more "realistic", by forcing it to provide everything that a normal computer would also provide. This ensures that the emulation would be a bit more solid. I eventually got it to look like my actual computer; stuck after random points in `kmain`, and slowly solved all these problems.
+
+These "problems" in question are a list of stuff I left in TODO.md and never bothered to fix them because they worked, and I thought the emulation was realistic enough for it. Unfortunately, this is not true, and I had to fix it all today. I can't believe I'm doing all this just for moving the shell into ELF. I think it's working, I'll check tomorrow, it's 11:41 am, and I have school tomorrow.

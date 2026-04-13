@@ -9,13 +9,19 @@
 > [!WARNING]
 > The ARM32 implementation is wrong, even though it compiles. x86_32 is perfectly functional though.
 
+- ATA
+  - Made `ata_wait_ready` silicon proper
+- Keyboard
+  - Made `init_keyboard` silicon proper
 - Terminal
   - Made `t_print` as raw as possible
 - Shell
   - `int` command to go to specific interrupt
 - Makefile
+  - Split functionalities accross files for readability
   - Compiles apps and puts into kernel disk
   - Option to emulate in QEMU or write to USB
+  - QEMU execution is much more realistic (though slower)
 
 ## ACPICA Inclusion - *11th April, 2026*
 

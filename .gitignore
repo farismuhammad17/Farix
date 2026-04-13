@@ -1,14 +1,24 @@
-.DS_Store
-build/
-libc_build*/
-newlib-cygwin/
-pending/
-test/
-hidden/
-disk.img
-make.conf.json
-TODO.md
-*test*
 *.bin
 *.img
 *.log
+
+# System
+.DS_Store
+__pycache__/
+
+# Build
+build/
+libc_build*/
+newlib-cygwin/
+
+# Testing grounds
+pending/
+test/
+hidden/
+*test*
+
+# Makefile
+make.conf.json
+
+# Misc
+TODO.md

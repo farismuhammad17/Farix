@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "arch/stubs.h"
+#include "cpu/timer.h"
 
 #include "drivers/ata.h"
 
@@ -68,7 +69,7 @@ void ata_write_sector(uint32_t lba, uint8_t* buffer) {
 
     ata_wait_ready(); // Wait for DRQ before sending data
 
-    uint16_t* ptr = (uint16_t*)buffer;
+    uint16_t* ptr = (uint16_t*) buffer;
     for (int i = 0; i < 256; i++) {
         outw(0x1F0, ptr[i]);
     }
@@ -78,11 +79,16 @@ void ata_write_sector(uint32_t lba, uint8_t* buffer) {
 }
 
 void ata_wait_ready() {
-    // Wait while the drive is BUSY (BSY bit 7)
-    while (inb(0x1F7) & 0x80);
+    timer_stall(1);
 
-    // Wait until the drive is READY (DRQ bit 3) or has an ERROR (ERR bit 0)
     uint8_t status;
+
+    // The "Busy" check with a safety break for floating buses (0xFF)
+    while ((status = inb(0x1F7)) & 0x80) {
+        if (status == 0xFF) return; // Exit if the bus is floating/dead
+    }
+
+    // We wait for DRQ (0x08) or ERR (0x01)
     while (!((status = inb(0x1F7)) & 0x08)) {
         if (status & 0x01) return;
     }
