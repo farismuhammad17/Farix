@@ -346,10 +346,17 @@ void echo_raw(const char* data, size_t len) {
     size_t needed_lines = 0;
     size_t tx = cursor_x;
     for (size_t i = 0; i < len; i++) {
-        if (data[i] == '\n' || ++tx >= WIDTH) {
+        if (data[i] == '\n') {
             needed_lines++;
             tx = 0;
+            continue;
+        } else if (data[i] == '\t') {
+            tx += 4;
+        } else if (data[i] == '\r') {
+            tx = 0;
         }
+
+        if (++tx >= WIDTH) needed_lines++;
     }
 
     // Early scroll
@@ -385,7 +392,13 @@ void echo_raw(const char* data, size_t len) {
         }
 
         if (!handle_special_chars(c)) {
-            if (cursor_y < HEIGHT) {
+            if (c == ESC_CODE || special_char_mode) {
+                special_char_mode = true;
+                handle_ansi_char(c);
+                continue;
+            }
+
+            else if (cursor_y < HEIGHT) {
                 echo_at(c, terminal_color, cursor_x, cursor_y);
             }
 
@@ -449,6 +462,10 @@ bool handle_special_chars(uint16_t c) {
                 cursor_y++;
             }
 
+            return true;
+
+        case '\r':
+            cursor_x = 0;
             return true;
 
         case KEY_UP:
