@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -34,7 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "drivers/terminal.h"
 
-#define MEMORY 0xB8000
+#define VGA_MEMORY 0xB8000
 
 #define VGA_COLOR_BLACK         0
 #define VGA_COLOR_BLUE          1
@@ -53,10 +54,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define VGA_COLOR_LIGHT_BROWN   14
 #define VGA_COLOR_WHITE         15
 
-size_t        cursor_x = 0;
-size_t        cursor_y = 0;
-uint8_t       terminal_color  = 0;
-uint16_t*     terminal_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(MEMORY);
+size_t        cursor_x;
+size_t        cursor_y;
+uint8_t       terminal_color ;
+uint16_t*     terminal_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(VGA_MEMORY);
 
 TerminalCmd*  cmd_current_line  = NULL;
 TerminalCmd*  cmd_history_head  = NULL;
@@ -74,19 +75,14 @@ bool special_char_mode = false;
 char special_char_buffer[MAX_SPECIAL_CHAR_LEN] = "";
 
 void init_terminal() {
-	update_cursor(0, 0);
-
+    cursor_x = 0;
+    cursor_y = 0;
 	terminal_color = terminal_color_entry(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
-
-	for (size_t y = 0; y < HEIGHT; y++) {
-		for (size_t x = 0; x < WIDTH; x++) {
-		const size_t index = y * WIDTH + x;
-			terminal_buffer[index] = terminal_entry(' ', terminal_color);
-		}
-	}
 
 	uint16_t blank_line[WIDTH] = {0};
     save_line_to_history(blank_line);
+
+    update_cursor(0, 0);
 }
 
 uint8_t terminal_color_entry(uint8_t fg, uint8_t bg) {
@@ -106,6 +102,9 @@ void update_cursor(size_t x, size_t y) {
     outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
 }
 
+// TODO: Can be technically sped up if we store the empty slate
+// beforehand, but that takes up memory, and doesn't matter I
+// suppose. Will think of it later.
 void terminal_clear() {
     uint16_t empty_char  = terminal_entry(' ', terminal_color);
 
@@ -116,6 +115,15 @@ void terminal_clear() {
     cursor_x = 0;
     cursor_y = 0;
     update_cursor(0, 0);
+}
+
+void terminal_clear_phys() {
+    uint16_t* vga = (uint16_t*) VGA_MEMORY;
+    uint16_t empty_char = terminal_entry(' ', terminal_color);
+
+    for (int i = 0; i < WIDTH * HEIGHT; i++) {
+        vga[i] = empty_char;
+    }
 }
 
 void terminal_change_color(uint8_t color) {
@@ -417,11 +425,64 @@ void echo_raw(const char* data, size_t len) {
 // doesn't rely on heap on anything to print
 // anything, so is useful for anything that
 // needs to be debugged
-void t_print(const char* data, uint8_t row) {
-    uint16_t* t_print_vga_buffer = (uint16_t*) MEMORY;
+void t_print(const char* data) {
+    uint16_t* t_print_vga_buffer = (uint16_t*) VGA_MEMORY;
     for (int i = 0; data[i] != '\0'; i++) {
-        t_print_vga_buffer[(row * WIDTH) + i] = (uint16_t) data[i] | (uint16_t) 0x0F << 8;
+        t_print_vga_buffer[(cursor_y * WIDTH) + i] = (uint16_t) data[i] | (uint16_t) 0x0F << 8;
     }
+
+    cursor_y++;
+}
+
+// Terminal print (formatted):
+// Like t_print, this writes directly into the
+// VGA buffers, but allows formatting. The formatting
+// is done manually to ensure this will work even if
+// the entire kernel has died and only the VGA stands.
+// It is slow, and is better used only in errors.
+void t_printf(const char* format, ...) {
+    uint16_t* t_print_vga_buffer = (uint16_t*) VGA_MEMORY;
+
+    va_list args;
+    va_start(args, format);
+
+    int col = 0;
+    for (int i = 0; format[i] != '\0'; i++) {
+        if (format[i] == '%' && format[i + 1] != '\0') {
+            i++;
+            if (format[i] == 's') {
+                char* s = va_arg(args, char*);
+                while (*s) {
+                    t_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) *s++ | (uint16_t) 0x0F << 8;
+                }
+            }
+            else if (format[i] == 'd' || format[i] == 'x') {
+                uint32_t val = va_arg(args, uint32_t);
+                int base = (format[i] == 'x') ? 16 : 10;
+
+                char buffer[32];
+                int p = 0;
+
+                if (val == 0) buffer[p++] = '0';
+                else {
+                    while (val > 0) {
+                        int r = val % base;
+                        buffer[p++] = (r < 10) ? (r + '0') : (r - 10 + 'a');
+                        val /= base;
+                    }
+                }
+                while (p > 0) {
+                    t_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) buffer[--p] | (uint16_t) 0x0F << 8;
+                }
+            }
+        } else {
+            t_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) format[i] | (uint16_t) 0x0F << 8;
+        }
+    }
+
+    va_end(args);
+
+    cursor_y++;
 }
 
 bool handle_special_chars(uint16_t c) {

@@ -64,6 +64,8 @@ void mouse_reset() {
     inb(0x60);          // Read self-test result 2
 }
 
+// TODO: Use new functions
+// Remove magic numbers
 void init_mouse() {
     uint8_t status;
 

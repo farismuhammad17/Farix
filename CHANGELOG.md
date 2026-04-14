@@ -2,19 +2,28 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## ELF Shell - *Work In Progress*
+## Silicon Verification - *Work In Progress*
 
-*Move from kernel Shell into shell.elf*
+*Get the kernel working on my real life computer*
 
 > [!WARNING]
-> The ARM32 implementation is wrong, even though it compiles. x86_32 is perfectly functional though.
+> The ARM32 implementation is still WIP. x86_32 is perfectly functional though.
 
+- Used `t_print` to eliminate silent failures.
 - ATA
+  - Improved readability with defined variables
+  - `init_ata` functions for newer ATAs using PCI
   - Made `ata_wait_ready` silicon proper
+- PCI
+  - Checks all 8 functions instead of just the 0th
 - Keyboard
   - Made `init_keyboard` silicon proper
 - Terminal
   - Made `t_print` as raw as possible
+  - `t_print` adjusts `cursor_y` down
+  - Implemented `t_printf`
+  - `init_terminal` no longer clears the screen itself
+  - `terminal_clear_phys` to clear the VGA buffers before VMM
 - Shell
   - `int` command to go to specific interrupt
 - Makefile

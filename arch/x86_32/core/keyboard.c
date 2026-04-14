@@ -59,6 +59,7 @@ void push_to_kbd_buffer(char c) {
     }
 }
 
+// TODO: Remove magic numbers
 void init_keyboard() {
     // Tell the controller we want to read the 'Command Byte'
     while (inb(0x64) & 0x02); // Wait for input buffer empty
@@ -97,15 +98,15 @@ void init_keyboard() {
     // If it's 0xFE, the keyboard is asking to Resend
     while (!(inb(0x64) & 0x01));
     if (inb(0x60) != 0xFA) {
-        t_print("init_keyboard: Reset failed or got NACK", 0);
-        while (1) system_halt();
+        t_print("init_keyboard: Reset failed or got NACK");
+        return;
     }
 
     // Wait for Self-Test (0xAA)
     while (!(inb(0x64) & 0x01));
     if (inb(0x60) != 0xAA) {
-        t_print("init_keyboard: Keyboard hardware failure", 0);
-        while (1) system_halt();
+        t_print("init_keyboard: Keyboard hardware failure");
+        return;
     }
 
     keyboard_ready = true;
@@ -121,7 +122,7 @@ extern void keyboard_handler() {
     uint8_t scancode = inb(0x60);
 
     // if (echo_scancodes) {
-    //     t_print("Scancode detected", 0);
+    //     t_print("Scancode detected");
     //     printf("Status: 0x%x\n", status);
     //     printf("Scancode: 0x%x\n", scancode);
     // }

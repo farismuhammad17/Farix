@@ -1,6 +1,8 @@
 import os
 import shutil
 import subprocess
+import time
+import re
 
 import makefile.globals
 
@@ -100,7 +102,7 @@ def deploy_usb():
     os.makedirs(grub_dir, exist_ok=True)
 
     with open(os.path.join(grub_dir, "grub.cfg"), "w") as f:
-        f.write(globals.GRUB_CFG)
+        f.write(makefile.globals.GRUB_CFG)
 
     subprocess.run(eject_cmd, check=True)
 

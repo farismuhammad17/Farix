@@ -37,6 +37,7 @@ void timer_handler() {
     schedule(); // Swap tasks
 }
 
+// TODO: Remove magic numbers
 void init_timer(uint32_t frequency) {
     divisor = PIT_FREQ_HZ / frequency;
     timer_freq = frequency;

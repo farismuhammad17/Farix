@@ -51,6 +51,8 @@ void shell_thread() {
 // Called before the architecture initialisations. Everything here
 // must be so raw, it should not depend on literally anything else.
 void early_kmain() {
+    terminal_clear_phys();
+
     init_uart();
 }
 
@@ -72,15 +74,14 @@ void kmain() {
     init_multitasking();
     init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms
 
-    // AcpiInitializeSubsystem();
-    // AcpiInitializeTables(NULL, 16, FALSE);
-    // AcpiLoadTables();
+    AcpiInitializeSubsystem();
+    AcpiInitializeTables(NULL, 16, FALSE);
+    AcpiLoadTables();
 
-    // AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
-    // AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
+    AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
+    AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
 
     init_ata();
-
 
     // Enable interrupts
     system_int_on();

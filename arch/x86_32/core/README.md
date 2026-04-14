@@ -173,7 +173,7 @@ The ATA controller allows the kernel to issue commands—like "read" or "write" 
 void init_ata();
 ```
 
-Initializes the disk controller, detects connected drives, and prepares the bus for data transfer.
+Initializes the disk controller, detects connected drives, and prepares the bus for data transfer. This function uses the PCI to find the ATA, and if no ATA is found, or the ATA is found to be legacy, then it fallbacks to the default values for the ATA driver. If the ATA found by the PCI is a new version, then the ATA's addresses and constants are changed accordingly.
 
 ```c
 void ata_read_sector(uint32_t lba, uint8_t* buffer);

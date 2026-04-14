@@ -71,15 +71,17 @@ if "arm32" in sys.argv:
 if globals.arch == "x86_32":
     globals.QEMU_BIN = "qemu-system-i386"
     globals.QEMU_FLAGS = (
-        "-machine q35,accel=tcg "
+        "-machine pc,accel=tcg "
         "-cpu pentium "
         "-m 256 "
         "-boot menu=on,strict=on "
         "-global i8042.extended-state=off "
-        f"-drive file={globals.DISK_PATH},format=raw,if=ide,index=0,media=disk "
+        "-device piix4-ide,id=pci-ide0 "
+        "-device ide-hd,bus=pci-ide0.0,drive=hd0 "
+        "-device virtio-mouse-pci "
+        f"-drive file={globals.DISK_PATH},if=none,id=hd0,format=raw,media=disk "
         "-vga std "
         "-serial stdio "
-        "-d int "
     )
 
     globals.BOCHS_BIN = "bochs"

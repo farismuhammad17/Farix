@@ -52,9 +52,12 @@ uint8_t  terminal_color_entry(uint8_t fg, uint8_t bg);
 uint16_t terminal_entry(unsigned char uc, uint8_t color);
 
 void update_cursor(size_t x, size_t y);
-void terminal_clear();
 void terminal_change_color(uint8_t color);
+
+void terminal_clear();
+void terminal_clear_phys();
 void refresh_terminal_view();
+
 void new_line();
 void new_line_n(size_t n);
 
@@ -70,7 +73,8 @@ void cmd_history_down();
 void echo_at   (char c, uint8_t color, size_t x, size_t y);
 void echo_char (uint16_t c);
 void echo_raw  (const char* data, size_t len);
-void t_print   (const char* data, uint8_t row);
+void t_print   (const char* data);
+void t_printf  (const char* format, ...);
 
 bool handle_special_chars(uint16_t c);
 void handle_mouse();
