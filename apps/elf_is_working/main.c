@@ -17,14 +17,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef KERNEL_H
-#define KERNEL_H
+#include "farix.h"
 
-#define THREAD_HZ 100
+int main(int argc, char** argv) {
+    const char* msg = "ELF is working!\n";
 
-void early_kmain();
-void kmain();
+    for (int i = 0; msg[i] != '\0'; i++) {
+        asm volatile (
+            "mov $1, %%eax\n"   // Syscall number 1 (Example: putc)
+            "mov %0, %%bl\n"    // Load the character into bl
+            "int $0x80\n"       // Call the kernel
+            :
+            : "r"(msg[i])       // Input: current character
+            : "eax", "ebx"      // Clobbered registers
+        );
+    }
 
-void AcpiMappingCleanup();
-
-#endif
+    return 0;
+}

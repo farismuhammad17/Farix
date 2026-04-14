@@ -17,19 +17,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef ATA_H
-#define ATA_H
+#ifndef KERNEL_H
+#define KERNEL_H
 
-#define STATUS_BSY 0x80
-#define STATUS_DRQ 0x08
+#define THREAD_HZ 100
 
-#include <stdint.h>
+// Debug to know the last init
+extern char* last_init;
+extern char* last_call;
 
-void init_ata();
+#define LOG_CALL() last_call = __func__
 
-void ata_read_sector(uint32_t lba, uint8_t* buffer);
-void ata_write_sector(uint32_t lba, uint8_t* buffer);
+void early_kmain();
+void kmain();
 
-int  ata_wait_ready();
+void AcpiMappingCleanup();
 
 #endif

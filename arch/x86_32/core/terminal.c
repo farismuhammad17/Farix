@@ -54,10 +54,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define VGA_COLOR_LIGHT_BROWN   14
 #define VGA_COLOR_WHITE         15
 
-size_t        cursor_x;
-size_t        cursor_y;
-uint8_t       terminal_color ;
-uint16_t*     terminal_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(VGA_MEMORY);
+size_t    cursor_x;
+size_t    cursor_y;
+uint8_t   terminal_color;
+uint16_t* terminal_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(VGA_MEMORY);
 
 TerminalCmd*  cmd_current_line  = NULL;
 TerminalCmd*  cmd_history_head  = NULL;
@@ -426,12 +426,13 @@ void echo_raw(const char* data, size_t len) {
 // anything, so is useful for anything that
 // needs to be debugged
 void t_print(const char* data) {
-    uint16_t* t_print_vga_buffer = (uint16_t*) VGA_MEMORY;
+    uint16_t* t_print_vga_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(VGA_MEMORY);
     for (int i = 0; data[i] != '\0'; i++) {
         t_print_vga_buffer[(cursor_y * WIDTH) + i] = (uint16_t) data[i] | (uint16_t) 0x0F << 8;
     }
 
     cursor_y++;
+    update_cursor(cursor_x, cursor_y);
 }
 
 // Terminal print (formatted):
@@ -441,7 +442,7 @@ void t_print(const char* data) {
 // the entire kernel has died and only the VGA stands.
 // It is slow, and is better used only in errors.
 void t_printf(const char* format, ...) {
-    uint16_t* t_print_vga_buffer = (uint16_t*) VGA_MEMORY;
+    uint16_t* t_print_vga_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(VGA_MEMORY);
 
     va_list args;
     va_start(args, format);
@@ -483,6 +484,7 @@ void t_printf(const char* format, ...) {
     va_end(args);
 
     cursor_y++;
+    update_cursor(cursor_x, cursor_y);
 }
 
 bool handle_special_chars(uint16_t c) {

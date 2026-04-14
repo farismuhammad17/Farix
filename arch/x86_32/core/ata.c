@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdint.h>
+
 #include "arch/stubs.h"
 #include "cpu/pci.h"
 #include "drivers/terminal.h"
@@ -34,6 +36,8 @@ static int REG_LBA_HI   = 0x1F5; // LBA bits 16-23
 static int REG_DRV_SEL  = 0x1F6; // Drive select / LBA bits 24-27
 static int REG_COMMAND  = 0x1F7; // Command register (Write)
 static int REG_STATUS   = 0x1F7; // Status register (Read)
+static int REG_CONTROL  = 0x3F6; // Used for software resets.
+static int REG_ALT_STAT = 0x3F6; // Same as REG_CONTROL, but read-only
 
 // Commands
 static int CMD_READ     = 0x20;  // PIO Read with retry
@@ -57,7 +61,6 @@ static int LBA_SLAVE    = 0xF0;  // LBA Mode, Slave Drive
 
 void init_ata() {
     pci_device_t* ata_dev = NULL;
-    uint16_t base = 0x1F0; // Default fallback
 
     for (int i = 0; i < pci_device_count; i++) {
         if (pci_devices[i].class_code == 0x01) {
@@ -77,19 +80,15 @@ void init_ata() {
     pci_write(ata_dev->bus, ata_dev->device, ata_dev->function, 0x04, pci_cmd | 0x05);
 
     // Retrieve Base Address from BAR0 (Base Address Register 0)
-    // Offset 0x10 is BAR0 for the Primary Channel.
     uint32_t bar0 = pci_read(ata_dev->bus, ata_dev->device, ata_dev->function, 0x10);
+    uint32_t bar1 = pci_read(ata_dev->bus, ata_dev->device, ata_dev->function, 0x14);
 
-    if (bar0 & 0x01) {
-        // Found a Native PCI port
-        base = (uint16_t)(bar0 & ~0x03);
-    } else if (bar0 == 0) {
-        // Device is in Compatibility Mode, leave base at 0x1F0
-    } else {
-        t_printf("ATA: Device at %d:%d is AHCI (MMIO)",
-                    ata_dev->bus, ata_dev->device);
-        return;
-    }
+    // If bit 0 is set, it's I/O space. If not, it's Memory Mapped.
+    uint16_t base = (bar0 & 1) ? (uint16_t)(bar0 & 0xFFFC) : 0x1F0;
+    uint16_t ctrl = (bar1 & 1) ? (uint16_t)(bar1 & 0xFFFC) : 0x3F4;
+
+    // If ctrl is 0, we MUST fallback to the legacy control port.
+    if (ctrl == 0) ctrl = 0x3F4;
 
     // Revalue the global register variables
     REG_DATA     = base;
@@ -102,13 +101,22 @@ void init_ata() {
     REG_DRV_SEL  = base + 6;
     REG_COMMAND  = base + 7;
     REG_STATUS   = base + 7;
+    REG_CONTROL  = ctrl + 2;
 
-    // IDENTIFY Sequence
-    outb(REG_DRV_SEL, 0xA0);
+    outb(REG_CONTROL, 0x04);                     // Set SRST bit (Software Reset)
+    for(int i = 0; i < 20; i++) inb(REG_STATUS); // Wait for the hardware to react
+    outb(REG_CONTROL, 0x00);                     // Clear SRST (Back to normal operation)
+    for(int i = 0; i < 20; i++) inb(REG_STATUS);
+
+    outb(REG_DRV_SEL, 0xA0); // Master
+    for(int i = 0; i < 4; i++) inb(REG_STATUS); // 400ns "Select" delay
+
+    // Clear the counts
     outb(REG_SEC_CNT, 0);
     outb(REG_LBA_LO, 0);
     outb(REG_LBA_MI, 0);
     outb(REG_LBA_HI, 0);
+
     outb(REG_COMMAND, CMD_IDENTIFY);
 
     uint8_t status = inb(REG_STATUS);
@@ -116,6 +124,7 @@ void init_ata() {
         t_print("init_ata (ATA): Floating bus, unresponsive hardware at port");
         return;
     }
+    for (int i = 0; i < 3; i++) inb(REG_STATUS); // 400ns "Command" delay (1 from earlier 'status')
 
     ata_wait_ready();
 
@@ -148,7 +157,11 @@ void ata_write_sector(uint32_t lba, uint8_t* buffer) {
     outb(REG_LBA_HI, (uint8_t)(lba >> 16));
     outb(REG_COMMAND, CMD_WRITE);
 
-    ata_wait_ready(); // Wait for DRQ before sending data
+    int wait_stat = ata_wait_ready(); // Wait for DRQ before sending data
+    if (wait_stat) {
+        t_printf("ata_write_sector (ATA): Write aborted at %x", lba);
+        return;
+    }
 
     uint16_t* ptr = (uint16_t*) buffer;
     for (int i = 0; i < 256; i++) outw(REG_DATA, ptr[i]);
@@ -157,22 +170,38 @@ void ata_write_sector(uint32_t lba, uint8_t* buffer) {
     while (inb(REG_STATUS) & SR_BSY);
 }
 
-void ata_wait_ready() {
+int ata_wait_ready() {
+    // 400ns delay for status to stabilize
     for(int i = 0; i < 4; i++) inb(REG_STATUS);
 
     uint8_t status;
+    uint32_t timeout = 1000000;
 
-    while ((status = inb(REG_STATUS)) & SR_BSY) {
+    while (((status = inb(REG_STATUS)) & SR_BSY) && --timeout > 0) {
         if (status == 0xFF) {
             t_print("ata_wait_ready (ATA): Bus floating/dead");
-            return;
+            return 1;
         }
     }
 
-    while (!((status = inb(REG_STATUS)) & SR_DRQ)) {
+    if (timeout == 0) {
+        t_print("ata_wait_ready (ATA): Timeout waiting for BSY to clear");
+        return 1;
+    }
+
+    timeout = 1000000;
+    while (!((status = inb(REG_STATUS)) & SR_DRQ) && --timeout > 0) {
         if (status & SR_ERR) {
-            t_printf("ata_wait_ready (ATA): status: %x, error reg: %x\n", status, inb(REG_ERROR));
-            return;
+            t_printf("ata_wait_ready (ATA): status: %x, error reg: %x",
+                     status, inb(REG_ERROR));
+            return 1;
         }
     }
+
+    if (timeout == 0) {
+        t_print("ata_wait_ready (ATA): Timeout waiting for DRQ");
+        return 1;
+    }
+
+    return 0;
 }

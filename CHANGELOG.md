@@ -2,32 +2,37 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## Silicon Verification - *Work In Progress*
-
-*Get the kernel working on my real life computer*
+## Silicon Verification - *14th April, 2026*
 
 > [!WARNING]
 > The ARM32 implementation is still WIP. x86_32 is perfectly functional though.
 
+- `last_call` with `LOG_CALL` macro to track function calls
+- `last_init` to trace load crashes
 - Used `t_print` to eliminate silent failures.
 - Implemented Panic Shell
 - ATA
   - Improved readability with defined variables
   - `init_ata` functions for newer ATAs using PCI
   - Made `ata_wait_ready` silicon proper
+  - Maximum timeout to `ata_wait_ready`
+  - Looks at BAR1 too
 - PCI
   - Checks all 8 functions instead of just the 0th
+- ACPI
+  - Filled out Semaphore and lock stubs
+  - Removed unmap functionality
 - Keyboard
   - Made `init_keyboard` silicon proper
   - Implemented `keyboard_getc`
 - Terminal
+  - Implemented `t_printf`
   - Made `t_print` as raw as possible
   - `t_print` adjusts `cursor_y` down
-  - Implemented `t_printf`
   - `init_terminal` no longer clears the screen itself
   - `terminal_clear_phys` to clear the VGA buffers before VMM
 - Shell
-  - `int` command to go to specific interrupt
+  - `int` command to execute specific interrupt
 - Makefile
   - Split functionalities accross files for readability
   - Compiles apps and puts into kernel disk

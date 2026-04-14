@@ -1,9 +1,5 @@
 # Setup
 
-Your system must be targeting the x86 architecture, since the OS is specifically designed for it.
-
-## Initialising environment
-
 Assuming you have cloned the GitHub repository, the program requries some external modules. You can download these easily with the [make.py](../make.py) (assuming you have python on your machine). You may run it directly with python, but for making it nicer to use, you can use an alias:
 
 ```bash
@@ -25,23 +21,23 @@ m libc
 To run it, use either of the following, and the [make.py](../make.py) handles the rest:
 
 ```bash
-m run        # Full screen
-m run_       # Runs in a window
+m qemu        # Full screen
+m qemu_       # Runs in a window
 ```
 
 Alternatively, if you want to compile the OS:
 
 ```bash
-m -arch [ARCHITECTURE NAME]
+m [ARCHITECTURE NAME]
 ```
 
 Create the disk image:
 
 ```bash
-m disk.img
+m disk
 ```
 
-Additionally, you can use help with it:
+For more functions:
 
 ```bash
 m help

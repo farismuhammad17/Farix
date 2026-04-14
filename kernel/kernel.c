@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdint.h>
 #include <stdio.h>
 
 #include "arch/stubs.h"
@@ -38,7 +39,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "process/task.h"
 #include "shell/shell.h"
 
-#include "arch/kernel.h"
+#include "kernel.h"
+
+char* last_init = "Loaded";
+char* last_call = "Unassigned";
 
 void shell_thread() {
     init_shell();
@@ -53,7 +57,7 @@ void shell_thread() {
 void early_kmain() {
     terminal_clear_phys();
 
-    init_uart();
+    init_uart(); last_init = "UART";
 }
 
 void kmain() {
@@ -64,35 +68,36 @@ void kmain() {
     // This function is a general kernel_main function, and does not
     // care about the architecture it's running on.
 
-    init_interrupts();
-    init_heap();
-    init_terminal();
+    init_interrupts(); last_init = "Interrupts";
+    init_heap();       last_init = "Heap";
+    init_terminal();   last_init = "Terminal";
 
-    init_keyboard();
-    init_mouse();
+    init_keyboard();   last_init = "Keyboard";
+    init_mouse();      last_init = "Mouse";
 
-    init_multitasking();
-    init_timer(THREAD_HZ); // 100 Hz, i.e. every 10 ms
+    init_multitasking();   last_init = "Multitasking";
+    init_timer(THREAD_HZ); last_init = "Timer"; // 100 Hz, i.e. every 10 ms
 
-    AcpiInitializeSubsystem();
-    AcpiInitializeTables(NULL, 16, FALSE);
-    AcpiLoadTables();
+    AcpiInitializeSubsystem();                       last_init = "ACPI: init subsystems";
+    AcpiInitializeTables(NULL, 16, FALSE);           last_init = "ACPI: init tables";
+    AcpiLoadTables();                                last_init = "ACPI: load tables";
+    AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);   last_init = "ACPI: enable subsystems";
+    AcpiInitializeObjects(ACPI_FULL_INITIALIZATION); last_init = "ACPI";
 
-    AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
-    AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
-
-    init_ata();
+    init_ata(); last_init = "ATA";
 
     // Enable interrupts
     system_int_on();
 
-    init_ramdisk();
-    init_fat32();
+    init_ramdisk(); last_init = "RAMDISK";
+    init_fat32();   last_init = "FAT32";
 
-    vfs_mount(&fat32_ops);    // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
+    vfs_mount(&fat32_ops); // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
 
     create_task(shell_thread, "Shell", 0);
     create_task(handle_mouse, "Terminal mouse handler", 0);
+
+    last_init = "kmain";
 
     // The OS must NEVER die.
     // Interrupts take back control from this loop whenever

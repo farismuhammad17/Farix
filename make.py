@@ -27,16 +27,16 @@ import time
 import re
 import json
 
-from makefile         import globals
-from makefile.apps    import *
-from makefile.bin     import *
-from makefile.img     import *
-from makefile.qemu    import *
-from makefile.usb     import *
-from makefile.deps    import *
-from makefile.libc    import *
-from makefile.utils   import *
-from makefile.help    import *
+from makefile       import globals
+from makefile.apps  import *
+from makefile.bin   import *
+from makefile.img   import *
+from makefile.qemu  import *
+from makefile.usb   import *
+from makefile.deps  import *
+from makefile.libc  import *
+from makefile.utils import *
+from makefile.help  import *
 
 globals.IGNORES = (
     # These ACPI stuff come with ACPICA, having these make it easier to
@@ -61,7 +61,6 @@ globals.IGNORES = (
 
 globals.OS = globals.run("uname -s")
 
-globals.FARIX_ISO_PATH = "build/farix.iso"
 globals.DISK_PATH      = "build/disk.img"
 
 globals.arch = "x86_32"

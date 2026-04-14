@@ -20,7 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <stdio.h>
 
-#include "arch/kernel.h"
 #include "arch/stubs.h"
 #include "arch/x86_32/gdt.h"
 #include "arch/x86_32/multiboot.h"
@@ -31,6 +30,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/heap.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
+
+#include "kernel.h"
 
 multiboot_info* mbi = NULL;
 
@@ -47,15 +48,15 @@ void arch_kmain(uint32_t magic, multiboot_info* _mbi) {
 
     mbi = _mbi;
 
-    pic_remap();
-    init_pci();
+    pic_remap(); last_init = "PIC";
+    init_pci();  last_init = "PCI";
 
-    init_pmm();
-    init_vmm();
+    init_pmm();  last_init = "PMM";
+    init_vmm();  last_init = "VMM";
 
-    init_gdt();
+    init_gdt();  last_init = "GDT";
 
-    _init();
+    _init();     last_init = "CRTI";
 
     kmain();
 }

@@ -26,14 +26,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cpu/timer.h"
 #include "drivers/uart.h"
 #include "memory/heap.h"
+#include "memory/pmm.h"
 #include "memory/vmm.h"
 #include "process/task.h"
 
-#include "arch/kernel.h"
 #include "drivers/acpi/acpi.h"
+#include "kernel.h"
 
 #define OS_SLEEP_MAX_MICROSECONDS 3000000
 #define MAX_DEFERRED_UNMAPS 64
+
+typedef struct {
+    uint32_t units;
+    uint32_t max_units;
+    uint32_t magic;
+} __attribute__((aligned(8))) acpi_semaphore_t;
 
 static void*  unmap_queue[MAX_DEFERRED_UNMAPS];
 static size_t unmap_count = 0;
@@ -56,21 +63,28 @@ ACPI_STATUS AcpiOsInitialize() {
 
 // This is a cleanup function ACPICA uses once it is done, and is part
 // of the shutdown sequence.
-ACPI_STATUS AcpiOsTerminate() { return AE_OK; }
+ACPI_STATUS AcpiOsTerminate() {
+    AcpiMappingCleanup();
+    return AE_OK;
+}
 
 // This function registers an OS-level interrupt handler for a specific
 // ACPI event. It maps the hardware InterruptNumber to the ServiceRoutine
 // function. When the interrupt fires, the kernel executes that routine
 // with the provided Context. It returns AE_OK if the mapping succeeds
 // or AE_ALREADY_EXISTS if the slot is taken.
-ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine, void *Context) { return AE_OK; }
+ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine, void *Context) {
+    return AE_OK;
+}
 
 // This function uninstalls the interrupt handler previously registered for
 // InterruptNumber. It ensures the ServiceRoutine is no longer executed when
 // the hardware interrupt triggers. You must call this during driver unloading
 // or system shutdown to prevent the kernel from jumping to invalid memory
 // addresses when an ACPI interrupt occurs.
-ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine) { return AE_OK; }
+ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine) {
+    return AE_OK;
+}
 
 // AcpiOsExecute() schedules a function for deferred execution, typically by
 // placing it in a kernel work queue or a dedicated thread. It prevents long-running
@@ -105,7 +119,8 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
         }
     }
 
-    uart_printf("ACPI OSL: AcpiOsGetRootPointer: RSDP NOT FOUND\n");
+    t_print("AcpiGetRootPointer (ACPI): AcpiOsGetRootPointer: RSDP NOT FOUND");
+    uart_printf("AcpiGetRootPointer (ACPI): AcpiOsGetRootPointer: RSDP NOT FOUND\n");
     return 0;
 }
 
@@ -187,25 +202,29 @@ void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length) {
 // (void), but ensures the virtual address space is freed and any associated page table entries
 // are cleared by the kernel.
 void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
-    if (!LogicalAddress || Length == 0) return;
+    // idk why, but leaving this crashes us, even though this won't actually
+    // unmap any memory. To avoid a page fault on literal boot, I am going to
+    // just comment it out, since we don't unmap any of the ACPICA pages anyway.
 
-    uintptr_t addr = (uintptr_t) LogicalAddress;
-    uintptr_t base_page = addr & ~0xFFF;
-    uintptr_t last_page = (addr + Length - 1) & ~0xFFF;
+    // if (!LogicalAddress || Length == 0) return;
 
-    for (uintptr_t pg = base_page; pg <= last_page; pg += 0x1000) {
-        uintptr_t phys = vmm_get_phys(vmm_get_current_directory(), (void*) pg);
+    // uintptr_t addr = (uintptr_t) LogicalAddress;
+    // uintptr_t base_page = addr & ~0xFFF;
+    // uintptr_t last_page = (addr + Length - 1) & ~0xFFF;
 
-        // Never unmap the first 32MB (Initial Kernel/Identity Map)
-        if (phys < (VMM_INIT_MAP_SIZE << 20)) continue;
+    // for (uintptr_t pg = base_page; pg <= last_page; pg += 0x1000) {
+    //     uintptr_t phys = vmm_get_phys(vmm_get_current_directory(), (void*) pg);
 
-        // Only unmap if it's NOT the page containing the RSDT or DSDT headers
-        // ACPICA often keeps these pointers cached internally.
-        if (phys == (AcpiRSDP & ~0xFFF)) continue;
+    //     // Never unmap the first 32MB (Initial Kernel/Identity Map)
+    //     if (phys < (VMM_INIT_MAP_SIZE << 20)) continue;
 
-        unmap_queue[unmap_count++] = (void*) pg;
-        if (unmap_count >= MAX_DEFERRED_UNMAPS) uart_print("ACPI OSL: Unmap queue full");
-    }
+    //     // Only unmap if it's NOT the page containing the RSDT or DSDT headers
+    //     // ACPICA often keeps these pointers cached internally.
+    //     if (phys == (AcpiRSDP & ~0xFFF)) continue;
+
+    //     unmap_queue[unmap_count++] = (void*) pg;
+    //     if (unmap_count >= MAX_DEFERRED_UNMAPS) uart_print("ACPI OSL: Unmap queue full");
+    // }
 }
 
 // Defined in arch/kernel.h
@@ -239,8 +258,7 @@ void AcpiOsFree(void *Memory) {
 // provides a handle to the new cache via a pointer. This optimization reduces fragmentation and
 // overhead during frequent interpreter allocations.
 // TODO: Use proper slab allocation
-ACPI_STATUS AcpiOsCreateCache(char *CacheName, UINT16 ObjectSize,
-                              UINT16 MaxDepth, ACPI_CACHE_T **ReturnCache) {
+ACPI_STATUS AcpiOsCreateCache(char *CacheName, UINT16 ObjectSize, UINT16 MaxDepth, ACPI_CACHE_T **ReturnCache) {
     *ReturnCache = (ACPI_CACHE_T*)(uintptr_t) ObjectSize;
     return AE_OK;
 }
@@ -273,8 +291,7 @@ ACPI_STATUS AcpiOsTableOverride(ACPI_TABLE_HEADER *ExistingTable, ACPI_TABLE_HEA
 // table with a different version. It takes a pointer to the existing table header,
 // returning a new physical address and table length if an override is provided.
 // It returns AE_OK, regardless of whether an override occurs.
-ACPI_STATUS AcpiOsPhysicalTableOverride(ACPI_TABLE_HEADER *ExistingTable,
-    ACPI_PHYSICAL_ADDRESS *NewAddress, UINT32 *NewTableLength) {
+ACPI_STATUS AcpiOsPhysicalTableOverride(ACPI_TABLE_HEADER *ExistingTable, ACPI_PHYSICAL_ADDRESS *NewAddress, UINT32 *NewTableLength) {
     return AE_SUPPORT;
 }
 
@@ -282,8 +299,7 @@ ACPI_STATUS AcpiOsPhysicalTableOverride(ACPI_TABLE_HEADER *ExistingTable,
 // ACPI object. It takes a pointer to the initial predefined name structure and returns a
 // new string value if an override is available. It returns AE_OK to indicate the check was
 // performed, facilitating platform-specific adjustments to standard ACPI names.
-ACPI_STATUS AcpiOsPredefinedOverride(const ACPI_PREDEFINED_NAMES *InitVal,
-                                     ACPI_STRING *NewVal) {
+ACPI_STATUS AcpiOsPredefinedOverride(const ACPI_PREDEFINED_NAMES *InitVal, ACPI_STRING *NewVal) {
     *NewVal = NULL;
     return AE_OK;
 }
@@ -312,13 +328,14 @@ ACPI_STATUS AcpiOsReleaseObject(ACPI_CACHE_T *Cache, void *Object) {
 // an ACPI_STATUS code and populates the handle if successful. This is used by the interpreter
 // to manage shared resource access.
 
-// These will crash us and not work if:
-// IN the future, if we ever have one thing and another, say keyboard and shell,
-// call the ACPI for something, at the same time, then the ACPI will get sad,
-// and this is REQUIRED to avoid that.
-// Currently, this is not a concern, hence is being skipped.
 ACPI_STATUS AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEMAPHORE *OutHandle) {
-    *OutHandle = (ACPI_SEMAPHORE) 1;
+    acpi_semaphore_t* sem = kmalloc(sizeof(acpi_semaphore_t));
+    if (!sem) return AE_NO_MEMORY;
+
+    sem->units = InitialUnits;
+    sem->max_units = MaxUnits;
+
+    *OutHandle = (ACPI_SEMAPHORE) sem;
     return AE_OK;
 }
 
@@ -327,6 +344,18 @@ ACPI_STATUS AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEM
 // in milliseconds. It returns AE_OK on acquisition or AE_TIME if the timeout period expires before
 // units become available.
 ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout) {
+    if (!Handle) return AE_BAD_PARAMETER;
+    acpi_semaphore_t* sem = (acpi_semaphore_t*) Handle;
+
+    // TODO: check if (sem->units >= Units).
+    // If not, you'd yield the thread.
+    // But we aren't letting ACPICA anywhere yet, so it doesn't matter
+    if (sem->units >= Units) {
+        sem->units -= Units;
+        return AE_OK;
+    }
+
+    sem->units -= Units;
     return AE_OK;
 }
 
@@ -334,6 +363,9 @@ ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Time
 // It requires the semaphore handle and the number of units to release. It returns an ACPI_STATUS code.
 // This is the primary mechanism for signaling that a shared resource or event is now available.
 ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units) {
+    if (!Handle) return AE_BAD_PARAMETER;
+    acpi_semaphore_t* sem = (acpi_semaphore_t*) Handle;
+    sem->units += Units;
     return AE_OK;
 }
 
@@ -341,6 +373,8 @@ ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units) {
 // It takes the semaphore handle as input and returns an ACPI_STATUS code. This should only be called
 // when the semaphore is no longer needed and no threads are currently blocked waiting on it.
 ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle) {
+    if (Handle) kfree(Handle);
+
     return AE_OK;
 }
 
@@ -351,7 +385,12 @@ ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle) {
 // to protect small, critical sections of code where blocking is not permitted, ensuring mutual exclusion
 // at the hardware level.
 ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK *OutHandle) {
-    *OutHandle = (ACPI_SPINLOCK) 1;
+    void* lock = kmalloc(sizeof(uint32_t));
+    if (!lock) return AE_NO_MEMORY;
+
+    *(uint32_t*) lock = 0;
+    *OutHandle = (ACPI_SPINLOCK) lock;
+
     return AE_OK;
 }
 
@@ -500,6 +539,7 @@ ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID *PciId, UINT32 Register, UIN
 // information. It returns an ACPI_STATUS code. This is primarily used for debugger breakpoints or reporting
 // fatal ACPI errors to the kernel.
 ACPI_STATUS AcpiOsSignal(UINT32 Function, void *Info) {
+    t_printf("ACPI: %d", Function);
     uart_printf("ACPI: %d\n", Function);
     return AE_OK;
 }

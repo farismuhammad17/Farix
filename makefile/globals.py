@@ -6,8 +6,7 @@ OS = None
 
 IGNORES = tuple()
 
-FARIX_ISO_PATH = None
-DISK_PATH      = None
+DISK_PATH = None
 
 arch = None
 

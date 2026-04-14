@@ -27,6 +27,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/vmm.h"
 #include "process/task.h"
 
+#include "kernel.h"
+
 typedef struct syscalls_registers_x86_32_t {
     uint32_t ds;                                           // Data segment (pushed by us)
     uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax; // Pushed by pusha
@@ -225,6 +227,9 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
         printf("Selector: %lx (%s)\n", regs->err_code & 0xFFF8,
                 (regs->err_code & 0x04) ? "LDT" : "GDT");
     }
+
+    printf("Last init: %s\n", last_init);
+    printf("Last call: %s\n", last_call);
 
     dump_register_info(regs);
     dump_multitasking_info();

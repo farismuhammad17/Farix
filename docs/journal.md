@@ -1,6 +1,3 @@
-> [!NOTE]  
-> Links to certain files may lead nowhere due to later changes.
-
 # Journal
 
 *Refer [CHANGELOG.md](../CHANGELOG.md) for only list of changes.*
@@ -31,4 +28,4 @@ This is more of a journal of how this project was built. It helps to keep track 
 - [5 Apr: Improved Scheduler algorithm](journal_entries/5-apr-2026.md)
 - [8 Apr: PCI Implementation](journal_entries/8-apr-2026.md)
 - [11 Apr: ACPI Implementation](journal_entries/11-apr-2026.md)
-- [Current: ELF Shell](journal_entries/current.md)
+- [14 Apr: Silicon Verification](journal_entries/14-apr-2026.md)

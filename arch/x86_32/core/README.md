@@ -183,10 +183,10 @@ void ata_write_sector(uint32_t lba, uint8_t* buffer);
 These functions translate high-level requests into low-level commands sent to the disk. They handle the transfer of 512-byte chunks of data (sectors) between the hardware and a provided memory buffer.
 
 ```c
-void ata_wait_ready();
+int ata_wait_ready();
 ```
 
-A helper that polls the status register. It ensures the drive is not busy and is ready to accept the next command or data packet before the kernel proceeds.
+A helper that polls the status register. It ensures the drive is not busy and is ready to accept the next command or data packet before the kernel proceeds. If the kernel does not return anything by some defined `timeout`, it would just assume failure, and return 1.
 
 # PIT (Programmable Interval Timer)
 
