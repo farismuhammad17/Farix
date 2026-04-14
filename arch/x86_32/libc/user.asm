@@ -14,3 +14,20 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ; -----------------------------------------------------------------------
+
+[BITS 32]
+
+section .text
+global _start
+extern main
+
+_start:
+    mov ebp, 0
+    push ebp
+    mov ebp, esp
+
+    call main
+
+    jmp $
+.halt:
+    jmp .halt

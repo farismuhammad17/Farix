@@ -45,7 +45,7 @@ def compile_apps():
                    f"{makefile.globals.USER_ASM_OBJ} {objs_str} {makefile.globals.USER_LIBC_OBJ} {libs}"
 
         print(f"\x1b[3;35mLinking {out_elf}...\x1b[0m")
-        run(link_cmd)
+        makefile.globals.run(link_cmd)
 
 def deploy_apps():
     if not os.path.exists(makefile.globals.DISK_PATH):

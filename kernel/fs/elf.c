@@ -139,7 +139,7 @@ bool exec(const char* path) {
 
     system_int_on();
 
-    task* elf_task = create_task((void(*)()) header->e_entry, path, 1);
+    task* elf_task = create_task((void(*)()) header->e_entry, file_obj->name, 1);
 
     elf_task->page_directory = user_pd_phys; // Switch from default kernel_directory
     elf_task->heap_break     = highest_vaddr;

@@ -67,7 +67,7 @@ typedef struct task {
     uint32_t* stack_origin;   // Memory allocated for the stack
     void (*entry_func)();
     bool privilege;           // 0 -> Kernel ; 1 -> User
-    char* name;
+    const char* name;
 } task;
 
 typedef struct task_list {

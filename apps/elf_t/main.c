@@ -19,19 +19,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "farix.h"
 
+#define SYS_WRITE 1
+
+// Took from the journal (finally became useful)
 int main(int argc, char** argv) {
-    const char* msg = "ELF is working!\n";
+    const char* msg = "Farix is alive!\n";
+    int len = 16;
 
-    for (int i = 0; msg[i] != '\0'; i++) {
-        asm volatile (
-            "mov $1, %%eax\n"   // Syscall number 1 (Example: putc)
-            "mov %0, %%bl\n"    // Load the character into bl
-            "int $0x80\n"       // Call the kernel
-            :
-            : "r"(msg[i])       // Input: current character
-            : "eax", "ebx"      // Clobbered registers
-        );
-    }
+    asm volatile (
+        "mov %0, %%eax\n"  // SYS_WRITE
+        "mov %1, %%ebx\n"  // file descriptor 1 (stdout)
+        "mov %2, %%ecx\n"  // buffer pointer
+        "mov %3, %%edx\n"  // length
+        "int $0x80\n"
+        :
+        : "i"(SYS_WRITE), "i"(1), "r"(msg), "r"(len)
+        : "eax", "ebx", "ecx", "edx"
+    );
 
-    return 0;
+    while(1);
 }

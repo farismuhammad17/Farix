@@ -222,7 +222,7 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
         printf("Reason: %s, %s, %s\n",
             (regs->err_code & PAGE_PRESENT) ? "Page unaccessible" : "Non-present page",
             (regs->err_code & PAGE_RW)      ? "Write fault" : "Read fault",
-            (regs->err_code & PAGE_USER)    ? "User fault" : "Kernel fault");
+            (regs->err_code & PAGE_USER)    ? "User-mode" : "Kernel-mode");
     } else if (regs->int_no == 13) {
         printf("Selector: %lx (%s)\n", regs->err_code & 0xFFF8,
                 (regs->err_code & 0x04) ? "LDT" : "GDT");
