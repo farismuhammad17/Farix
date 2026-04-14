@@ -10,6 +10,7 @@
 > The ARM32 implementation is still WIP. x86_32 is perfectly functional though.
 
 - Used `t_print` to eliminate silent failures.
+- Implemented Panic Shell
 - ATA
   - Improved readability with defined variables
   - `init_ata` functions for newer ATAs using PCI
@@ -18,6 +19,7 @@
   - Checks all 8 functions instead of just the 0th
 - Keyboard
   - Made `init_keyboard` silicon proper
+  - Implemented `keyboard_getc`
 - Terminal
   - Made `t_print` as raw as possible
   - `t_print` adjusts `cursor_y` down
@@ -31,6 +33,7 @@
   - Compiles apps and puts into kernel disk
   - Option to emulate in QEMU or write to USB
   - QEMU execution is much more realistic (though slower)
+  - Optional `clean` exclusions
 
 ## ACPICA Inclusion - *11th April, 2026*
 

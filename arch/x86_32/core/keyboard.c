@@ -147,3 +147,28 @@ extern void keyboard_handler() {
 
     outb(0x20, 0x20);
 }
+
+char keyboard_getc() {
+    if (!(inb(0x64) & 0x01)) return 0;
+
+    uint8_t scancode = inb(0x60);
+
+    if (scancode == 0x2A || scancode == 0x36) {
+        shift_pressed = true;
+        return 0;
+    }
+    if (scancode == 0xAA || scancode == 0xB6) {
+        shift_pressed = false;
+        return 0;
+    }
+
+    if (scancode & 0x80) {
+        return 0;
+    }
+
+    size_t offset = shift_pressed ? 64 : 0;
+
+    if (scancode < 64) return kbd[scancode + offset];
+
+    return 0;
+}

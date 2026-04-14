@@ -38,4 +38,6 @@ extern unsigned char kbd[128];
 void init_keyboard();
 extern void keyboard_handler();
 
+char keyboard_getc();
+
 #endif
