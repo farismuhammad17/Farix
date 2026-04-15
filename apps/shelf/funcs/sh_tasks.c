@@ -35,7 +35,7 @@ void cmd_tasks(UNUSED_ARG const char* args) {
     while (1) {
         // Is this slow? Yes.
         // Do I care? No, atleast not yet.
-        if (GET_TASKS_DATA(current_id, &info)) break;
+        if (GET_TASK_DATA(current_id, &info)) break;
 
         char* state_str = "READY";
         if (info.state == TASK_RUNNING) state_str = "RUNNING";
@@ -72,7 +72,7 @@ void cmd_tasks(UNUSED_ARG const char* args) {
 
             // We need parent's info to check neighbor vs parent's first child
             TaskData p_info;
-            GET_TASKS_DATA(p_id, &p_info);
+            GET_TASK_DATA(p_id, &p_info);
 
             // NOTE: first_child_at_level[indent+1] IS p->next from the previous level
             if (info.neighbor_id != first_child_at_level[indent + 1]) {

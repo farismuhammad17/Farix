@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cmds.h"
 
 void cmd_echo(const char* args) {
-    if (!args) return;
+    if (args[0] == '\0') return;
 
     sh_print("%s\n", args);
 }

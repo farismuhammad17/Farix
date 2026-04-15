@@ -23,46 +23,39 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdbool.h>
 #include <sys/stat.h>
 
-#define SYS_DONE     0
-#define SYS_ERROR   -1
+#include "process/task.h"
 
-#define SYS_EXIT                  1 // NOTE: SYS_EXIT is hardcoded in user.asm, changing requires changing there
-#define SYS_READ                  2
-#define SYS_WRITE                 3
-#define SYS_OPEN                  4
-#define SYS_CLOSE                 5
-#define SYS_LSEEK                 6
-#define SYS_ISATTY                7
-#define SYS_FSTAT                 8
-#define SYS_GETPID                9
-#define SYS_KILL                  10
-#define SYS_SBRK                  11
+#define SYS_DONE                  0
+#define SYS_ERROR                -1
 
-// Super user
-#define SYS_UART_PUT              1000
-#define SYS_GET_HEAP              1001
-#define SYS_GET_HEAP_SEG_SIZE     1002
-#define SYS_GET_HEAP_START        1003
-#define SYS_GET_HEAP_END          1004
-#define SYS_HEAP_AUDIT            1005
-#define SYS_INT_EXEC              1006
-#define SYS_INT_ON                1007
-#define SYS_INT_OFF               1008
-#define SYS_GET_TASK_INFO         1009
+#define USER_MIN_SYSCALL          0
+#define SUPER_MIN_SYSCALL         1000
 
-void  _exit(int status);
-int   _read(int file, char *ptr, int len);
-int   _write(int file, char *ptr, int len);
-int   _open(const char *name, int flags, int mode);
-int   _close(int file);
-int   _lseek(int file, int ptr, int dir);
-int   _getpid();
-int   _kill(int pid, int sig);
-void* _sbrk(int incr);
-int   _isatty(int file);
-int   _fstat(int file, struct stat *st);
+// Default user system calls
+#define SYS_EXIT                  USER_MIN_SYSCALL + 1 // NOTE: SYS_EXIT is hardcoded in user.asm, changing requires changing there
+#define SYS_READ                  USER_MIN_SYSCALL + 2
+#define SYS_WRITE                 USER_MIN_SYSCALL + 3
+#define SYS_OPEN                  USER_MIN_SYSCALL + 4
+#define SYS_CLOSE                 USER_MIN_SYSCALL + 5
+#define SYS_LSEEK                 USER_MIN_SYSCALL + 6
+#define SYS_ISATTY                USER_MIN_SYSCALL + 7
+#define SYS_FSTAT                 USER_MIN_SYSCALL + 8
+#define SYS_GETPID                USER_MIN_SYSCALL + 9
+#define SYS_KILL                  USER_MIN_SYSCALL + 10
+#define SYS_SBRK                  USER_MIN_SYSCALL + 11
 
-// Super user
+// Super user system calls
+#define SYS_UART_PUT              SUPER_MIN_SYSCALL + 1
+#define SYS_GET_HEAP              SUPER_MIN_SYSCALL + 2
+#define SYS_GET_HEAP_SEG_SIZE     SUPER_MIN_SYSCALL + 3
+#define SYS_GET_HEAP_START        SUPER_MIN_SYSCALL + 4
+#define SYS_GET_HEAP_END          SUPER_MIN_SYSCALL + 5
+#define SYS_HEAP_AUDIT            SUPER_MIN_SYSCALL + 6
+#define SYS_INT_EXEC              SUPER_MIN_SYSCALL + 7
+#define SYS_INT_ON                SUPER_MIN_SYSCALL + 8
+#define SYS_INT_OFF               SUPER_MIN_SYSCALL + 9
+#define SYS_GET_TASK_INFO         SUPER_MIN_SYSCALL + 10
+#define SYS_GET_TASK_LIST         SUPER_MIN_SYSCALL + 11
 
 typedef struct {
     uint32_t address;
@@ -84,6 +77,25 @@ typedef struct {
     uint32_t eax, ebx, ecx, edx, esi, edi, ebp, eip;
 } TaskData;
 
+typedef struct {
+    uint32_t pids[TASKS_LIST_LEN];
+    task_list_mask_t mask;
+} TaskListData;
+
+void  _exit(int status);
+int   _read(int file, char *ptr, int len);
+int   _write(int file, char *ptr, int len);
+int   _open(const char *name, int flags, int mode);
+int   _close(int file);
+int   _lseek(int file, int ptr, int dir);
+int   _getpid();
+int   _kill(int pid, int sig);
+void* _sbrk(int incr);
+int   _isatty(int file);
+int   _fstat(int file, struct stat *st);
+
+// Super user
+
 int UART_PUTS(const char *data);
 int GET_HEAP_DATA(HeapData* buffer, int max_count);
 int GET_HEAP_SEG_SIZE();
@@ -93,6 +105,7 @@ int HEAP_AUDIT(int *fault_addr);
 int SYSTEM_INT_EXEC(int int_id);
 int SYSTEM_INT_ON();
 int SYSTEM_INT_OFF();
-int GET_TASKS_DATA(int pid, TaskData* buffer);
+int GET_TASK_DATA(int pid, TaskData* buffer);
+int GET_TASK_LIST(int list_id, TaskListData* buffer);
 
 #endif

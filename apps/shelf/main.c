@@ -199,4 +199,3 @@ void cmd_exec(const char* args){}
 
 void cmd_kill(const char* args){}
 void cmd_peek(const char* args){}
-void cmd_tlist(const char* args){}

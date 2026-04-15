@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/stat.h>
 
 #include "arch/stubs.h"
@@ -234,51 +235,62 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
     uint32_t arg3 = regs->edx;
 
     switch (regs->eax) {
-        case SYS_EXIT:
+        case SYS_EXIT: {
             _exit(arg1);
             break;
+        }
 
-        case SYS_READ:
+        case SYS_READ: {
             regs->eax = (uint32_t) _read((int) arg1, (char*) arg2, (int) arg3);
             break;
+        }
 
-        case SYS_WRITE:
+        case SYS_WRITE: {
             regs->eax = (uint32_t) _write((int) arg1, (char*) arg2, (int) arg3);
             break;
+        }
 
-        case SYS_OPEN:
+        case SYS_OPEN: {
             regs->eax = (uint32_t) _open((const char*) arg1, (int) arg2, (int) arg3);
             break;
+        }
 
-        case SYS_CLOSE:
+        case SYS_CLOSE: {
             regs->eax = (uint32_t) _close((int) arg1);
             break;
+        }
 
-        case SYS_LSEEK:
+        case SYS_LSEEK: {
             regs->eax = (uint32_t) _lseek((int) arg1, (int) arg2, (int) arg3);
             break;
+        }
 
-        case SYS_GETPID:
+        case SYS_GETPID: {
             regs->eax = (uint32_t) _getpid();
             break;
+        }
 
-        case SYS_KILL:
+        case SYS_KILL: {
             regs->eax = (uint32_t) _kill((int) arg1, (int) arg2);
             break;
+        }
 
-        case SYS_SBRK:
+        case SYS_SBRK: {
             regs->eax = (uint32_t) _sbrk((int) arg1);
             break;
+        }
 
-        case SYS_ISATTY:
+        case SYS_ISATTY: {
             regs->eax = (uint32_t) _isatty((int) arg1);
             break;
+        }
 
-        case SYS_FSTAT:
+        case SYS_FSTAT: {
             regs->eax = (uint32_t) _fstat((int) arg1, (struct stat*) arg2);
             break;
+        }
 
-        case SYS_UART_PUT:
+        case SYS_UART_PUT: {
             if (current_task->privilege != PRIV_SUPER) {
                 regs->eax = SYS_ERROR;
                 break;
@@ -287,8 +299,9 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             uart_print((const char*) arg1);
             regs->eax = SYS_DONE;
             break;
+        }
 
-        case SYS_GET_HEAP:
+        case SYS_GET_HEAP: {
             if (current_task->privilege != PRIV_SUPER) {
                 regs->eax = SYS_ERROR;
                 break;
@@ -298,22 +311,23 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             int max_entries = (int) arg2;
             int count = 0;
 
-            HeapSegment* current_heapsegment = first_segment;
+            HeapSegment* current = first_segment;
 
-            while (current_heapsegment != NULL && count < max_entries) {
-                heapdata_buf[count].address = (uint32_t) current_heapsegment;
-                heapdata_buf[count].size    = current_heapsegment->size;
-                heapdata_buf[count].is_free = current_heapsegment->is_free;
-                heapdata_buf[count].caller  = current_heapsegment->caller;
+            while (current != NULL && count < max_entries) {
+                heapdata_buf[count].address = (uint32_t) current;
+                heapdata_buf[count].size    = current->size;
+                heapdata_buf[count].is_free = current->is_free;
+                heapdata_buf[count].caller  = current->caller;
 
-                current_heapsegment = current_heapsegment->next;
+                current = current->next;
                 count++;
             }
 
             regs->eax = count;
             break;
+        }
 
-        case SYS_GET_HEAP_SEG_SIZE:
+        case SYS_GET_HEAP_SEG_SIZE: {
             if (current_task->privilege != PRIV_SUPER) {
                 regs->eax = SYS_ERROR;
                 break;
@@ -321,8 +335,9 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
 
             regs->eax = sizeof(HeapSegment);
             break;
+        }
 
-        case SYS_GET_HEAP_START:
+        case SYS_GET_HEAP_START: {
             if (current_task->privilege != PRIV_SUPER) {
                 regs->eax = SYS_ERROR;
                 break;
@@ -330,8 +345,9 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
 
             regs->eax = (uint32_t) heap_start;
             break;
+        }
 
-        case SYS_GET_HEAP_END:
+        case SYS_GET_HEAP_END: {
             if (current_task->privilege != PRIV_SUPER) {
                 regs->eax = SYS_ERROR;
                 break;
@@ -339,47 +355,49 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
 
             regs->eax = (uint32_t) heap_end;
             break;
+        }
 
-        case SYS_HEAP_AUDIT:
+        case SYS_HEAP_AUDIT: {
             if (current_task->privilege != PRIV_SUPER) {
                 regs->eax = SYS_ERROR;
                 break;
             }
 
             uint32_t* fault_addr_out = (uint32_t*) arg1;
-            HeapSegment* current_heapaudit = first_segment;
+            HeapSegment* current = first_segment;
             int res_code = 0; // Default: OK
 
-            while (current_heapaudit != NULL) {
-                if (current_heapaudit->magic != HEAP_MAGIC) { // Bad Magic
+            while (current != NULL) {
+                if (current->magic != HEAP_MAGIC) { // Bad Magic
                     res_code = 1; break;
                 }
 
-                if (((uint32_t) current_heapaudit & 0x3) != 0) { // Unaligned segment pointer
+                if (((uint32_t) current & 0x3) != 0) { // Unaligned segment pointer
                     res_code = 2; break;
                 }
 
-                if (current_heapaudit->next != NULL) {
-                    if (current_heapaudit->next <= current_heapaudit) { // Circular or backwards link
+                if (current->next != NULL) {
+                    if (current->next <= current) { // Circular or backwards link
                         res_code = 3; break;
                     }
-                    if (current_heapaudit->next->prev != current_heapaudit) { // Broken backlink
+                    if (current->next->prev != current) { // Broken backlink
                         res_code = 4; break;
                     }
                 }
 
-                current_heapaudit = current_heapaudit->next;
+                current = current->next;
             }
 
             // If error, write fault address
             if (res_code != 0 && fault_addr_out != NULL) {
-                *fault_addr_out = (uint32_t) current_heapaudit;
+                *fault_addr_out = (uint32_t) current;
             }
 
             regs->eax = res_code;
             break;
+        }
 
-        case SYS_INT_EXEC:
+        case SYS_INT_EXEC: {
             if (current_task->privilege != PRIV_SUPER) {
                 regs->eax = SYS_ERROR;
                 break;
@@ -392,8 +410,9 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
                     break;
             }
             break;
+        }
 
-        case SYS_INT_ON:
+        case SYS_INT_ON: {
             if (current_task->privilege != PRIV_SUPER) {
                 regs->eax = SYS_ERROR;
                 break;
@@ -402,8 +421,9 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             system_int_on();
             regs->eax = SYS_DONE;
             break;
+        }
 
-        case SYS_INT_OFF:
+        case SYS_INT_OFF: {
             if (current_task->privilege != PRIV_SUPER) {
                 regs->eax = SYS_ERROR;
                 break;
@@ -412,9 +432,15 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             system_int_off();
             regs->eax = SYS_DONE;
             break;
+        }
 
         case SYS_GET_TASK_INFO: {
-            uint32_t pid = (uint32_t) arg1;
+            if (current_task->privilege != PRIV_SUPER) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
+            uint32_t pid  = (uint32_t)  arg1;
             TaskData* out = (TaskData*) arg2;
 
             task* t = get_task(pid);
@@ -436,13 +462,43 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             out->eax = kregs->eax; out->ebx = kregs->ebx;
             out->eip = kregs->eip; out->ebp = kregs->ebp;
 
-            regs->eax = 0;
+            regs->eax = SYS_DONE;
             break;
         }
 
-        default:
+        case SYS_GET_TASK_LIST: {
+            if (current_task->privilege != PRIV_SUPER) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
+            task_list* tasklist = first_task_list;
+            for (size_t i = 0; i < (size_t) arg1; i++) {
+                tasklist = tasklist->next;
+                if (tasklist == NULL) {
+                    regs->eax = SYS_ERROR;
+                    return;
+                }
+            }
+
+            TaskListData* out = (TaskListData*) arg2;
+
+            for (size_t i = 0; i < TASKS_LIST_LEN; i++) {
+                if (tasklist->tasks[i] != NULL) {
+                    out->pids[i] = tasklist->tasks[i]->id;
+                } else {
+                    out->pids[i] = NULL;
+                }
+            }
+            out->mask = tasklist->mask;
+
+            break;
+        }
+
+        default: {
             printf("Unknown syscall (%s): %ld\n", current_task->name, regs->eax);
             regs->eax = SYS_ERROR;
             break;
+        }
     }
 }

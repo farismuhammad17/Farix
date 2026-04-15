@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cmds.h"
 
 void cmd_memstat(const char* args) {
-    if (!args) {
+    if (args[0] == '\0') {
         sh_print("Usage: memstat <total segments>\n");
         return;
     }
