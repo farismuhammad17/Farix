@@ -56,6 +56,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYS_INT_OFF               SUPER_MIN_SYSCALL + 9
 #define SYS_GET_TASK_INFO         SUPER_MIN_SYSCALL + 10
 #define SYS_GET_TASK_LIST         SUPER_MIN_SYSCALL + 11
+#define SYS_TASK_KILL             SUPER_MIN_SYSCALL + 12
 
 typedef struct {
     uint32_t address;
@@ -107,5 +108,6 @@ int SYSTEM_INT_ON();
 int SYSTEM_INT_OFF();
 int GET_TASK_DATA(int pid, TaskData* buffer);
 int GET_TASK_LIST(int list_id, TaskListData* buffer);
+int TASK_KILL(int pid);
 
 #endif

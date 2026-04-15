@@ -477,9 +477,10 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
                 tasklist = tasklist->next;
                 if (tasklist == NULL) {
                     regs->eax = SYS_ERROR;
-                    return;
+                    break;
                 }
             }
+            if (tasklist == NULL) break;
 
             TaskListData* out = (TaskListData*) arg2;
 
@@ -491,6 +492,18 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
                 }
             }
             out->mask = tasklist->mask;
+
+            break;
+        }
+
+        case SYS_TASK_KILL: {
+            if (current_task->privilege != PRIV_SUPER) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
+            task* t = get_task(arg1);
+            kill_task(t->id);
 
             break;
         }

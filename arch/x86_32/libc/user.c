@@ -142,3 +142,7 @@ int GET_TASK_DATA(int pid, TaskData* buffer) {
 int GET_TASK_LIST(int list_id, TaskListData* buffer) {
     return farix_syscall(SYS_GET_TASK_LIST, (uint32_t) list_id, (uint32_t) buffer, 0);
 }
+
+int TASK_KILL(int pid) {
+    return farix_syscall(SYS_TASK_KILL, (uint32_t) pid, 0, 0);
+}
