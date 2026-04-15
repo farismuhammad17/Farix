@@ -130,7 +130,7 @@ void cmd_cat(const char* args) {
 
     memset(buffer, 0, f->size + 1);
 
-    if (fs_read(filename, (uint8_t*) buffer, f->size))
+    if (fs_read(filename, (uint8_t*) buffer, f->size, 0))
         sh_print("%s\n", buffer);
 
     kfree(buffer);
@@ -167,7 +167,7 @@ void cmd_write(const char* args) {
 
     char* path = full_path_to(filename);
 
-    if (!fs_write(path, (uint8_t*) content, strlen(content))) {
+    if (!fs_write(path, (uint8_t*) content, strlen(content), 0)) {
         sh_print("Error: Could not write to file %s\n", filename);
     }
 }

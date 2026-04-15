@@ -100,8 +100,9 @@ int _read(int file, char *ptr, int len) {
     }
 
     else if (file >= 3 && file < 20 && fd_table[file] != NULL) {
+        FileOpenHandle* h = (FileOpenHandle*) fd_table[file];
         // fs_read returns bool, Newlib wants bytes read
-        if (fs_read(fd_table[file]->file->name, ptr, len)) { // TODO: Read directly in the future
+        if (fs_read(h->file->name, ptr, len, h->pos)) { // TODO: Read directly in the future
             return len;
         }
     }
@@ -118,7 +119,8 @@ int _write(int file, char *ptr, int len) {
     }
 
     else if (file >= 3 && file < 20 && fd_table[file] != NULL) {
-        if (fs_write(fd_table[file]->file->name, ptr, len)) {
+        FileOpenHandle* h = (FileOpenHandle*) fd_table[file];
+        if (fs_write(h->file->name, ptr, len, h->pos)) {
             return len;
         }
     }

@@ -56,7 +56,7 @@ bool exec(const char* path) {
         return false;
     }
 
-    if (!fs_read(path, file_buffer, file_obj->size)) {
+    if (!fs_read(path, file_buffer, file_obj->size, 0)) {
         printf("ELF Error: Failed to read file data\n");
         kfree(file_buffer);
         return false;

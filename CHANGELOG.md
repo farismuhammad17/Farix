@@ -8,7 +8,10 @@
 > The ARM32 implementation is still WIP. x86_32 is perfectly functional though.
 
 - ELFs finally die properly
-- Filled out all Newlib stubs
+- File system
+  - Read and Write take `offset`
+- Syscalls
+  - Filled out all Newlib stubs
 
 ## Silicon Verification - *14th April, 2026*
 

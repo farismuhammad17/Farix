@@ -36,8 +36,8 @@ typedef struct FileNode {
 } FileNode;
 
 typedef struct FileOperations {
-    int       (*read)   (const char* name, void* buffer, size_t size);
-    int       (*write)  (const char* name, const void* buffer, size_t size);
+    int       (*read)   (const char* name, void* buffer, size_t size, uint32_t offset);
+    int       (*write)  (const char* name, const void* buffer, size_t size, uint32_t offset);
     bool      (*create) (const char* name);
     bool      (*mkdir)  (const char* name);
     bool      (*remove) (const char* name);
@@ -47,8 +47,8 @@ typedef struct FileOperations {
 
 void      vfs_mount (FileOperations* ops);
 
-int       fs_read   (const char* name, void* buffer, size_t size);
-int       fs_write  (const char* name, const void* buffer, size_t size);
+int       fs_read   (const char* name, void* buffer, size_t size, uint32_t offset);
+int       fs_write  (const char* name, const void* buffer, size_t size, uint32_t offset);
 bool      fs_create (const char* name);
 bool      fs_mkdir  (const char* name);
 bool      fs_remove (const char* name);

@@ -29,14 +29,14 @@ void vfs_mount(FileOperations* ops) {
     current_fs_ops = ops;
 }
 
-int fs_read(const char* name, void* buffer, size_t size) {
+int fs_read(const char* name, void* buffer, size_t size, uint32_t offset) {
     if (!current_fs_ops || !current_fs_ops->read) return false;
-    return current_fs_ops->read(name, buffer, size);
+    return current_fs_ops->read(name, buffer, size, offset);
 }
 
-int fs_write(const char* name, const void* buffer, size_t size) {
+int fs_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
     if (!current_fs_ops || !current_fs_ops->write) return false;
-    return current_fs_ops->write(name, buffer, size);
+    return current_fs_ops->write(name, buffer, size, offset);
 }
 
 bool fs_create(const char* name) {

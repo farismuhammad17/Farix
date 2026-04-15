@@ -75,8 +75,8 @@ extern FileOperations fat32_ops;
 
 void      init_fat32();
 
-int       fat32_read   (const char* name, void* buffer, size_t size);
-int       fat32_write  (const char* name, const void* buffer, size_t size);
+int       fat32_read   (const char* name, void* buffer, size_t size, uint32_t offset);
+int       fat32_write  (const char* name, const void* buffer, size_t size, uint32_t offset);
 bool      fat32_create (const char* name);
 bool      fat32_mkdir  (const char* name);
 bool      fat32_remove (const char* name);

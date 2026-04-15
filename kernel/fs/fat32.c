@@ -247,16 +247,21 @@ void init_fat32() {
     if (disk_info != NULL) kmemcpy(disk_info, boot_buf, sizeof(FAT32Header));
 }
 
-int fat32_read(const char* name, void* buffer, size_t size) {
-    char* filename = strrchr(name, '/');
-    char* path     = (char*) name;
+int fat32_read(const char* name, void* buffer, size_t size, uint32_t offset) {
+    char path_copy[256]; // In case required, malloc more
+    strncpy(path_copy, name, 256);
 
-    if (filename == NULL) {
-        filename = (char*) name;
+    char* last_slash = strrchr(path_copy, '/');
+    char* filename;
+    char* path;
+
+    if (last_slash == NULL) {
+        filename = path_copy;
         path = "";
     } else {
-        *filename = '\0';
-        filename++;
+        *last_slash = '\0';
+        filename = last_slash + 1;
+        path = path_copy;
     }
 
     uint32_t parent_cluster = disk_info->root_cluster;
@@ -284,31 +289,44 @@ int fat32_read(const char* name, void* buffer, size_t size) {
 
                 if (compare_fat_names(files[i].name, filename)) {
                     uint32_t current_cluster = get_file_cluster(&files[i]);
-
                     uint32_t file_size       = files[i].size;
-                    uint32_t bytes_remaining = (size < file_size) ? size : file_size;
 
-                    uint32_t total_to_read   = bytes_remaining;
+                    if (offset >= file_size) return 0;
+                    if (offset + size > file_size) size = file_size - offset;
 
-                    while (current_cluster >= 2 &&
-                           current_cluster < 0x0FFFFFF8 &&
-                           bytes_remaining > 0) {
-                        uint32_t lba = get_lba_from_cluster(current_cluster, disk_info);
-
-                        for (int sec = 0; sec < disk_info->sectors_per_cluster && bytes_remaining > 0; sec++) {
-                            ata_read_sector(lba + sec, sector_buffer);
-
-                            uint32_t to_copy = (bytes_remaining > 512) ? 512 : bytes_remaining;
-                            kmemcpy(out_ptr, sector_buffer, to_copy);
-
-                            out_ptr += to_copy;
-                            bytes_remaining -= to_copy;
-                        }
-
+                    // Fast-forward to the cluster where 'offset' lives
+                    uint32_t clusters_to_skip = offset / (disk_info->sectors_per_cluster << 9);
+                    for (uint32_t i = 0; i < clusters_to_skip; i++) {
                         current_cluster = get_next_cluster(current_cluster);
                     }
 
-                    return (int)(total_to_read - bytes_remaining);
+                    // Calculate internal offsets
+                    uint32_t cluster_offset = offset % (disk_info->sectors_per_cluster << 9);
+                    uint32_t sector_in_cluster = cluster_offset >> 9;
+                    uint32_t byte_in_sector = cluster_offset % 512;
+
+                    uint32_t bytes_read = 0;
+
+                    while (bytes_read < size && current_cluster >= 2 && current_cluster < 0x0FFFFFF8) {
+                        uint32_t lba = get_lba_from_cluster(current_cluster, disk_info);
+
+                        // Start from sector_in_cluster on the first cluster, then 0 for others
+                        for (int sec = sector_in_cluster; sec < disk_info->sectors_per_cluster && bytes_read < size; sec++) {
+                            ata_read_sector(lba + sec, sector_buffer);
+
+                            // How much can we take from this sector
+                            uint32_t available = 512 - byte_in_sector;
+                            uint32_t to_copy = (size - bytes_read > available) ? available : (size - bytes_read);
+
+                            kmemcpy(out_ptr + bytes_read, sector_buffer + byte_in_sector, to_copy);
+
+                            bytes_read += to_copy;
+                            byte_in_sector = 0; // After the first partial read, we start at byte 0
+                        }
+                        sector_in_cluster = 0; // After the first partial cluster, we start at sector 0
+                        current_cluster = get_next_cluster(current_cluster);
+                    }
+                    return bytes_read;
                 }
             }
         }
@@ -319,16 +337,21 @@ int fat32_read(const char* name, void* buffer, size_t size) {
     return -1;
 }
 
-int fat32_write(const char* name, const void* buffer, size_t size) {
-    char* filename = strrchr(name, '/');
-    char* path     = (char*) name;
+int fat32_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
+    char path_copy[256];
+    strncpy(path_copy, name, 256);
 
-    if (filename == NULL) {
-        filename = (char*) name;
+    char* last_slash = strrchr(path_copy, '/');
+    char* filename;
+    char* path;
+
+    if (last_slash == NULL) {
+        filename = path_copy;
         path = "";
     } else {
-        *filename = '\0';
-        filename++;
+        *last_slash = '\0';
+        filename = last_slash + 1;
+        path = path_copy;
     }
 
     uint32_t parent_cluster = disk_info->root_cluster;
@@ -354,35 +377,55 @@ int fat32_write(const char* name, const void* buffer, size_t size) {
                 if (compare_fat_names(entries[i].name, filename)) {
                     uint32_t current_cluster = get_file_cluster(&entries[i]);
 
-                    uint32_t bytes_left = size;
+                    uint32_t bytes_per_cluster = disk_info->sectors_per_cluster << 9;
+                    uint32_t skip = offset / bytes_per_cluster;
+                    for (uint32_t j = 0; j < skip; j++) {
+                        current_cluster = get_next_cluster(current_cluster);
+                        if (current_cluster >= 0x0FFFFFF8) return -1; // Offset is beyond file size
+                    }
+
+                    // Calculate starting points within that cluster
+                    uint32_t cluster_off = offset % bytes_per_cluster;
+                    uint32_t sector_in_cluster = cluster_off >> 9;
+                    uint32_t byte_in_sector = cluster_off % 512;
+
+                    uint32_t bytes_written = 0;
                     const uint8_t* write_ptr = (const uint8_t*) buffer;
 
-                    while (bytes_left > 0 && current_cluster >= 2 && current_cluster < 0x0FFFFFF8) {
+                    while (bytes_written < size && current_cluster >= 2 && current_cluster < 0x0FFFFFF8) {
                         uint32_t data_lba = get_lba_from_cluster(current_cluster, disk_info);
 
-                        for (int sec = 0; sec < disk_info->sectors_per_cluster && bytes_left > 0; sec++) {
+                        for (int sec = sector_in_cluster; sec < disk_info->sectors_per_cluster && bytes_written < size; sec++) {
                             uint8_t temp_block[512];
+
+                            // Read current sector to preserve data we aren't overwriting
                             ata_read_sector(data_lba + sec, temp_block);
 
-                            uint32_t to_write = (bytes_left > 512) ? 512 : bytes_left;
-                            kmemcpy(temp_block, write_ptr, to_write);
+                            uint32_t available = 512 - byte_in_sector;
+                            uint32_t to_write = (size - bytes_written > available) ? available : (size - bytes_written);
+
+                            // Copy new data into the specific offset of the sector buffer
+                            kmemcpy(temp_block + byte_in_sector, write_ptr + bytes_written, to_write);
 
                             ata_write_sector(data_lba + sec, temp_block);
 
-                            write_ptr += to_write;
-                            bytes_left -= to_write;
+                            bytes_written += to_write;
+                            byte_in_sector = 0; // After first sector, we start at byte 0
                         }
+                        sector_in_cluster = 0; // After first cluster, we start at sector 0
 
-                        if (bytes_left > 0) current_cluster = get_next_cluster(current_cluster);
+                        if (bytes_written < size) {
+                            current_cluster = get_next_cluster(current_cluster);
+                        }
                     }
 
-                    // Update size
-                    entries[i].size = size;
+                    // Update directory entry size ONLY if file grew
+                    if (offset + size > entries[i].size) {
+                        entries[i].size = offset + size;
+                        ata_write_sector(lba + s, dir_buf);
+                    }
 
-                    // Write back this directory sector
-                    ata_write_sector(lba + s, dir_buf);
-
-                    return size - bytes_left;
+                    return bytes_written;
                 }
             }
         }

@@ -61,33 +61,45 @@ void init_ramdisk() {
     }
 }
 
-int ramdisk_read(const char* name, void* buffer, size_t size) {
+int ramdisk_read(const char* name, void* buffer, size_t size, uint32_t offset) {
     File* file = ramdisk_get(name);
+
     if (!file || !file->data || file->is_directory) return -1;
-    size_t bytes_to_read = (size < file->size) ? size : file->size;
-    kmemcpy(buffer, file->data, bytes_to_read);
+    if (offset >= file->size) return 0; // End of file
+
+    // Ensure we don't read past the end of the file
+    size_t bytes_to_read = size;
+    if (offset + bytes_to_read > file->size) {
+        bytes_to_read = file->size - offset;
+    }
+
+    // Copy starting from the offset pointer
+    kmemcpy(buffer, (uint8_t*) file->data + offset, bytes_to_read);
+
     return (int) bytes_to_read;
 }
 
-int ramdisk_write(const char* name, const void* buffer, size_t size) {
+int ramdisk_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
     File* file = ramdisk_get(name);
+    if (!file || file->is_directory) return -1;
 
-    if (!file || file->is_directory) {
-        return -1;
+    // If we are writing beyond current capacity, we need more RAM
+    if (offset + size > file->size) {
+        uint8_t* new_data = (uint8_t*) kmalloc(offset + size);
+        if (!new_data) return -1;
+
+        // If there was old data, preserve it
+        if (file->data) {
+            kmemcpy(new_data, file->data, file->size);
+            kfree(file->data);
+        }
+
+        file->data = new_data;
+        file->size = offset + size;
     }
 
-    if (file->data) {
-        kfree(file->data);
-    }
-
-    file->data = (uint8_t*) kmalloc(size);
-    if (!file->data) {
-        file->size = 0;
-        return -1;
-    }
-
-    kmemcpy(file->data, buffer, size);
-    file->size = size;
+    // Now that we're sure the buffer is big enough, copy to the offset
+    kmemcpy((uint8_t*) file->data + offset, buffer, size);
 
     return (int) size;
 }

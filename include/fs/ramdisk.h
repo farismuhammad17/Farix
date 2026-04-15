@@ -28,8 +28,8 @@ extern FileOperations ramdisk_ops;
 
 void      init_ramdisk();
 
-int       ramdisk_read   (const char* name, void* buffer, size_t size);
-int       ramdisk_write  (const char* name, const void* buffer, size_t size);
+int       ramdisk_read   (const char* name, void* buffer, size_t size, uint32_t offset);
+int       ramdisk_write  (const char* name, const void* buffer, size_t size, uint32_t offset);
 bool      ramdisk_create (const char* name);
 bool      ramdisk_mkdir  (const char* name);
 bool      ramdisk_remove (const char* name);
