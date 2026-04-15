@@ -48,6 +48,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYS_INT_EXEC              1006
 #define SYS_INT_ON                1007
 #define SYS_INT_OFF               1008
+#define SYS_GET_TASK_INFO         1009
 
 void  _exit(int status);
 int   _read(int file, char *ptr, int len);
@@ -70,6 +71,19 @@ typedef struct {
     bool is_free;
 } HeapData;
 
+typedef struct {
+    uint32_t id;
+    uint32_t state;
+    uint32_t parent_id;
+    uint32_t next_id;
+    uint32_t neighbor_id;
+    uint32_t stack_ptr;
+    uint32_t stack_origin;
+    uint32_t page_dir;
+    char     name[32];
+    uint32_t eax, ebx, ecx, edx, esi, edi, ebp, eip;
+} TaskData;
+
 int UART_PUTS(const char *data);
 int GET_HEAP_DATA(HeapData* buffer, int max_count);
 int GET_HEAP_SEG_SIZE();
@@ -79,5 +93,6 @@ int HEAP_AUDIT(int *fault_addr);
 int SYSTEM_INT_EXEC(int int_id);
 int SYSTEM_INT_ON();
 int SYSTEM_INT_OFF();
+int GET_TASKS_DATA(int pid, TaskData* buffer);
 
 #endif

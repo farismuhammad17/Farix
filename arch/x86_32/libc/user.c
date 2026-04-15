@@ -134,3 +134,7 @@ int SYSTEM_INT_ON() {
 int SYSTEM_INT_OFF() {
     return syscall(SYS_INT_OFF, 0, 0, 0);
 }
+
+int GET_TASKS_DATA(int pid, TaskData* buffer) {
+    return syscall(SYS_GET_TASK_INFO, (uint32_t) pid, (uint32_t) buffer, 0);
+}

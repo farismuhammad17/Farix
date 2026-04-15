@@ -24,6 +24,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
+#define INIT_TASK_ID  1
+
 #define TASK_RUNNING  0
 #define TASK_READY    1
 #define TASK_SLEEPING 2
@@ -47,12 +49,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #endif
 
 #define TASK_LIST_MASK_FULL ((task_list_mask_t)((1ULL << TASKS_LIST_LEN) - 1))
-
-// TODO: Find out why the hell I have two register structs
-typedef struct cpu_state {
-    uint32_t eax, ebx, ecx, edx, esi, edi, ebp;
-    uint32_t eip, cs, eflags, esp, ss;
-} cpu_state;
 
 typedef struct task_registers_t {
     uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax;

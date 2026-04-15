@@ -413,6 +413,33 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             regs->eax = SYS_DONE;
             break;
 
+        case SYS_GET_TASK_INFO: {
+            uint32_t pid = (uint32_t) arg1;
+            TaskData* out = (TaskData*) arg2;
+
+            task* t = get_task(pid);
+
+            if (!t) { regs->eax = -1; break; }
+
+            out->id            = t->id;
+            out->state         = t->state;
+            out->parent_id     = t->parent ? t->parent->id : 0;
+            out->next_id       = t->next ? t->next->id : 0;
+            out->neighbor_id   = t->neighbor ? t->neighbor->id : 0;
+            out->stack_ptr     = t->stack_pointer;
+            out->stack_origin  = (uint32_t) t->stack_origin;
+            out->page_dir      = (uint32_t) t->page_directory;
+            strncpy(out->name, t->name, 31);
+
+            // Snapshot registers from the saved stack
+            task_registers_t* kregs = (task_registers_t*) t->stack_pointer;
+            out->eax = kregs->eax; out->ebx = kregs->ebx;
+            out->eip = kregs->eip; out->ebp = kregs->ebp;
+
+            regs->eax = 0;
+            break;
+        }
+
         default:
             printf("Unknown syscall (%s): %ld\n", current_task->name, regs->eax);
             regs->eax = SYS_ERROR;
