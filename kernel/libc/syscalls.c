@@ -32,20 +32,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/vmm.h"
 #include "process/task.h"
 
-#include "libc/syscalls.h"
+#include "farix.h"
 
 // For debugging:
 // #include "drivers/uart.h"
 
-// A table of strings representing the names of open files
-static const char* fd_table[20] = {NULL};
+#define FD_TABLE_MIN 3
+#define FD_TABLE_MAX 32
 
-int _close(UNUSED_ARG int file) { return -1; }
-int _fstat(UNUSED_ARG int file, struct stat *st) { st->st_mode = S_IFCHR; return 0; }
-int _isatty(UNUSED_ARG int file) { return 1; }
-int _lseek(UNUSED_ARG int file, UNUSED_ARG int ptr, UNUSED_ARG int dir) { return 0; }
-int _getpid() { return 1; }
-int _kill(UNUSED_ARG int pid, UNUSED_ARG int sig) { return -1; }
+typedef struct {
+    File* file;
+    uint32_t pos;
+} FileOpenHandle;
+
+// A table of strings representing the names of open files
+static FileOpenHandle* fd_table[FD_TABLE_MAX] = {NULL};
 
 void* _sbrk(int incr) {
     if (current_task->page_directory == NULL) {
@@ -73,9 +74,10 @@ void* _sbrk(int incr) {
 }
 
 void _exit(UNUSED_ARG int status) {
-    current_task->state = TASK_DEAD;
-    schedule();
+    // TODO: Kill tasks using dedicated task* killer
+    // kill_task wastes time finding the task we already have.
 
+    kill_task(current_task->id);
     while(1);
 }
 
@@ -83,8 +85,10 @@ int _read(int file, char *ptr, int len) {
     if (file == 0) { // stdin
         int i = 0;
         while (i < len) {
-            while (kbd_head == kbd_tail)
-                system_halt();
+            while (kbd_head == kbd_tail) {
+                current_task->state = TASK_SLEEPING;
+                task_yield();
+            }
 
             char c = kbd_buffer[kbd_tail];
             kbd_tail = (kbd_tail + 1) % KBD_BUFFER_LEN;
@@ -97,7 +101,7 @@ int _read(int file, char *ptr, int len) {
 
     else if (file >= 3 && file < 20 && fd_table[file] != NULL) {
         // fs_read returns bool, Newlib wants bytes read
-        if (fs_read(fd_table[file], ptr, len)) {
+        if (fs_read(fd_table[file]->file->name, ptr, len)) { // TODO: Read directly in the future
             return len;
         }
     }
@@ -114,32 +118,101 @@ int _write(int file, char *ptr, int len) {
     }
 
     else if (file >= 3 && file < 20 && fd_table[file] != NULL) {
-        if (fs_write(fd_table[file], ptr, len)) {
+        if (fs_write(fd_table[file]->file->name, ptr, len)) {
             return len;
         }
     }
 
-    errno = EBADF;
     return -1;
 }
 
 int _open(const char *name, UNUSED_ARG int flags, UNUSED_ARG int mode) {
     File* f = fs_get(name);
 
-    if (!f) {
-        errno = ENOENT;
-        return -1;
-    }
+    if (!f) return -1;
 
-    for (int i = 3; i < 20; i++) {
+    for (int i = FD_TABLE_MIN; i < FD_TABLE_MAX; i++) {
         if (fd_table[i] == NULL) {
-            fd_table[i] = name;
+            FileOpenHandle* handle = kmalloc(sizeof(FileOpenHandle));
+            handle->file = f;
+            handle->pos = 0;
+
+            fd_table[i] = handle;
             return i;
         }
     }
 
-    errno = EMFILE;
     return -1;
+}
+
+int _close(int file) {
+    if (file < FD_TABLE_MIN || file >= FD_TABLE_MAX || !fd_table[file]) return -1;
+
+    kfree((void*) fd_table[file]);
+    fd_table[file] = NULL;
+    return 0;
+}
+
+int _fstat(int file, struct stat *st) {
+    if (!st) return -EFAULT;
+
+    kmemset(st, 0, sizeof(struct stat));
+
+    if (file >= 0 && file < FD_TABLE_MIN) {
+        st->st_mode = S_IFCHR;  // Terminal
+        st->st_dev = 0;         // TODO: Device ID
+        return 0;
+    }
+
+    // Handle actual files
+    if (file < FD_TABLE_MAX && fd_table[file] != NULL) {
+        FileOpenHandle* f = (FileOpenHandle*) fd_table[file];
+
+        st->st_mode    = S_IFREG;
+        st->st_size    = f->file->size;
+        st->st_blksize = PAGE_SIZE;  // Optimal I/O chunk (one page)
+
+        return 0;
+    }
+
+    // If we get here, the ticket (FD) is invalid or empty
+    return -EBADF;
+}
+
+int _isatty(int file) {
+    return file >= 0 && file < FD_TABLE_MIN;
+}
+
+int _lseek(int file, int ptr, int dir) {
+    if (file >= 0 && file < FD_TABLE_MIN) return 0;
+
+    if (file < FD_TABLE_MAX && fd_table[file]) {
+        FileOpenHandle* f = (FileOpenHandle*) fd_table[file];
+        size_t f_size = f->file->size;
+        int new_pos;
+
+        if (dir == 0)      new_pos = ptr;          // SEEK_SET
+        else if (dir == 1) new_pos = f->pos + ptr; // SEEK_CUR
+        else if (dir == 2) new_pos = f_size + ptr; // SEEK_END
+        else return -EINVAL;
+
+        // Clamp to file boundaries
+        if (new_pos < 0) new_pos = 0;
+        else if (new_pos > (int) f_size) new_pos = f_size;
+
+        f->pos = new_pos;
+        return f->pos;
+    }
+
+    return -EBADF;
+}
+
+int _getpid() {
+    return current_task->id;
+}
+
+int _kill(int pid, UNUSED_ARG int sig) {
+    kill_task(pid);
 }
 
 int getentropy(void *ptr, size_t len) {

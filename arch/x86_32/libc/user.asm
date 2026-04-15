@@ -28,6 +28,10 @@ _start:
 
     call main
 
-    jmp $
+    mov ebx, eax ; status code
+    mov eax, 1   ; SYS_EXIT
+    int 0x80     ; yield
+
+    jmp $        ; Not good to get here, kernel should've killed us by now
 .halt:
     jmp .halt

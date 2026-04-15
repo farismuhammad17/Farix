@@ -17,20 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef SYSCALLS_H
-#define SYSCALLS_H
+#include <stdio.h>
 
-#define SYS_WRITE 1
-#define SYS_READ  2
-#define SYS_EXIT  3
-#define SYS_SBRK 45
-
-// For avoiding unused argument compiler warnings cleanly
-#define UNUSED_ARG __attribute__((unused))
-
-void* _sbrk(int incr);
-void  _exit(UNUSED_ARG int status);
-int   _read(int file, char *ptr, int len);
-int   _write(int file, char *ptr, int len);
-
-#endif
+int main() {
+    printf("Hello!\n");
+}

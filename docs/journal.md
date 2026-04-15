@@ -29,3 +29,4 @@ This is more of a journal of how this project was built. It helps to keep track 
 - [8 Apr: PCI Implementation](journal_entries/8-apr-2026.md)
 - [11 Apr: ACPI Implementation](journal_entries/11-apr-2026.md)
 - [14 Apr: Silicon Verification](journal_entries/14-apr-2026.md)
+- [Current: Shelf](journal_entries/current.md)

@@ -51,9 +51,7 @@ void task_trampoline() {
 
     current_task->state = TASK_DEAD;
 
-    while(1) {
-        task_yield(); // Keep yielding until the scheduler deletes the task
-    }
+    while(1) task_yield(); // Keep yielding till deletion
 }
 
 void init_multitasking() {
@@ -201,6 +199,8 @@ void kill_task(uint32_t id) {
 
         if (target->stack_origin) kfree(target->stack_origin);
         kfree(target);
+
+        if (target == current_task) task_yield();
     }
 
     system_int_on();
@@ -208,6 +208,7 @@ void kill_task(uint32_t id) {
     if (target == current_task) task_yield();
 }
 
+// TODO: Scheduler doesn't deal with sleeping tasks
 void schedule() {
     task* last = current_task;
     task* next = current_task->next;

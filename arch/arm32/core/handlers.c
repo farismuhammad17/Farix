@@ -21,8 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "arch/arm32/defs.h"
 #include "arch/stubs.h"
-#include "libc/syscalls.h"
 #include "process/task.h"
+
+#include "farix.h"
 
 // For avoiding unused argument compiler warnings cleanly
 #define UNUSED_ARG __attribute__((unused))

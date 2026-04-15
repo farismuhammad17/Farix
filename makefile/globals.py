@@ -13,9 +13,6 @@ arch = None
 QEMU_BIN = None
 QEMU_FLAGS = None
 
-BOCHS_BIN = None
-BOCHS_CONFIG = None
-
 PREFIX = None
 
 ASM_ASSEMBLER = None

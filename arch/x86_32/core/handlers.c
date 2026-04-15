@@ -23,10 +23,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
-#include "libc/syscalls.h"
 #include "memory/vmm.h"
 #include "process/task.h"
 
+#include "farix.h"
 #include "kernel.h"
 
 typedef struct syscalls_registers_x86_32_t {

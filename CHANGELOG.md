@@ -2,10 +2,15 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## Silicon Verification - *14th April, 2026*
+## Shelf - *Work in progress*
 
 > [!WARNING]
 > The ARM32 implementation is still WIP. x86_32 is perfectly functional though.
+
+- ELFs finally die properly
+- Filled out all Newlib stubs
+
+## Silicon Verification - *14th April, 2026*
 
 - `last_call` with `LOG_CALL` macro to track function calls
 - `last_init` to trace load crashes
@@ -129,7 +134,7 @@
 
 ## Pipe Shell Operator - *8th Mar, 2026*
 
-> [!WARNING]  
+> [!WARNING]
 > This commit comes with a partial implementation of the ELF executor, and, though it won't crash the kernel, it also doesn't work.
 
 - **Shell**

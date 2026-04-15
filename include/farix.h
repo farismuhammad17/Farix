@@ -20,15 +20,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef FARIX_H
 #define FARIX_H
 
-static inline int _farix_syscall(int eax, int ebx, int ecx, int edx) {
-    int ret;
-    asm volatile (
-        "int $0x80"
-        : "=a"(ret)
-        : "a"(eax), "b"(ebx), "c"(ecx), "d"(edx)
-        : "memory"
-    );
-    return ret;
-}
+// NOTE: SYS_EXIT is hardcoded in user.asm, changing requires changing there
+
+#define SYS_EXIT  1
+#define SYS_READ  2
+#define SYS_WRITE 3
+#define SYS_SBRK 45
+
+// For avoiding unused argument compiler warnings cleanly
+#define UNUSED_ARG __attribute__((unused))
+
+void* _sbrk(int incr);
+void  _exit(UNUSED_ARG int status);
+int   _read(int file, char *ptr, int len);
+int   _write(int file, char *ptr, int len);
 
 #endif

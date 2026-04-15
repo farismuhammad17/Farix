@@ -61,7 +61,7 @@ globals.IGNORES = (
 
 globals.OS = globals.run("uname -s")
 
-globals.DISK_PATH      = "build/disk.img"
+globals.DISK_PATH = "build/disk.img"
 
 globals.arch = "x86_32"
 if "arm32" in sys.argv:
@@ -82,9 +82,6 @@ if globals.arch == "x86_32":
         "-vga std "
         "-serial stdio "
     )
-
-    globals.BOCHS_BIN = "bochs"
-    globals.BOCHS_CONFIG = "bochsrc.txt"
 
     if globals.shell_which("i686-elf-gcc"):
         globals.PREFIX = "i686-elf-"

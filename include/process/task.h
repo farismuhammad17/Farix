@@ -86,6 +86,7 @@ void init_multitasking();
 
 task* create_task(void (*entry_point)(), const char* name, const bool privilege);
 void  kill_task(uint32_t id);
+
 void  schedule();
 
 task* get_task(uint32_t id);
