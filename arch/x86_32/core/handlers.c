@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <sys/stat.h>
 
+#include "arch/stubs.h"
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
@@ -30,6 +31,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "farix.h"
 #include "kernel.h"
+
+// For syscall_handler > SYS_INT_EXEC
+#define SYS_INT_EXEC_CASE(n) case n: asm volatile("int %0" :: "i"(n)); break;
+#define SYS_INT_EXEC_REP2(n)   SYS_INT_EXEC_CASE(n) SYS_INT_EXEC_CASE(n+1)
+#define SYS_INT_EXEC_REP4(n)   SYS_INT_EXEC_REP2(n) SYS_INT_EXEC_REP2(n+2)
+#define SYS_INT_EXEC_REP8(n)   SYS_INT_EXEC_REP4(n) SYS_INT_EXEC_REP4(n+4)
+#define SYS_INT_EXEC_REP16(n)  SYS_INT_EXEC_REP8(n) SYS_INT_EXEC_REP8(n+8)
+#define SYS_INT_EXEC_REP32(n)  SYS_INT_EXEC_REP16(n) SYS_INT_EXEC_REP16(n+16)
+#define SYS_INT_EXEC_REP64(n)  SYS_INT_EXEC_REP32(n) SYS_INT_EXEC_REP32(n+32)
+#define SYS_INT_EXEC_REP128(n) SYS_INT_EXEC_REP64(n) SYS_INT_EXEC_REP64(n+64)
+#define SYS_INT_EXEC_REP256(n) SYS_INT_EXEC_REP128(n) SYS_INT_EXEC_REP128(n+128)
 
 typedef struct syscalls_registers_x86_32_t {
     uint32_t ds;                                           // Data segment (pushed by us)
@@ -286,15 +298,15 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             int max_entries = (int) arg2;
             int count = 0;
 
-            HeapSegment* current = first_segment;
+            HeapSegment* current_heapsegment = first_segment;
 
-            while (current != NULL && count < max_entries) {
-                heapdata_buf[count].address = (uint32_t) current;
-                heapdata_buf[count].size    = current->size;
-                heapdata_buf[count].is_free = current->is_free;
-                heapdata_buf[count].caller  = current->caller;
+            while (current_heapsegment != NULL && count < max_entries) {
+                heapdata_buf[count].address = (uint32_t) current_heapsegment;
+                heapdata_buf[count].size    = current_heapsegment->size;
+                heapdata_buf[count].is_free = current_heapsegment->is_free;
+                heapdata_buf[count].caller  = current_heapsegment->caller;
 
-                current = current->next;
+                current_heapsegment = current_heapsegment->next;
                 count++;
             }
 
@@ -316,7 +328,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
                 break;
             }
 
-            regs->eax = heap_start;
+            regs->eax = (uint32_t) heap_start;
             break;
 
         case SYS_GET_HEAP_END:
@@ -325,41 +337,60 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
                 break;
             }
 
-            regs->eax = heap_end;
+            regs->eax = (uint32_t) heap_end;
             break;
 
         case SYS_HEAP_AUDIT:
+            if (current_task->privilege != PRIV_SUPER) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
             uint32_t* fault_addr_out = (uint32_t*) arg1;
-            HeapSegment* current = first_segment;
+            HeapSegment* current_heapaudit = first_segment;
             int res_code = 0; // Default: OK
 
-            while (current != NULL) {
-                if (current->magic != HEAP_MAGIC) { // Bad Magic
+            while (current_heapaudit != NULL) {
+                if (current_heapaudit->magic != HEAP_MAGIC) { // Bad Magic
                     res_code = 1; break;
                 }
 
-                if (((uint32_t) current & 0x3) != 0) { // Unaligned segment pointer
+                if (((uint32_t) current_heapaudit & 0x3) != 0) { // Unaligned segment pointer
                     res_code = 2; break;
                 }
 
-                if (current->next != NULL) {
-                    if (current->next <= current) { // Circular or backwards link
+                if (current_heapaudit->next != NULL) {
+                    if (current_heapaudit->next <= current_heapaudit) { // Circular or backwards link
                         res_code = 3; break;
                     }
-                    if (current->next->prev != current) { // Broken backlink
+                    if (current_heapaudit->next->prev != current_heapaudit) { // Broken backlink
                         res_code = 4; break;
                     }
                 }
 
-                current = current->next;
+                current_heapaudit = current_heapaudit->next;
             }
 
             // If error, write fault address
             if (res_code != 0 && fault_addr_out != NULL) {
-                *fault_addr_out = (uint32_t) current;
+                *fault_addr_out = (uint32_t) current_heapaudit;
             }
 
             regs->eax = res_code;
+            break;
+
+        case SYS_INT_EXEC:
+            if (current_task->privilege != PRIV_SUPER) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
+            switch((int) arg1) {
+                SYS_INT_EXEC_REP256(0)
+                default:
+                    regs->eax = SYS_ERROR;
+                    break;
+            }
             break;
 
         case SYS_INT_ON:

@@ -151,7 +151,6 @@ void shell_parse(const char* input) {
     is_piping = false;
 }
 
-void cmd_int(const char* args){}
 void cmd_grep(const char* args){}
 
 void cmd_cd(const char* args){}

@@ -26,27 +26,28 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYS_DONE     0
 #define SYS_ERROR   -1
 
-#define SYS_EXIT     1 // NOTE: SYS_EXIT is hardcoded in user.asm, changing requires changing there
-#define SYS_READ     2
-#define SYS_WRITE    3
-#define SYS_OPEN     4
-#define SYS_CLOSE    5
-#define SYS_LSEEK    6
-#define SYS_ISATTY   7
-#define SYS_FSTAT    8
-#define SYS_GETPID   9
-#define SYS_KILL     10
-#define SYS_SBRK     11
+#define SYS_EXIT                  1 // NOTE: SYS_EXIT is hardcoded in user.asm, changing requires changing there
+#define SYS_READ                  2
+#define SYS_WRITE                 3
+#define SYS_OPEN                  4
+#define SYS_CLOSE                 5
+#define SYS_LSEEK                 6
+#define SYS_ISATTY                7
+#define SYS_FSTAT                 8
+#define SYS_GETPID                9
+#define SYS_KILL                  10
+#define SYS_SBRK                  11
 
 // Super user
-#define SYS_UART_PUT          1000
-#define SYS_GET_HEAP          1001
-#define SYS_GET_HEAP_SEG_SIZE 1002
-#define SYS_GET_HEAP_START    1003
-#define SYS_GET_HEAP_END      1004
-#define SYS_HEAP_AUDIT        1005
-#define SYS_INT_ON            1006
-#define SYS_INT_OFF           1007
+#define SYS_UART_PUT              1000
+#define SYS_GET_HEAP              1001
+#define SYS_GET_HEAP_SEG_SIZE     1002
+#define SYS_GET_HEAP_START        1003
+#define SYS_GET_HEAP_END          1004
+#define SYS_HEAP_AUDIT            1005
+#define SYS_INT_EXEC              1006
+#define SYS_INT_ON                1007
+#define SYS_INT_OFF               1008
 
 void  _exit(int status);
 int   _read(int file, char *ptr, int len);
@@ -75,6 +76,7 @@ int GET_HEAP_SEG_SIZE();
 int GET_HEAP_START();
 int GET_HEAP_END();
 int HEAP_AUDIT(int *fault_addr);
+int SYSTEM_INT_EXEC(int int_id);
 int SYSTEM_INT_ON();
 int SYSTEM_INT_OFF();
 
