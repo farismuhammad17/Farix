@@ -44,8 +44,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYS_GET_HEAP_SEG_SIZE 1002
 #define SYS_GET_HEAP_START    1003
 #define SYS_GET_HEAP_END      1004
-#define SYS_INT_ON            1005
-#define SYS_INT_OFF           1006
+#define SYS_HEAP_AUDIT        1005
+#define SYS_INT_ON            1006
+#define SYS_INT_OFF           1007
 
 void  _exit(int status);
 int   _read(int file, char *ptr, int len);
@@ -73,6 +74,7 @@ int GET_HEAP_DATA(HeapData* buffer, int max_count);
 int GET_HEAP_SEG_SIZE();
 int GET_HEAP_START();
 int GET_HEAP_END();
+int HEAP_AUDIT(int *fault_addr);
 int SYSTEM_INT_ON();
 int SYSTEM_INT_OFF();
 

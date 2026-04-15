@@ -119,6 +119,10 @@ int GET_HEAP_END() {
     return syscall(SYS_GET_HEAP_END, 0, 0, 0);
 }
 
+int HEAP_AUDIT(int *fault_addr) {
+    return syscall(SYS_HEAP_AUDIT, (uint32_t) fault_addr, 0, 0);
+}
+
 int SYSTEM_INT_ON() {
     return syscall(SYS_INT_ON, 0, 0, 0);
 }

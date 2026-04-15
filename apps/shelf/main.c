@@ -20,8 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -151,7 +151,6 @@ void shell_parse(const char* input) {
     is_piping = false;
 }
 
-void cmd_heapstat(const char* args){}
 void cmd_int(const char* args){}
 void cmd_grep(const char* args){}
 

@@ -24,8 +24,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
-#include "memory/vmm.h"
 #include "memory/heap.h"
+#include "memory/vmm.h"
 #include "process/task.h"
 
 #include "farix.h"
@@ -326,6 +326,40 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             }
 
             regs->eax = heap_end;
+            break;
+
+        case SYS_HEAP_AUDIT:
+            uint32_t* fault_addr_out = (uint32_t*) arg1;
+            HeapSegment* current = first_segment;
+            int res_code = 0; // Default: OK
+
+            while (current != NULL) {
+                if (current->magic != HEAP_MAGIC) { // Bad Magic
+                    res_code = 1; break;
+                }
+
+                if (((uint32_t) current & 0x3) != 0) { // Unaligned segment pointer
+                    res_code = 2; break;
+                }
+
+                if (current->next != NULL) {
+                    if (current->next <= current) { // Circular or backwards link
+                        res_code = 3; break;
+                    }
+                    if (current->next->prev != current) { // Broken backlink
+                        res_code = 4; break;
+                    }
+                }
+
+                current = current->next;
+            }
+
+            // If error, write fault address
+            if (res_code != 0 && fault_addr_out != NULL) {
+                *fault_addr_out = (uint32_t) current;
+            }
+
+            regs->eax = res_code;
             break;
 
         case SYS_INT_ON:
