@@ -9,3 +9,7 @@ I also want to note: I started the kernel in VS Code, but it felt like bloatware
 *15th April, 2026*
 
 I decided that the system calls definitions that are required by newlib were not fully filled out. The majority of it were left to return default values, even if it was wrong. I decided I didn't like that, and filled out every single one, since I would need them in the future, probably. As of now, the kernel ran properly without the rest of them, but, perhaps, newlib uses them in some way that I haven't seen yet. It also makes the kernel programs even more straightforward.
+
+The user syscalls are all set up now, it was just tedious copy-pasting and changing. It was quite boring, but now we can access the kernel's syscalls from the user! Yay... now to actually write the shelf. Fantastic. This much time was just for setting it up. Quite annoying. I realise how cooked ARM32 will be on this kernel. I have to make that after I get most of x86 done. I plan on finishing ARM32 much later, I only left it here because I wanted to make sure than an HAL won't cause too much annoyances to me in the future.
+
+If I recall right, the HAL was annoying to do, even then. I can only imagine how sufferable it would've been with the whole ACPI and User syscalls and stuff now. Fortunately, that early (yet slightly late) HAL will make sure that the future implementations are not too annoying.

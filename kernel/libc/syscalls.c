@@ -73,7 +73,7 @@ void* _sbrk(int incr) {
     return (void*) old_break;
 }
 
-void _exit(UNUSED_ARG int status) {
+void _exit(int status) {
     // TODO: Kill tasks using dedicated task* killer
     // kill_task wastes time finding the task we already have.
 
@@ -128,7 +128,7 @@ int _write(int file, char *ptr, int len) {
     return -1;
 }
 
-int _open(const char *name, UNUSED_ARG int flags, UNUSED_ARG int mode) {
+int _open(const char *name, int flags, int mode) {
     File* f = fs_get(name);
 
     if (!f) return -1;
@@ -213,7 +213,7 @@ int _getpid() {
     return current_task->id;
 }
 
-int _kill(int pid, UNUSED_ARG int sig) {
+int _kill(int pid, int sig) {
     kill_task(pid);
 }
 
@@ -253,7 +253,7 @@ int isatty(int file) { return _isatty(file); }
 int kill(int pid, int sig) { return _kill(pid, sig); }
 int getpid() { return _getpid(); }
 
-void _free_r(UNUSED_ARG struct _reent *r, void *ptr) {
+void _free_r(struct _reent *r, void *ptr) {
     kfree(ptr);
 }
 
@@ -267,7 +267,6 @@ void* memset(void* s, int c, size_t n) {
     return s;
 }
 
-// Some strings calls memmove
 void* memmove(void* dest, const void* src, size_t n) {
     if (dest < src) return memcpy(dest, src, n);
     uint8_t* d = (uint8_t*)dest;

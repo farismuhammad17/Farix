@@ -172,6 +172,11 @@ if __name__ == "__main__":
     if "-elen" in sys.argv: err_len = int(sys.argv[sys.argv.index('-elen') + 1])
 
     if   target == globals.arch: farix_bin()
+    elif target == "all":
+        if not os.path.exists("farix.bin"): farix_bin()
+        if not os.path.exists(globals.DISK_PATH): disk_img()
+        compile_apps()
+        deploy_apps()
     elif target == "clean": clean(sys.argv[1:])
     elif target == "libc": libc()
     elif target == "get_deps": get_deps()

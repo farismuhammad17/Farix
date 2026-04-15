@@ -12,6 +12,9 @@
   - Read and Write take `offset`
 - Syscalls
   - Filled out all Newlib stubs
+  - Implemented user syscalls
+- Makefile
+  - `m clean apps` to only delete build/apps
 
 ## Silicon Verification - *14th April, 2026*
 

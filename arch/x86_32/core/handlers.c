@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
@@ -169,31 +170,6 @@ static void panic_shell() {
     }
 }
 
-void syscall_handler(syscalls_registers_x86_32_t* regs) {
-    switch (regs->eax) {
-        case SYS_WRITE:
-            regs->eax = _write(regs->ebx, (char*) regs->ecx, regs->edx);
-            break;
-
-        case SYS_READ:
-            regs->eax = _read(regs->ebx, (char*) regs->ecx, regs->edx);
-            break;
-
-        case SYS_EXIT:
-            _exit(regs->ebx);
-            break;
-
-        case SYS_SBRK:
-            regs->eax = (uint32_t) _sbrk(regs->ebx);
-            break;
-
-        default:
-            printf("Unknown syscall: %ld\n", regs->eax);
-            regs->eax = -1;
-            break;
-    }
-}
-
 // TODO: use t_printf instead, but t_print doesn't support colors yet
 void exception_handler(syscalls_registers_x86_32_t* regs) {
     asm volatile("cli");
@@ -235,4 +211,63 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
     dump_multitasking_info();
 
     panic_shell();
+}
+
+void syscall_handler(syscalls_registers_x86_32_t* regs) {
+    // EAX: Caller function ID, also return value (if any)
+
+    uint32_t arg1 = regs->ebx;
+    uint32_t arg2 = regs->ecx;
+    uint32_t arg3 = regs->edx;
+
+    switch (regs->eax) {
+        case SYS_EXIT:
+            _exit(arg1);
+            break;
+
+        case SYS_READ:
+            regs->eax = (uint32_t) _read((int) arg1, (char*) arg2, (int) arg3);
+            break;
+
+        case SYS_WRITE:
+            regs->eax = (uint32_t) _write((int) arg1, (char*) arg2, (int) arg3);
+            break;
+
+        case SYS_OPEN:
+            regs->eax = (uint32_t) _open((const char*) arg1, (int) arg2, (int) arg3);
+            break;
+
+        case SYS_CLOSE:
+            regs->eax = (uint32_t) _close((int) arg1);
+            break;
+
+        case SYS_LSEEK:
+            regs->eax = (uint32_t) _lseek((int) arg1, (int) arg2, (int) arg3);
+            break;
+
+        case SYS_GETPID:
+            regs->eax = (uint32_t) _getpid();
+            break;
+
+        case SYS_KILL:
+            regs->eax = (uint32_t) _kill((int) arg1, (int) arg2);
+            break;
+
+        case SYS_SBRK:
+            regs->eax = (uint32_t) _sbrk((int) arg1);
+            break;
+
+        case SYS_ISATTY:
+            regs->eax = (uint32_t) _isatty((int) arg1);
+            break;
+
+        case SYS_FSTAT:
+            regs->eax = (uint32_t) _fstat((int) arg1, (struct stat*) arg2);
+            break;
+
+        default:
+            printf("Unknown syscall: %ld\n", regs->eax);
+            regs->eax = -1;
+            break;
+    }
 }

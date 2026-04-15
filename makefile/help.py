@@ -6,7 +6,7 @@ HELP = """
 Usage: \033[1m m [target] <architecture>\033[0m
 
 \033[1;36mTargets:\033[0m
-  \033[1;32mall\033[0m          Build the kernel and all dependencies \033[90m(default)\033[0m
+  \033[1;32mall\033[0m          Build the kernel and deploy apps
   \033[1;32mlibc\033[0m         Compile the internal C standard library
   \033[1;32mdisk\033[0m         Generate the bootable disk image for emulation
   \033[1;32mget_deps\033[0m     Fetch and verify build-tool dependencies
@@ -14,7 +14,7 @@ Usage: \033[1m m [target] <architecture>\033[0m
   \033[1;32musb\033[0m          Copy farix.bin into Boot USB \033[90m(provide in make.conf.json)\033[0m
   \033[1;32mqemu\033[0m         Build and launch in QEMU \033[90m(Fullscreen mode)\033[0m
   \033[1;32mqemu_\033[0m        Build and launch in QEMU \033[90m(Windowed mode)\033[0m
-  \033[1;32mclean\033[0m        Remove all build artifacts and object files \033[90m(Optionally provide exclusions after)\033[0m
+  \033[1;32mclean\033[0m        Remove all build artifacts and object files \033[90m(Optionally provide exclusions after; 'apps' to delete only apps)\033[0m
   \033[1;32mapps\033[0m         Compile and add all apps into disk
   \033[1;32mcompile_apps\033[0m Compile all the files inside apps into ELF
   \033[1;32mdeploy_apps\033[0m  Deploy all ELF files inside apps folder

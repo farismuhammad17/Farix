@@ -19,12 +19,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #include "farix.h"
 
 // Writing inline assembly is tedious, this function just abstract that off.
 // Unused arguments are set to 0
-static int32_t syscall(uint32_t num, uint32_t arg1, uint32_t arg2, uint32_t arg3) {
+static int32_t syscall(uint32_t sys_id, uint32_t arg1, uint32_t arg2, uint32_t arg3) {
     int32_t ret;
     asm volatile (
         "mov %1, %%eax\n"
@@ -33,7 +34,7 @@ static int32_t syscall(uint32_t num, uint32_t arg1, uint32_t arg2, uint32_t arg3
         "mov %4, %%edx\n"
         "int $0x80\n"
         : "=a"(ret)
-        : "g"(num), "g"(arg1), "g"(arg2), "g"(arg3)
+        : "g"(sys_id), "g"(arg1), "g"(arg2), "g"(arg3)
         : "ebx", "ecx", "edx"
     );
     return ret;
@@ -48,7 +49,6 @@ void* _sbrk(int incr) {
 
 void _exit(int status) {
     syscall(SYS_EXIT, (uint32_t) status, 0, 0);
-    while(1); // Should never reach here
 }
 
 int _read(int file, char *ptr, int len) {
@@ -59,12 +59,33 @@ int _write(int file, char *ptr, int len) {
     return syscall(SYS_WRITE, (uint32_t) file, (uint32_t) ptr, (uint32_t) len);
 }
 
-int _close(UNUSED_ARG int file) { return -1; }
-int _fstat(UNUSED_ARG int file, struct stat *st) { return 0; }
-int _isatty(UNUSED_ARG int file) { return 1; }
-int _lseek(UNUSED_ARG int file, UNUSED_ARG int ptr, UNUSED_ARG int dir) { return 0; }
-int _getpid() { return 1; }
-int _kill(UNUSED_ARG int pid, UNUSED_ARG int sig) { return -1; }
+int _open(const char *name, int flags, int mode) {
+    return syscall(SYS_OPEN, (uint32_t) name, (uint32_t) flags, (uint32_t) mode);
+}
+
+int _close(int file) {
+    return syscall(SYS_CLOSE, (uint32_t) file, 0, 0);
+}
+
+int _fstat(int file, struct stat *st) {
+    return syscall(SYS_FSTAT, (uint32_t) file, (uint32_t) st, 0);
+}
+
+int _isatty(int file) {
+    return syscall(SYS_ISATTY, (uint32_t) file, 0, 0);
+}
+
+int _lseek(int file, int ptr, int dir) {
+    return syscall(SYS_LSEEK, (uint32_t) file, (uint32_t) ptr, (uint32_t) dir);
+}
+
+int _getpid() {
+    return syscall(SYS_GETPID, 0, 0, 0);
+}
+
+int _kill(int pid, int sig) {
+    return syscall(SYS_KILL, (uint32_t) pid, (uint32_t) sig, 0);
+}
 
 void* sbrk(int incr) { return _sbrk(incr); }
 int read(int file, char *ptr, int len) { return _read(file, ptr, len); }
