@@ -440,17 +440,17 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
                 break;
             }
 
-            uint32_t pid  = (uint32_t)  arg1;
+            uint32_t  pid = (uint32_t)  arg1;
             TaskData* out = (TaskData*) arg2;
 
             task* t = get_task(pid);
 
-            if (!t) { regs->eax = -1; break; }
+            if (!t) { regs->eax = SYS_ERROR; break; }
 
             out->id            = t->id;
             out->state         = t->state;
-            out->parent_id     = t->parent ? t->parent->id : 0;
-            out->next_id       = t->next ? t->next->id : 0;
+            out->parent_id     = t->parent   ?   t->parent->id : 0;
+            out->next_id       = t->next     ?     t->next->id : 0;
             out->neighbor_id   = t->neighbor ? t->neighbor->id : 0;
             out->stack_ptr     = t->stack_pointer;
             out->stack_origin  = (uint32_t) t->stack_origin;
@@ -459,8 +459,14 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
 
             // Snapshot registers from the saved stack
             task_registers_t* kregs = (task_registers_t*) t->stack_pointer;
-            out->eax = kregs->eax; out->ebx = kregs->ebx;
-            out->eip = kregs->eip; out->ebp = kregs->ebp;
+            out->eax = kregs->eax;
+            out->ebx = kregs->ebx;
+            out->ecx = kregs->ecx;
+            out->edx = kregs->edx;
+            out->esi = kregs->esi;
+            out->edi = kregs->edi;
+            out->eip = kregs->eip;
+            out->ebp = kregs->ebp;
 
             regs->eax = SYS_DONE;
             break;
