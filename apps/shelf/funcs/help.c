@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void cmd_help(UNUSED_ARG const char* args) {
     for (size_t i = 0; command_table[i].name != NULL; i++) {
-        printf("%-*s %s\n",
+        sh_print("%-*s %s\n",
             INDENT_LEN * 2, // *2 because some commands are longer than INDENT_LEN
             command_table[i].name,
             command_table[i].help_text);

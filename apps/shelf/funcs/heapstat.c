@@ -26,19 +26,19 @@ void cmd_heapstat(UNUSED_ARG const char* args) {
     int status = HEAP_AUDIT(fault_addr);
 
     switch (status) {
-        case 0: printf("Heap verified\n");
+        case 0: sh_print("Heap verified\n");
             break;
-        case 1: printf("HEAP CORRUPTION: Bad Magic at %p", fault_addr);
+        case 1: sh_print("HEAP CORRUPTION: Bad Magic at %p", fault_addr);
             break;
-        case 2: printf("HEAP CORRUPTION: Unaligned segment pointer %p\n", fault_addr);
+        case 2: sh_print("HEAP CORRUPTION: Unaligned segment pointer %p\n", fault_addr);
             break;
-        case 3: printf("HEAP CORRUPTION: Circular or backwards link at %p", fault_addr);
+        case 3: sh_print("HEAP CORRUPTION: Circular or backwards link at %p", fault_addr);
             break;
-        case 4: printf("HEAP CORRUPTION: Broken backlink at %p", fault_addr);
+        case 4: sh_print("HEAP CORRUPTION: Broken backlink at %p", fault_addr);
             break;
 
         default:
-            printf("heapstat: Returns unknown status %d", status);
+            sh_print("heapstat: Returns unknown status %d", status);
             break;
     }
 }

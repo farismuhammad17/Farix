@@ -17,18 +17,38 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-
-#include "farix.h"
+#include <stddef.h>
 
 #include "cmds.h"
 
-void cmd_int(const char* args) {
-    if (!args) {
-        sh_print("int: Interrupt ID unspecified.");
+void cmd_grep(const char* args) {
+    if (last_cmd_output[0] == '\0') {
+        sh_print("grep: No input to search.\n");
+        return;
+    }
+    else if (args == NULL || args[0] == '\0') {
+        sh_print("grep: Usage: <command> | grep <pattern>\n");
         return;
     }
 
-    SYSTEM_INT_EXEC(atoi(args));
+    char* start = last_cmd_output;
+    char* end = strchr(start, '\n');
+
+    while (end != NULL) {
+        char saved_char = *end;
+        *end = '\0';
+
+        if (strstr(start, args) != NULL) {
+            sh_print("%s\n", start);
+        }
+
+        *end = saved_char;
+        start = end + 1;
+
+        end = strchr(start, '\n');
+    }
+
+    if (*start != '\0' && strstr(start, args) != NULL) {
+        sh_print("%s\n", start);
+    }
 }

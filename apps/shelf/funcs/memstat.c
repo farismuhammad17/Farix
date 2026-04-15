@@ -26,19 +26,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void cmd_memstat(const char* args) {
     if (!args) {
-        printf("Usage: memstat <total segments>\n");
+        sh_print("Usage: memstat <total segments>\n");
         return;
     }
 
     size_t max_segs = atoi(args);
     if (max_segs <= 0 || max_segs > 1024) {
-        printf("memstat: Please specify 1-1024 total segments.\n");
+        sh_print("memstat: Please specify 1-1024 total segments.\n");
         return;
     }
 
     HeapData* entries = malloc(max_segs * sizeof(HeapData));
     if (!entries) {
-        printf("memstat: Out of memory when allocating output space.\n");
+        sh_print("memstat: Out of memory when allocating output space.\n");
         return;
     }
 
@@ -46,10 +46,10 @@ void cmd_memstat(const char* args) {
     int count = GET_HEAP_DATA(entries, max_segs);
     SYSTEM_INT_ON();
 
-    printf("Heap Start: %p | End: %p\n", GET_HEAP_START(), GET_HEAP_END());
-    printf("----------------------------------------------------------------------\n");
-    printf("Address    | Size      | Status | Caller Address\n");
-    printf("----------------------------------------------------------------------\n");
+    sh_print("Heap Start: %p | End: %p\n", GET_HEAP_START(), GET_HEAP_END());
+    sh_print("----------------------------------------------------------------------\n");
+    sh_print("Address    | Size      | Status | Caller Address\n");
+    sh_print("----------------------------------------------------------------------\n");
 
     size_t total_kb  = 0;
     size_t heap_used = 0;
@@ -57,7 +57,7 @@ void cmd_memstat(const char* args) {
     for (size_t i = 0; i < count; i++) {
         HeapData* current = (HeapData*) &entries[i];
 
-        printf("%p | %-9lu | %-6s | 0x%08lX\n",
+        sh_print("%p | %-9lu | %-6s | 0x%08lX\n",
                 current,
                 current->size,
                 current->is_free ? "FREE" : "USED",
@@ -76,12 +76,12 @@ void cmd_memstat(const char* args) {
 
     int usage_pct = (total_kb > 0) ? (int)((used_kb * 100) / total_kb) : 0;
 
-    printf("----------------------------------------------------------------------\n");
-    printf("Total Used: %lu bytes\n", heap_used);
-    printf("----------------------------------------------------------------------\n");
+    sh_print("----------------------------------------------------------------------\n");
+    sh_print("Total Used: %lu bytes\n", heap_used);
+    sh_print("----------------------------------------------------------------------\n");
 
-    printf("Total memory:     %lu KiB\n", total_kb);
-    printf("Used memory:      %lu KiB [%d%%]\n", used_kb, usage_pct);
-    printf("Free memory:      %lu KiB\n", free_kb);
-    printf("Segments counted: %d\n", count);
+    sh_print("Total memory:     %lu KiB\n", total_kb);
+    sh_print("Used memory:      %lu KiB [%d%%]\n", used_kb, usage_pct);
+    sh_print("Free memory:      %lu KiB\n", free_kb);
+    sh_print("Segments counted: %d\n", count);
 }

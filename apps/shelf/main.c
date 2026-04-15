@@ -146,12 +146,47 @@ void shell_parse(const char* input) {
 
         // Capture output for next pipe stage
         strncpy(last_cmd_output, shell_output_buffer, MAX_LAST_CMD_OUTPUT_LEN - 1);
+        last_cmd_output[MAX_LAST_CMD_OUTPUT_LEN - 1] = '\0';
+    }
+
+    if (shell_output_ptr > 0) {
+        printf("%s", shell_output_buffer);
     }
 
     is_piping = false;
 }
 
-void cmd_grep(const char* args){}
+void sh_print(const char* format, ...) {
+    static char local_buf[1024];
+    va_list args;
+    va_start(args, format);
+    int len = vsnprintf(local_buf, sizeof(local_buf), format, args);
+    va_end(args);
+
+    if (len <= 0) return;
+
+    char* src = local_buf;
+    int remaining = len;
+
+    while (remaining > 0) {
+        size_t space_left = sizeof(shell_output_buffer) - shell_output_ptr - 1;
+
+        if (space_left == 0) {
+            printf("shelf: Pipe buffer full\n");
+            return;
+        }
+
+        size_t to_copy = (remaining < (int) space_left) ? (size_t) remaining : space_left;
+
+        memcpy(shell_output_buffer + shell_output_ptr, src, to_copy);
+
+        shell_output_ptr += to_copy;
+        shell_output_buffer[shell_output_ptr] = '\0';
+
+        src += to_copy;
+        remaining -= to_copy;
+    }
+}
 
 void cmd_cd(const char* args){}
 void cmd_cat(const char* args){}

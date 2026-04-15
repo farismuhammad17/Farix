@@ -24,5 +24,5 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void cmd_echo(const char* args) {
     if (!args) return;
 
-    printf("%s\n", args);
+    sh_print("%s\n", args);
 }
