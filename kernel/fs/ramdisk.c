@@ -104,9 +104,9 @@ int ramdisk_write(const char* name, const void* buffer, size_t size, uint32_t of
     return (int) size;
 }
 
-bool ramdisk_create(const char* name) {
+int ramdisk_create(const char* name) {
     uint32_t index = hash(name) % RAMDISK_HASH_SIZE;
-    if (files_table[index] != NULL) return false;
+    if (files_table[index] != NULL) return 0;
 
     File* new_file = (File*) kmalloc(sizeof(File));
     kmemset(new_file, 0, sizeof(File));
@@ -118,12 +118,12 @@ bool ramdisk_create(const char* name) {
 
     files_table[index] = new_file;
 
-    return true;
+    return 1;
 }
 
-bool ramdisk_mkdir(const char* name) {
+int ramdisk_mkdir(const char* name) {
     uint32_t index = hash(name) % RAMDISK_HASH_SIZE;
-    if (files_table[index] != NULL) return false;
+    if (files_table[index] != NULL) return 0;
 
     File* new_file = (File*) kmalloc(sizeof(File));
     kmemset(new_file, 0, sizeof(File));
@@ -135,15 +135,15 @@ bool ramdisk_mkdir(const char* name) {
 
     files_table[index] = new_file;
 
-    return true;
+    return 1;
 }
 
-bool ramdisk_remove(const char* name) {
+int ramdisk_remove(const char* name) {
     uint32_t index = hash(name) % RAMDISK_HASH_SIZE;
     File* file = files_table[index];
 
     if (file == NULL || strcmp(file->name, name) != 0) {
-        return false;
+        return 0;
     }
 
     if (file->data != NULL) {
@@ -157,7 +157,7 @@ bool ramdisk_remove(const char* name) {
     kfree(file);
     files_table[index] = NULL;
 
-    return true;
+    return 1;
 }
 
 File* ramdisk_get(const char* name) {

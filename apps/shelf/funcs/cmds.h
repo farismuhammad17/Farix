@@ -34,8 +34,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MAX_FILENAME_LEN 64
 
 extern char shell_directory[MAX_DIRECTORY_PATH_LEN];
-extern char shell_buffer[MAX_SHELL_BUFFER_LEN];
-extern bool shell_buffer_ready;
 
 extern char  last_cmd_output[MAX_LAST_CMD_OUTPUT_LEN];
 extern char* pipe_buffer;
@@ -54,7 +52,8 @@ typedef struct ShellCommand {
 
 extern ShellCommand command_table[];
 
-void sh_print(const char* format, ...);
+void  sh_print(const char* format, ...);
+char* full_path_to(const char* filename);
 
 void cmd_help(const char* args);
 void cmd_clear(const char* args);

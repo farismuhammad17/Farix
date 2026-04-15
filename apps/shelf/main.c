@@ -28,8 +28,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "funcs/cmds.h"
 
 char shell_directory[MAX_DIRECTORY_PATH_LEN];
-char shell_buffer[MAX_SHELL_BUFFER_LEN];
-bool shell_buffer_ready = false;
 
 char  last_cmd_output[MAX_LAST_CMD_OUTPUT_LEN] = {0};
 char* pipe_buffer = NULL;
@@ -81,6 +79,7 @@ void shell_parse(const char* input);
 
 int main() {
     char input[256];
+    shell_directory[0] = '/';
 
     while (1) {
         printf("/> ");
@@ -191,7 +190,6 @@ void sh_print(const char* format, ...) {
 void cmd_cd(const char* args){}
 void cmd_cat(const char* args){}
 void cmd_write(const char* args){}
-void cmd_touch(const char* args){}
 void cmd_mkdir(const char* args){}
 void cmd_rm(const char* args){}
 void cmd_ls(const char* args){}

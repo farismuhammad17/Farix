@@ -2,7 +2,7 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## Shelf - *Work in progress*
+## Shelf - *15th April, 2026*
 
 > [!WARNING]
 > The ARM32 implementation is still WIP. x86_32 is perfectly functional though.
@@ -16,6 +16,7 @@
 - Syscalls
   - Filled out all Newlib stubs
   - Implemented user syscalls
+  - Added super user system calls for shelf
 - Makefile
   - `m clean apps` to only delete build/apps
 

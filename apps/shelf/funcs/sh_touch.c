@@ -17,23 +17,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef RAMDISK_H
-#define RAMDISK_H
+#include <fcntl.h>
+#include <unistd.h>
 
-#define RAMDISK_HASH_SIZE 64
+#include "cmds.h"
 
-#include "fs/vfs.h"
+void cmd_touch(const char* args) {
+    if (args[0] == '\0') {
+        sh_print("Usage: touch <file name>\n");
+        return;
+    }
 
-extern FileOperations ramdisk_ops;
+    char* path = full_path_to(args);
+    int fd = open(path, O_WRONLY | O_CREAT, 0644);
 
-void      init_ramdisk();
-
-int       ramdisk_read   (const char* name, void* buffer, size_t size, uint32_t offset);
-int       ramdisk_write  (const char* name, const void* buffer, size_t size, uint32_t offset);
-int       ramdisk_create (const char* name);
-int       ramdisk_mkdir  (const char* name);
-int       ramdisk_remove (const char* name);
-File*     ramdisk_get    (const char* name);
-FileNode* ramdisk_getall (const char* path);
-
-#endif
+    if (fd != -1) {
+        close(fd);
+    } else {
+        sh_print("touch: could not create '%s'\n", args);
+    }
+}

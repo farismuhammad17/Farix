@@ -1,15 +1,17 @@
 [Back to journal.md](../journal.md)
 
-# Shelf
+# Shelf - *15th April, 2026*
 
 This is what I am going to call my shell, since I am move it into an ELF, so shell.elf is going to be the shelf. It's really fancy, yea, and I can't be bothered about it. I am branding over here.
 
 I also want to note: I started the kernel in VS Code, but it felt like bloatware slowly, so I switched to Sublime Text, and it felt too ugly. I have no clue why, but it felt so lame, and the features felt quite annoying. It was nice, yes, but it wasn't what I liked. So, I switched over to Zed, but it seems that overtime, Zed would get slow, and I figured its most likely memory leaks or something like that, even if it's written in Rust. Vim, NeoVim, etc. all are so annoying by jam-packing movement and everything into keystrokes. I get its for efficiency, but I don't want to learn my editor just to type text, and I am lazy to learn it. Other stuff, like Cursor, seem to shove AI down my throat so much, I started preferring VS Code. So, currently, I am in Pulsar, unless I change out of it.
-
-*15th April, 2026*
 
 I decided that the system calls definitions that are required by newlib were not fully filled out. The majority of it were left to return default values, even if it was wrong. I decided I didn't like that, and filled out every single one, since I would need them in the future, probably. As of now, the kernel ran properly without the rest of them, but, perhaps, newlib uses them in some way that I haven't seen yet. It also makes the kernel programs even more straightforward.
 
 The user syscalls are all set up now, it was just tedious copy-pasting and changing. It was quite boring, but now we can access the kernel's syscalls from the user! Yay... now to actually write the shelf. Fantastic. This much time was just for setting it up. Quite annoying. I realise how cooked ARM32 will be on this kernel. I have to make that after I get most of x86 done. I plan on finishing ARM32 much later, I only left it here because I wanted to make sure than an HAL won't cause too much annoyances to me in the future.
 
 If I recall right, the HAL was annoying to do, even then. I can only imagine how sufferable it would've been with the whole ACPI and User syscalls and stuff now. Fortunately, that early (yet slightly late) HAL will make sure that the future implementations are not too annoying.
+
+Now, after a lot of time, I actually started to write the shelf, and it's been great - except like the fifty times I have to write a new system call for my special shell to tinker the kernel from user land. The shell being far from the kernel is super annoying, but it's cool, once this shell is done, I can actually start building cool stuff. Currently, I just want to port every command to it, because that would ensure I am done, and the whole user stuff is perfect, but it takes time, because I can't really do the same stuff, and I have to keep making new system calls for the shelf for privileged access, because kernels love discrimination.
+
+I think I am almost done with the entire kernel, at least the base of it. Once the core of the kernel is done, my life will feel fulfilled. From then, I only have to improve and refine the kernel. I hope that day isn't close, I really want the kernel to keep making my life annoying. If this kernel is over, I have nothing to do. Farix is the last thing keeping me sane right now, and is the only project I've actually stayed with. Most of the time, the spark I get for a project dies in a couple days. Building a kernel somehow surpassed that. My previous record was like 2 weeks, but this is been like 2 months. I love it, but I have school tomorrow, and it's kind of in the way.

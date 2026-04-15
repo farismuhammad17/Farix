@@ -17,23 +17,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef RAMDISK_H
-#define RAMDISK_H
+#include <string.h>
 
-#define RAMDISK_HASH_SIZE 64
+#include "funcs/cmds.h"
 
-#include "fs/vfs.h"
+static char path_buffer[MAX_SHELL_BUFFER_LEN];
 
-extern FileOperations ramdisk_ops;
+char* full_path_to(const char* filename) {
+    if (filename[0] == '/')
+        return (char*)(filename + 1); // Remove leading slash
 
-void      init_ramdisk();
+    char* dir = shell_directory;
+    if (dir[0] == '/') dir++;
 
-int       ramdisk_read   (const char* name, void* buffer, size_t size, uint32_t offset);
-int       ramdisk_write  (const char* name, const void* buffer, size_t size, uint32_t offset);
-int       ramdisk_create (const char* name);
-int       ramdisk_mkdir  (const char* name);
-int       ramdisk_remove (const char* name);
-File*     ramdisk_get    (const char* name);
-FileNode* ramdisk_getall (const char* path);
+    if (dir[0] == '\0')
+        return (char*) filename;
 
-#endif
+    // dir + "/" + filename
+    memset(path_buffer, 0, sizeof(path_buffer));
+    strcpy(path_buffer, dir);
+    strcat(path_buffer, "/");
+    strcat(path_buffer, filename);
+
+    return path_buffer;
+}

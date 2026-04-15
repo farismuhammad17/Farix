@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -30,27 +29,27 @@ void vfs_mount(FileOperations* ops) {
 }
 
 int fs_read(const char* name, void* buffer, size_t size, uint32_t offset) {
-    if (!current_fs_ops || !current_fs_ops->read) return false;
+    if (!current_fs_ops || !current_fs_ops->read) return 0;
     return current_fs_ops->read(name, buffer, size, offset);
 }
 
 int fs_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
-    if (!current_fs_ops || !current_fs_ops->write) return false;
+    if (!current_fs_ops || !current_fs_ops->write) return 0;
     return current_fs_ops->write(name, buffer, size, offset);
 }
 
-bool fs_create(const char* name) {
-    if (!current_fs_ops || !current_fs_ops->create) return false;
+int fs_create(const char* name) {
+    if (!current_fs_ops || !current_fs_ops->create) return 0;
     return current_fs_ops->create(name);
 }
 
-bool fs_mkdir(const char* name) {
-    if (!current_fs_ops || !current_fs_ops->mkdir) return false;
+int fs_mkdir(const char* name) {
+    if (!current_fs_ops || !current_fs_ops->mkdir) return 0;
     return current_fs_ops->mkdir(name);
 }
 
-bool fs_remove(const char* name) {
-    if (!current_fs_ops || !current_fs_ops->remove) return false;
+int fs_remove(const char* name) {
+    if (!current_fs_ops || !current_fs_ops->remove) return 0;
     return current_fs_ops->remove(name);
 }
 

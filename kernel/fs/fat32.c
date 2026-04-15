@@ -436,7 +436,7 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint32_t offs
     return -1;
 }
 
-bool fat32_create(const char* path) {
+int fat32_create(const char* path) {
     char* filename = strrchr(path, '/');
     char* dir_path = (char*) path;
 
@@ -452,7 +452,7 @@ bool fat32_create(const char* path) {
     if (dir_path[0] != '\0' && strcmp(dir_path, "/") != 0)
         parent_cluster = find_cluster_for_path(dir_path);
 
-    if (parent_cluster == 0) return false;
+    if (parent_cluster == 0) return 0;
 
     uint8_t  buffer[512];
     uint32_t current_dir_cluster = parent_cluster;
@@ -469,7 +469,7 @@ bool fat32_create(const char* path) {
             for (int i = 0; i < 16; i++) {
                 if (entries[i].name[0] == 0x00 || entries[i].name[0] == 0xE5) {
                     uint32_t file_cluster = find_free_fat_entry();
-                    if (file_cluster == 0) return false;
+                    if (file_cluster == 0) return 0;
 
                     format_to_83(filename, (uint8_t*)entries[i].name);
                     entries[i].attributes = 0x20; // Archive attribute
@@ -480,7 +480,7 @@ bool fat32_create(const char* path) {
                     ata_write_sector(lba + s, buffer);
                     update_fat_entry(file_cluster, 0x0FFFFFFF); // Mark EOF in FAT
 
-                    return true;
+                    return 1;
                 }
             }
         }
@@ -490,7 +490,7 @@ bool fat32_create(const char* path) {
 
     // If we reach here, the directory is full, so we grow it.
     uint32_t new_cluster = find_free_fat_entry();
-    if (new_cluster == 0) return false;
+    if (new_cluster == 0) return 0;
 
     update_fat_entry(last_cluster, new_cluster);
     update_fat_entry(new_cluster, 0x0FFFFFFF);
@@ -504,7 +504,7 @@ bool fat32_create(const char* path) {
 
     // Place the new file entry in the first slot of the new cluster
     uint32_t file_cluster = find_free_fat_entry();
-    if (file_cluster == 0) return false;
+    if (file_cluster == 0) return 0;
 
     // Use the first slot [0] of the freshly zeroed cluster
     FAT32File new_entry = {0};
@@ -519,10 +519,10 @@ bool fat32_create(const char* path) {
     ata_write_sector(new_lba, buffer);
     update_fat_entry(file_cluster, 0x0FFFFFFF);
 
-    return true;
+    return 1;
 }
 
-bool fat32_mkdir(const char* path) {
+int fat32_mkdir(const char* path) {
     char* folder_name = strrchr(path, '/');
     char* parent_path = (char*) path;
 
@@ -538,7 +538,7 @@ bool fat32_mkdir(const char* path) {
     if (parent_path[0] != '\0' && strcmp(parent_path, "/") != 0)
         parent_cluster = find_cluster_for_path(parent_path);
 
-    if (parent_cluster == 0) return false;
+    if (parent_cluster == 0) return 0;
 
     uint8_t  buffer[512];
     uint32_t current_dir_cluster = parent_cluster;
@@ -562,7 +562,7 @@ bool fat32_mkdir(const char* path) {
     }
 
     uint32_t new_parent_ext_cluster = find_free_fat_entry();
-    if (new_parent_ext_cluster == 0) return false;
+    if (new_parent_ext_cluster == 0) return 0;
 
     update_fat_entry(last_cluster, new_parent_ext_cluster);
     update_fat_entry(new_parent_ext_cluster, 0x0FFFFFFF);
@@ -579,7 +579,7 @@ bool fat32_mkdir(const char* path) {
     return create_directory_entry(new_lba, 0, folder_name, parent_cluster);
 }
 
-bool fat32_remove(const char* name) {
+int fat32_remove(const char* name) {
     char* target_name = strrchr(name, '/');
     char* path = (char*) name;
 
@@ -595,7 +595,7 @@ bool fat32_remove(const char* name) {
     if (path[0] != '\0' && strcmp(path, "/") != 0)
         parent_cluster = find_cluster_for_path(path);
 
-    if (parent_cluster == 0) return false;
+    if (parent_cluster == 0) return 0;
 
     uint32_t cluster = parent_cluster;
     uint8_t  dir_buf[512];
@@ -608,7 +608,7 @@ bool fat32_remove(const char* name) {
             FAT32File* entries = (FAT32File*) dir_buf;
 
             for (int i = 0; i < 16; i++) {
-                if (entries[i].name[0] == 0x00) return false; // Not found
+                if (entries[i].name[0] == 0x00) return 0; // Not found
                 if (entries[i].name[0] == 0xE5) continue;
 
                 if (compare_fat_names(entries[i].name, target_name)) {
@@ -624,7 +624,7 @@ bool fat32_remove(const char* name) {
                     entries[i].name[0] = 0xE5;
                     ata_write_sector(first_lba + s, dir_buf);
 
-                    return true;
+                    return 1;
                 }
             }
         }
@@ -632,7 +632,7 @@ bool fat32_remove(const char* name) {
         cluster = get_next_cluster(cluster);
     }
 
-    return false;
+    return 0;
 }
 
 File* fat32_get(const char* name) {

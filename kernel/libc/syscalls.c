@@ -37,6 +37,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // For debugging:
 // #include "drivers/uart.h"
 
+#define O_CREAT 0x40
+
 #define FD_TABLE_MIN 3
 #define FD_TABLE_MAX 32
 
@@ -142,7 +144,13 @@ int _write(int file, char *ptr, int len) {
 int _open(const char *name, int flags, int mode) {
     File* f = fs_get(name);
 
-    if (!f) return -1;
+    if (!f) {
+        if (flags & O_CREAT && fs_create(name)) {
+            f = fs_get(name);
+        } else {
+            return -1; // No O_CREAT, file wasn't found, or disk full
+        }
+    }
 
     for (int i = FD_TABLE_MIN; i < FD_TABLE_MAX; i++) {
         if (fd_table[i] == NULL) {

@@ -77,9 +77,9 @@ void      init_fat32();
 
 int       fat32_read   (const char* name, void* buffer, size_t size, uint32_t offset);
 int       fat32_write  (const char* name, const void* buffer, size_t size, uint32_t offset);
-bool      fat32_create (const char* name);
-bool      fat32_mkdir  (const char* name);
-bool      fat32_remove (const char* name);
+int       fat32_create (const char* name);
+int       fat32_mkdir  (const char* name);
+int       fat32_remove (const char* name);
 File*     fat32_get    (const char* name);
 FileNode* fat32_getall (const char* path);
 

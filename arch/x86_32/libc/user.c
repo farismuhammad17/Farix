@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void* sbrk(int incr) { return _sbrk(incr); }
 int read(int file, char *ptr, int len) { return _read(file, ptr, len); }
 int write(int file, char *ptr, int len) { return _write(file, ptr, len); }
+int open(const char *name, int flags, int mode) { return _open(name, flags, mode); }
 int close(int file) { return _close(file); }
 int lseek(int file, int ptr, int dir) { return _lseek(file, ptr, dir); }
 int fstat(int file, struct stat *st) { return _fstat(file, st); }
