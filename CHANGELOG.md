@@ -7,9 +7,12 @@
 > [!WARNING]
 > The ARM32 implementation is still WIP. x86_32 is perfectly functional though.
 
+- Kernel Shell replaces for ELF Shell
 - ELFs finally die properly
 - File system
   - Read and Write take `offset`
+- Tasks
+  - Privileges support super users
 - Syscalls
   - Filled out all Newlib stubs
   - Implemented user syscalls

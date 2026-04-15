@@ -81,7 +81,7 @@ void init_multitasking() {
     first_task_list = current_task_list;
 }
 
-task* create_task(void (*entry_point)(), const char* name, const bool privilege) {
+task* create_task(void (*entry_point)(), const char* name, const int privilege) {
     task* new_task = (task*) kmalloc(sizeof(task));
     kmemset(new_task, 0, sizeof(task));
 
@@ -114,10 +114,10 @@ task* create_task(void (*entry_point)(), const char* name, const bool privilege)
     uint32_t* stack = (uint32_t*) kmalloc(4096);
     uint32_t* esp = stack + 1024; // High address
 
-    if (privilege) { // 0 -> Kernel task
-        *(--esp) = (uint32_t) elf_user_trampoline;
-    } else {
+    if (privilege == PRIV_KERNEL) {
         *(--esp) = (uint32_t) task_trampoline;  // EIP (Where the task starts)
+    } else {
+        *(--esp) = (uint32_t) elf_user_trampoline;
     }
 
     // The PUSHA placeholders (8 registers)

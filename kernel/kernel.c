@@ -53,7 +53,7 @@ void shell_thread() {
 }
 
 // Called before the architecture initialisations. Everything here
-// must be so raw, it should not depend on literally anything else.
+// must be so raw; it should not depend on literally anything else.
 void early_kmain() {
     terminal_clear_phys();
 
@@ -94,8 +94,11 @@ void kmain() {
 
     vfs_mount(&fat32_ops); // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
 
-    create_task(shell_thread, "Shell", 0);
+    // create_task(shell_thread, "Shell", 0);
     create_task(handle_mouse, "Terminal mouse handler", 0);
+
+    task* shelf_task = exec("shelf.elf");
+    shelf_task->privilege = PRIV_SUPER;
 
     last_init = "kmain";
 

@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include "process/task.h"
+
 // ELF Identifiers
 #define ELFMAG0 0x7F
 #define ELFMAG1 'E'
@@ -67,6 +69,6 @@ typedef struct {
 
 extern void elf_user_trampoline();
 
-bool exec(const char* path);
+task* exec(const char* path);
 
 #endif

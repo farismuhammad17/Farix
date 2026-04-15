@@ -84,7 +84,7 @@ void _exit(int status) {
 int _read(int file, char *ptr, int len) {
     if (file == 0) { // stdin
         int i = 0;
-        while (i < len) {
+        while (i < len - 1) {
             while (kbd_head == kbd_tail) {
                 current_task->state = TASK_SLEEPING;
                 task_yield();
@@ -92,9 +92,20 @@ int _read(int file, char *ptr, int len) {
 
             char c = kbd_buffer[kbd_tail];
             kbd_tail = (kbd_tail + 1) % KBD_BUFFER_LEN;
-            ptr[i++] = c;
 
-            if (c == '\n') break; // Stop reading at newline
+            if (c == '\b') {
+                if (i > 0) {
+                    i--;
+                    echo_char('\b');
+                }
+                continue;
+            }
+
+            // Store and Echo
+            ptr[i++] = c;
+            echo_char(c);
+
+            if (c == '\n' || c == '\r') break;
         }
         return i;
     }

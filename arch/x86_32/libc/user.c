@@ -18,10 +18,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <stdint.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #include "farix.h"
+
+void* sbrk(int incr) { return _sbrk(incr); }
+int read(int file, char *ptr, int len) { return _read(file, ptr, len); }
+int write(int file, char *ptr, int len) { return _write(file, ptr, len); }
+int close(int file) { return _close(file); }
+int lseek(int file, int ptr, int dir) { return _lseek(file, ptr, dir); }
+int fstat(int file, struct stat *st) { return _fstat(file, st); }
+int isatty(int file) { return _isatty(file); }
+int kill(int pid, int sig) { return _kill(pid, sig); }
+int getpid() { return _getpid(); }
 
 // Writing inline assembly is tedious, this function just abstract that off.
 // Unused arguments are set to 0
@@ -87,12 +97,32 @@ int _kill(int pid, int sig) {
     return syscall(SYS_KILL, (uint32_t) pid, (uint32_t) sig, 0);
 }
 
-void* sbrk(int incr) { return _sbrk(incr); }
-int read(int file, char *ptr, int len) { return _read(file, ptr, len); }
-int write(int file, char *ptr, int len) { return _write(file, ptr, len); }
-int close(int file) { return _close(file); }
-int lseek(int file, int ptr, int dir) { return _lseek(file, ptr, dir); }
-int fstat(int file, struct stat *st) { return _fstat(file, st); }
-int isatty(int file) { return _isatty(file); }
-int kill(int pid, int sig) { return _kill(pid, sig); }
-int getpid() { return _getpid(); }
+// Super User functions
+
+int UART_PUTS(const char *data) {
+    return syscall(SYS_UART_PUT, (uint32_t) data, 0, 0);
+}
+
+int GET_HEAP_DATA(HeapData* buffer, int max_count) {
+    return syscall(SYS_GET_HEAP, (uint32_t) buffer, (uint32_t) max_count, 0);
+}
+
+int GET_HEAP_SEG_SIZE() {
+    return syscall(SYS_GET_HEAP_SEG_SIZE, 0, 0, 0);
+}
+
+int GET_HEAP_START() {
+    return syscall(SYS_GET_HEAP_START, 0, 0, 0);
+}
+
+int GET_HEAP_END() {
+    return syscall(SYS_GET_HEAP_END, 0, 0, 0);
+}
+
+int SYSTEM_INT_ON() {
+    return syscall(SYS_INT_ON, 0, 0, 0);
+}
+
+int SYSTEM_INT_OFF() {
+    return syscall(SYS_INT_OFF, 0, 0, 0);
+}

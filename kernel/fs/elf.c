@@ -43,23 +43,23 @@ void elf_user_trampoline() {
     while(1); // Should never reach here
 }
 
-bool exec(const char* path) {
+task* exec(const char* path) {
     File* file_obj = fs_get(path);
     if (!file_obj || file_obj->size == 0) {
         printf("ELF Error: File %s not found or empty\n", path);
-        return false;
+        return NULL;
     }
 
     uint8_t* file_buffer = (uint8_t*) kmalloc(file_obj->size);
     if (!file_buffer) {
         printf("ELF Error: Failed to allocate file buffer\n");
-        return false;
+        return NULL;
     }
 
     if (!fs_read(path, file_buffer, file_obj->size, 0)) {
         printf("ELF Error: Failed to read file data\n");
         kfree(file_buffer);
-        return false;
+        return NULL;
     }
 
     elf_header_t* header = (elf_header_t*) file_buffer;
@@ -72,7 +72,7 @@ bool exec(const char* path) {
     {
         printf("ELF Error: Not a valid ELF executable\n");
         kfree(file_buffer);
-        return false;
+        return NULL;
     }
 
     uint32_t* current_pd_phys = vmm_get_current_directory();
@@ -81,7 +81,7 @@ bool exec(const char* path) {
     if (!user_pd_phys) {
         printf("ELF Error: Failed to allocate page directory\n");
         kfree(file_buffer);
-        return false;
+        return NULL;
     }
 
     uint32_t* current_pd_virt     = (uint32_t*) PHYSICAL_TO_VIRTUAL(current_pd_phys);
@@ -157,5 +157,5 @@ bool exec(const char* path) {
 
     kfree(file_buffer);
 
-    return true;
+    return elf_task;
 }

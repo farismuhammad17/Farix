@@ -20,7 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef FARIX_H
 #define FARIX_H
 
+#include <stdbool.h>
 #include <sys/stat.h>
+
+#define SYS_DONE     0
+#define SYS_ERROR   -1
 
 #define SYS_EXIT     1 // NOTE: SYS_EXIT is hardcoded in user.asm, changing requires changing there
 #define SYS_READ     2
@@ -34,6 +38,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYS_KILL     10
 #define SYS_SBRK     11
 
+// Super user
+#define SYS_UART_PUT          1000
+#define SYS_GET_HEAP          1001
+#define SYS_GET_HEAP_SEG_SIZE 1002
+#define SYS_GET_HEAP_START    1003
+#define SYS_GET_HEAP_END      1004
+#define SYS_INT_ON            1005
+#define SYS_INT_OFF           1006
+
 void  _exit(int status);
 int   _read(int file, char *ptr, int len);
 int   _write(int file, char *ptr, int len);
@@ -45,5 +58,22 @@ int   _kill(int pid, int sig);
 void* _sbrk(int incr);
 int   _isatty(int file);
 int   _fstat(int file, struct stat *st);
+
+// Super user
+
+typedef struct {
+    uint32_t address;
+    uint32_t size;
+    uint32_t caller;
+    bool is_free;
+} HeapData;
+
+int UART_PUTS(const char *data);
+int GET_HEAP_DATA(HeapData* buffer, int max_count);
+int GET_HEAP_SEG_SIZE();
+int GET_HEAP_START();
+int GET_HEAP_END();
+int SYSTEM_INT_ON();
+int SYSTEM_INT_OFF();
 
 #endif

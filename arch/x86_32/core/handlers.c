@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "memory/vmm.h"
+#include "memory/heap.h"
 #include "process/task.h"
 
 #include "farix.h"
@@ -143,6 +144,7 @@ static void execute_panic_cmd(char cmd[]) {
     } else printf("\nUnknown command: %s", cmd);
 }
 
+// TODO IMP: Panic shell doesn't properly print, even though it is working
 static void panic_shell() {
     // Flush any leftover keys from the crash event
     while (inb(0x64) & 0x01) inb(0x60);
@@ -215,7 +217,6 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
 
 void syscall_handler(syscalls_registers_x86_32_t* regs) {
     // EAX: Caller function ID, also return value (if any)
-
     uint32_t arg1 = regs->ebx;
     uint32_t arg2 = regs->ecx;
     uint32_t arg3 = regs->edx;
@@ -265,9 +266,91 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             regs->eax = (uint32_t) _fstat((int) arg1, (struct stat*) arg2);
             break;
 
+        case SYS_UART_PUT:
+            if (current_task->privilege != PRIV_SUPER) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
+            uart_print((const char*) arg1);
+            regs->eax = SYS_DONE;
+            break;
+
+        case SYS_GET_HEAP:
+            if (current_task->privilege != PRIV_SUPER) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
+            HeapData* heapdata_buf = (HeapData*) arg1;
+            int max_entries = (int) arg2;
+            int count = 0;
+
+            HeapSegment* current = first_segment;
+
+            while (current != NULL && count < max_entries) {
+                heapdata_buf[count].address = (uint32_t) current;
+                heapdata_buf[count].size    = current->size;
+                heapdata_buf[count].is_free = current->is_free;
+                heapdata_buf[count].caller  = current->caller;
+
+                current = current->next;
+                count++;
+            }
+
+            regs->eax = count;
+            break;
+
+        case SYS_GET_HEAP_SEG_SIZE:
+            if (current_task->privilege != PRIV_SUPER) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
+            regs->eax = sizeof(HeapSegment);
+            break;
+
+        case SYS_GET_HEAP_START:
+            if (current_task->privilege != PRIV_SUPER) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
+            regs->eax = heap_start;
+            break;
+
+        case SYS_GET_HEAP_END:
+            if (current_task->privilege != PRIV_SUPER) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
+            regs->eax = heap_end;
+            break;
+
+        case SYS_INT_ON:
+            if (current_task->privilege != PRIV_SUPER) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
+            system_int_on();
+            regs->eax = SYS_DONE;
+            break;
+
+        case SYS_INT_OFF:
+            if (current_task->privilege != PRIV_SUPER) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
+            system_int_off();
+            regs->eax = SYS_DONE;
+            break;
+
         default:
-            printf("Unknown syscall: %ld\n", regs->eax);
-            regs->eax = -1;
+            printf("Unknown syscall (%s): %ld\n", current_task->name, regs->eax);
+            regs->eax = SYS_ERROR;
             break;
     }
 }

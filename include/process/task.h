@@ -29,6 +29,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define TASK_SLEEPING 2
 #define TASK_DEAD     3
 
+#define PRIV_KERNEL   0 // Kernel privilege
+#define PRIV_USER     1 // User
+#define PRIV_SUPER    2 // Super user
+
 // Ensure this is a proper power of 2, no more than 64
 #define TASKS_LIST_LEN 8
 
@@ -66,7 +70,7 @@ typedef struct task {
     uint32_t state;           // Running, Ready, etc.
     uint32_t* stack_origin;   // Memory allocated for the stack
     void (*entry_func)();
-    bool privilege;           // 0 -> Kernel ; 1 -> User
+    int privilege;
     const char* name;
 } task;
 
@@ -84,7 +88,7 @@ extern task_list* first_task_list;
 
 void init_multitasking();
 
-task* create_task(void (*entry_point)(), const char* name, const bool privilege);
+task* create_task(void (*entry_point)(), const char* name, const int privilege);
 void  kill_task(uint32_t id);
 
 void  schedule();

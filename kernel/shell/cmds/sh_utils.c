@@ -60,9 +60,6 @@ void cmd_secho(const char* args) {
 }
 
 void cmd_memstat(UNUSED_ARG const char* args) {
-    sh_print("memstat: This function is unsupported in the current version due to bugs in sh_print.\n");
-    return;
-
     // Disable interrupts to prevent the scheduler from
     // switching tasks while we use the heap.
     system_int_off();
