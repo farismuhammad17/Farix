@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <farix.h>
+#include "farix.h"
 
 #include "cmds.h"
 

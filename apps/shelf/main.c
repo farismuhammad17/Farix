@@ -188,8 +188,6 @@ void sh_print(const char* format, ...) {
 }
 
 void cmd_cd(const char* args){}
-void cmd_cat(const char* args){}
-void cmd_write(const char* args){}
 void cmd_rm(const char* args){}
 void cmd_ls(const char* args){}
 void cmd_exec(const char* args){}

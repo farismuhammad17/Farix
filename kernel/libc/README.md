@@ -5,7 +5,7 @@ Newlib is a lightweight C standard library designed for embedded systems. Since 
 To let the user applications access kernel functions, we have to port them through a syscall. An application cannot call kernel functions directly, so we define them in the `syscalls.c` file. Since the function that calls the syscall itself is assembly, it is defined inside the `arch` folder, since its architecture dependant.
 
 <p align="center">
-    <img src="../../readme-assets/flowchart.svg">
+    <img src="../../readme-assets/syscall-chain.svg">
 </p>
 
 This long boring chain is the only way to make user applications communicate with the kernel without any lag. Of course, we *can* have applications inside the kernel itself to speed it up, but that wouldn't be the best idea for safety.
