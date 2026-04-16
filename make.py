@@ -55,6 +55,7 @@ globals.IGNORES = (
     # kernel, even though it is part of the whole thing.
     "arch/x86_32/libc/",
     "arch/arm32/libc/",
+    "kernel/libc/user.c",
 )
 
 # --- INITIALIZATION ---
@@ -126,11 +127,13 @@ globals.CRTBEGIN = globals.run(f"{globals.CC} {globals.CFLAGS} -print-file-name=
 globals.CRTEND   = globals.run(f"{globals.CC} {globals.CFLAGS} -print-file-name=crtend.o")
 
 globals.USER_LIBC_DIR = f"arch/{globals.arch}/libc"
-globals.USER_LIBC = f"{globals.USER_LIBC_DIR}/user.c"
+globals.USER_LIBC = "kernel/libc/user.c"
+globals.USER_LIBC_ARCH = f"{globals.USER_LIBC_DIR}/user.c"
 globals.USER_ASM  = f"{globals.USER_LIBC_DIR}/user.asm"
 
 globals.USER_BUILD_DIR = "build/apps"
-globals.USER_LIBC_OBJ = f"{globals.USER_BUILD_DIR}/user.o"
+globals.USER_LIBC_OBJ = "build/kernel/libc/user.o"
+globals.USER_LIBC_ARCH_OBJ = f"{globals.USER_BUILD_DIR}/user.o"
 globals.USER_ASM_OBJ  = f"{globals.USER_BUILD_DIR}/user_asm.o"
 
 globals.APPS_ROOT = "apps"

@@ -11,6 +11,9 @@
   - Implemented commands: `touch`, `mkdir`, `write`, `cat`, `ls`
 - Syscalls
   - `SYS_MKDIR` User syscall
+  - Separated arch specific stubs from arch independent
+- Makefile
+  - Compiles arch specific user libC code
 
 ## Shelf - *15th April, 2026*
 

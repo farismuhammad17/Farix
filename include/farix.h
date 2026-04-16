@@ -62,6 +62,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYS_GET_TASK_LIST       SUPER_MIN_SYSCALL + 11
 #define SYS_TASK_KILL           SUPER_MIN_SYSCALL + 12
 
+int32_t farix_syscall (uint32_t sys_id, uint32_t arg1, uint32_t arg2, uint32_t arg3);
+
 typedef struct {
     bool isdir;
     char name[SYSCALL_FILENAME_LEN];

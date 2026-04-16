@@ -5,6 +5,7 @@ import makefile.globals
 def compile_apps():
     os.makedirs(makefile.globals.USER_BUILD_DIR, exist_ok=True)
 
+    makefile.globals.build_object(makefile.globals.USER_LIBC_ARCH, makefile.globals.USER_LIBC_ARCH_OBJ, f"{makefile.globals.CC} -c {{src}} -o {{obj}} {makefile.globals.USER_CFLAGS}")
     makefile.globals.build_object(makefile.globals.USER_LIBC, makefile.globals.USER_LIBC_OBJ, f"{makefile.globals.CC} -c {{src}} -o {{obj}} {makefile.globals.USER_CFLAGS}")
     makefile.globals.build_object(makefile.globals.USER_ASM, makefile.globals.USER_ASM_OBJ, f"nasm -f elf32 {{src}} -o {{obj}}")
 
@@ -42,7 +43,7 @@ def compile_apps():
 
         # Put USER_ASM_OBJ at the front to ensure _start is seen first
         link_cmd = f"{makefile.globals.CC} -T {ld_script} -ffreestanding -nostdlib -o {out_elf} " \
-                   f"{makefile.globals.USER_ASM_OBJ} {objs_str} {makefile.globals.USER_LIBC_OBJ} {libs}"
+                   f"{makefile.globals.USER_ASM_OBJ} {objs_str} {makefile.globals.USER_LIBC_ARCH_OBJ} {makefile.globals.USER_LIBC_OBJ} {libs}"
 
         print(f"\x1b[3;35mLinking {out_elf}...\x1b[0m")
         makefile.globals.run(link_cmd)
