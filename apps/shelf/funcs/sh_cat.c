@@ -51,7 +51,7 @@ void cmd_cat(const char* args) {
     // Allocate the buffer +1 for the null terminator
     char* buffer = (char*) malloc(size + 1);
     if (!buffer) {
-        sh_print("cat: out of memory for %d bytes\n", (int)size);
+        sh_print("cat: out of memory for %d bytes\n", (int) size);
         close(fd);
         return;
     }

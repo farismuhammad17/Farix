@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
+#include "fs/vfs.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
 #include "process/task.h"
@@ -265,6 +266,44 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             break;
         }
 
+        case SYS_DIRSCAN: {
+            FileData* buf = (FileData*) arg2;
+            size_t count  = (size_t) arg3;
+
+            FileNode* head = fs_getall((char*) arg1);
+            FileNode* temp = NULL;
+
+            if (!head) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
+
+            size_t total_count = 0;
+
+            for (size_t i = 0; i < count; i++) {
+                buf[i].isdir = head->file.is_directory;
+                strncpy(buf[i].name, head->file.name, SYSCALL_FILENAME_LEN - 1);
+
+                temp = head->next;
+                kfree(head);
+                head = temp;
+
+                total_count++;
+
+                if (!head) break;
+            }
+
+            // Cleanup unused nodes
+            while (head) {
+                temp = head->next;
+                kfree(head);
+                head = temp;
+            }
+
+            regs->eax = total_count;
+            break;
+        }
+
         case SYS_LSEEK: {
             regs->eax = (uint32_t) _lseek((int) arg1, (int) arg2, (int) arg3);
             break;
@@ -312,17 +351,17 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
                 break;
             }
 
-            HeapData* heapdata_buf = (HeapData*) arg1;
+            HeapData* buf = (HeapData*) arg1;
             int max_entries = (int) arg2;
             int count = 0;
 
             HeapSegment* current = first_segment;
 
             while (current != NULL && count < max_entries) {
-                heapdata_buf[count].address = (uint32_t) current;
-                heapdata_buf[count].size    = current->size;
-                heapdata_buf[count].is_free = current->is_free;
-                heapdata_buf[count].caller  = current->caller;
+                buf[count].address = (uint32_t) current;
+                buf[count].size    = current->size;
+                buf[count].is_free = current->is_free;
+                buf[count].caller  = current->caller;
 
                 current = current->next;
                 count++;

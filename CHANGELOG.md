@@ -8,7 +8,7 @@
 > The ARM32 implementation is still WIP. x86_32 is perfectly functional though.
 
 - Shelf
-  - Implemented commands: `touch`, `mkdir`, `write`, `cat`
+  - Implemented commands: `touch`, `mkdir`, `write`, `cat`, `ls`
 - Syscalls
   - `SYS_MKDIR` User syscall
 
