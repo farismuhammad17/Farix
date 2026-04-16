@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -36,8 +37,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // For debugging:
 // #include "drivers/uart.h"
-
-#define O_CREAT 0x40
 
 #define FD_TABLE_MIN 3
 #define FD_TABLE_MAX 32
@@ -145,7 +144,7 @@ int _open(const char *name, int flags, int mode) {
     File* f = fs_get(name);
 
     if (!f) {
-        if (flags & O_CREAT && fs_create(name)) {
+        if ((flags & O_CREAT) && fs_create(name)) {
             f = fs_get(name);
         } else {
             return -1; // No O_CREAT, file wasn't found, or disk full
