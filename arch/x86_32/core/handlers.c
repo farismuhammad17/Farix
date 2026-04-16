@@ -260,6 +260,11 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             break;
         }
 
+        case SYS_MKDIR: {
+            regs->eax = (uint32_t) _mkdir((const char*) arg1, (mode_t) arg2);
+            break;
+        }
+
         case SYS_LSEEK: {
             regs->eax = (uint32_t) _lseek((int) arg1, (int) arg2, (int) arg3);
             break;

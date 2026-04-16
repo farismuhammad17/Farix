@@ -2,10 +2,17 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## Shelf - *15th April, 2026*
+## Shelf File Command - *16th April, 2026*
 
 > [!WARNING]
 > The ARM32 implementation is still WIP. x86_32 is perfectly functional though.
+
+- Shelf
+  - Implemented commands: `touch`, `mkdir`
+- Syscalls
+  - `SYS_MKDIR` User syscall
+
+## Shelf - *15th April, 2026*
 
 - Kernel Shell replaces for ELF Shell
 - ELFs finally die properly

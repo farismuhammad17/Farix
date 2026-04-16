@@ -145,6 +145,8 @@ int _open(const char *name, int flags, int mode) {
 
     if (!f) {
         if ((flags & O_CREAT) && fs_create(name)) {
+            // TODO: Make fs_create write into a File* to use,
+            // instead of looking up the same file that was just made
             f = fs_get(name);
         } else {
             return -1; // No O_CREAT, file wasn't found, or disk full
@@ -171,6 +173,14 @@ int _close(int file) {
     kfree((void*) fd_table[file]);
     fd_table[file] = NULL;
     return 0;
+}
+
+int _mkdir(const char *path, mode_t mode) {
+    if (fs_mkdir(path)) {
+        return SYS_DONE;
+    }
+
+    return SYS_ERROR;
 }
 
 int _fstat(int file, struct stat *st) {
@@ -262,14 +272,14 @@ int getentropy(void *ptr, size_t len) {
 }
 
 void* sbrk(int incr) { return _sbrk(incr); }
-int read(int file, char *ptr, int len) { return _read(file, ptr, len); }
-int write(int file, char *ptr, int len) { return _write(file, ptr, len); }
-int close(int file) { return _close(file); }
-int lseek(int file, int ptr, int dir) { return _lseek(file, ptr, dir); }
-int fstat(int file, struct stat *st) { return _fstat(file, st); }
-int isatty(int file) { return _isatty(file); }
-int kill(int pid, int sig) { return _kill(pid, sig); }
-int getpid() { return _getpid(); }
+int   read(int file, char *ptr, int len) { return _read(file, ptr, len); }
+int   write(int file, char *ptr, int len) { return _write(file, ptr, len); }
+int   close(int file) { return _close(file); }
+int   lseek(int file, int ptr, int dir) { return _lseek(file, ptr, dir); }
+int   fstat(int file, struct stat *st) { return _fstat(file, st); }
+int   isatty(int file) { return _isatty(file); }
+int   kill(int pid, int sig) { return _kill(pid, sig); }
+int   getpid() { return _getpid(); }
 
 void _free_r(struct _reent *r, void *ptr) {
     kfree(ptr);

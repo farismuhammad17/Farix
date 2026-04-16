@@ -37,12 +37,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYS_WRITE                 USER_MIN_SYSCALL + 3
 #define SYS_OPEN                  USER_MIN_SYSCALL + 4
 #define SYS_CLOSE                 USER_MIN_SYSCALL + 5
-#define SYS_LSEEK                 USER_MIN_SYSCALL + 6
-#define SYS_ISATTY                USER_MIN_SYSCALL + 7
-#define SYS_FSTAT                 USER_MIN_SYSCALL + 8
-#define SYS_GETPID                USER_MIN_SYSCALL + 9
-#define SYS_KILL                  USER_MIN_SYSCALL + 10
-#define SYS_SBRK                  USER_MIN_SYSCALL + 11
+#define SYS_MKDIR                 USER_MIN_SYSCALL + 6
+#define SYS_LSEEK                 USER_MIN_SYSCALL + 7
+#define SYS_ISATTY                USER_MIN_SYSCALL + 8
+#define SYS_FSTAT                 USER_MIN_SYSCALL + 9
+#define SYS_GETPID                USER_MIN_SYSCALL + 10
+#define SYS_KILL                  USER_MIN_SYSCALL + 11
+#define SYS_SBRK                  USER_MIN_SYSCALL + 12
 
 // Super user system calls
 #define SYS_UART_PUT              SUPER_MIN_SYSCALL + 1
@@ -88,6 +89,7 @@ int   _read(int file, char *ptr, int len);
 int   _write(int file, char *ptr, int len);
 int   _open(const char *name, int flags, int mode);
 int   _close(int file);
+int   _mkdir(const char *path, mode_t mode);
 int   _lseek(int file, int ptr, int dir);
 int   _getpid();
 int   _kill(int pid, int sig);

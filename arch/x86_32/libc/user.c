@@ -41,15 +41,16 @@ static int32_t farix_syscall(uint32_t sys_id, uint32_t arg1, uint32_t arg2, uint
 }
 
 void* sbrk(int incr) { return _sbrk(incr); }
-int read(int file, char *ptr, int len) { return _read(file, ptr, len); }
-int write(int file, char *ptr, int len) { return _write(file, ptr, len); }
-int open(const char *name, int flags, int mode) { return _open(name, flags, mode); }
-int close(int file) { return _close(file); }
-int lseek(int file, int ptr, int dir) { return _lseek(file, ptr, dir); }
-int fstat(int file, struct stat *st) { return _fstat(file, st); }
-int isatty(int file) { return _isatty(file); }
-int kill(int pid, int sig) { return _kill(pid, sig); }
-int getpid() { return _getpid(); }
+int   read(int file, char *ptr, int len) { return _read(file, ptr, len); }
+int   write(int file, char *ptr, int len) { return _write(file, ptr, len); }
+int   open(const char *name, int flags, int mode) { return _open(name, flags, mode); }
+int   close(int file) { return _close(file); }
+int   mkdir(const char *path, mode_t mode) { return _mkdir(path, mode); }
+int   lseek(int file, int ptr, int dir) { return _lseek(file, ptr, dir); }
+int   fstat(int file, struct stat *st) { return _fstat(file, st); }
+int   isatty(int file) { return _isatty(file); }
+int   kill(int pid, int sig) { return _kill(pid, sig); }
+int   getpid() { return _getpid(); }
 
 // Since we do not compile this file with the rest of the kernel, defining the
 // newlib stubs here does not cause multiple definitions error.
@@ -76,6 +77,10 @@ int _open(const char *name, int flags, int mode) {
 
 int _close(int file) {
     return farix_syscall(SYS_CLOSE, (uint32_t) file, 0, 0);
+}
+
+int _mkdir(const char *path, mode_t mode) {
+    return farix_syscall(SYS_MKDIR, (uint32_t) path, (uint32_t) mode, 0);
 }
 
 int _fstat(int file, struct stat *st) {

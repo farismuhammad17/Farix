@@ -1,5 +1,15 @@
 Newlib is a lightweight C standard library designed for embedded systems. Since Newlib doesn't know how your specific kernel handles files or memory, you have to provide "stubs"—a set of glue functions that translate standard C calls (like `printf` or `malloc`) into your kernel's internal system calls.
 
+# User C library
+
+To let the user applications access kernel functions, we have to port them through a syscall. An application cannot call kernel functions directly, so we define them in the `syscalls.c` file. Since the function that calls the syscall itself is assembly, it is defined inside the `arch` folder, since its architecture dependant.
+
+<p align="center">
+    <img src="../../readme-assets/flowchart.svg">
+</p>
+
+This long boring chain is the only way to make user applications communicate with the kernel without any lag. Of course, we *can* have applications inside the kernel itself to speed it up, but that wouldn't be the best idea for safety.
+
 # System Stubs
 
 These stubs act as the interface between the standard C library and your kernel hardware abstractions. They allow user-space programs to use familiar functions while the kernel handles the heavy lifting of disk IO and memory management.
