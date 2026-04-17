@@ -54,7 +54,6 @@ ShellCommand command_table[] = {
     {"mkdir", cmd_mkdir, "Create new folder"},
     {"rm", cmd_rm, "Delete file"},
     {"ls", cmd_ls, "List directory contents"},
-    {"exec", cmd_exec, "Execute ELF file"},
     {"tasks", cmd_tasks, "List of running tasks"},
     {"kill", cmd_kill, "Kill a task given the process ID"},
     {"peek", cmd_peek, "Inspect a task"},
@@ -193,5 +192,3 @@ void sh_print(const char* format, ...) {
         remaining -= to_copy;
     }
 }
-
-void cmd_exec(const char* args){}

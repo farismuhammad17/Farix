@@ -277,6 +277,11 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             break;
         }
 
+        case SYS_EXEC: {
+            regs->eax = (uint32_t) exec_elf((const char*) arg1) ? SYS_DONE : SYS_ERROR;
+            break;
+        }
+
         case SYS_MKDIR: {
             regs->eax = (uint32_t) _mkdir((const char*) arg1, (mode_t) arg2);
             break;
@@ -284,6 +289,36 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
 
         case SYS_REMOVE: {
             regs->eax = (uint32_t) (fs_remove((const char*) arg1) ? SYS_DONE : SYS_ERROR);
+            break;
+        }
+
+        case SYS_LSEEK: {
+            regs->eax = (uint32_t) _lseek((int) arg1, (int) arg2, (int) arg3);
+            break;
+        }
+
+        case SYS_GETPID: {
+            regs->eax = (uint32_t) _getpid();
+            break;
+        }
+
+        case SYS_KILL: {
+            regs->eax = (uint32_t) _kill((int) arg1, (int) arg2);
+            break;
+        }
+
+        case SYS_SBRK: {
+            regs->eax = (uint32_t) _sbrk((int) arg1);
+            break;
+        }
+
+        case SYS_ISATTY: {
+            regs->eax = (uint32_t) _isatty((int) arg1);
+            break;
+        }
+
+        case SYS_FSTAT: {
+            regs->eax = (uint32_t) _fstat((int) arg1, (struct stat*) arg2);
             break;
         }
 
@@ -322,36 +357,6 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             }
 
             regs->eax = total_count;
-            break;
-        }
-
-        case SYS_LSEEK: {
-            regs->eax = (uint32_t) _lseek((int) arg1, (int) arg2, (int) arg3);
-            break;
-        }
-
-        case SYS_GETPID: {
-            regs->eax = (uint32_t) _getpid();
-            break;
-        }
-
-        case SYS_KILL: {
-            regs->eax = (uint32_t) _kill((int) arg1, (int) arg2);
-            break;
-        }
-
-        case SYS_SBRK: {
-            regs->eax = (uint32_t) _sbrk((int) arg1);
-            break;
-        }
-
-        case SYS_ISATTY: {
-            regs->eax = (uint32_t) _isatty((int) arg1);
-            break;
-        }
-
-        case SYS_FSTAT: {
-            regs->eax = (uint32_t) _fstat((int) arg1, (struct stat*) arg2);
             break;
         }
 

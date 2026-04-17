@@ -43,7 +43,7 @@ void elf_user_trampoline() {
     while(1); // Should never reach here
 }
 
-task* exec(const char* path) {
+task* exec_elf(const char* path) {
     File* file_obj = fs_get(path);
     if (!file_obj || file_obj->size == 0) {
         printf("ELF Error: File %s not found or empty\n", path);

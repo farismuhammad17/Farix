@@ -35,6 +35,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "drivers/terminal.h"
 
+// TODO: Make terminal not depend stuff on shell_directory
+
 #define VGA_MEMORY 0xB8000
 
 #define VGA_COLOR_BLACK         0

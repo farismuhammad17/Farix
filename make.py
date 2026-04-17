@@ -40,6 +40,10 @@ from makefile.lint  import *
 from makefile.utils import *
 from makefile.help  import *
 
+globals.arch = "x86_32"
+if "arm32" in sys.argv:
+    globals.arch = "arm32"
+
 globals.IGNORES = (
     # These ACPI stuff come with ACPICA, having these make it easier to
     # install newer versions of ACPICA without having to manually delete
@@ -55,8 +59,7 @@ globals.IGNORES = (
     # User system calls would get in the way of the kernel's,
     # so we don't actually compile it with the rest of the
     # kernel, even though it is part of the whole thing.
-    "arch/x86_32/libc/",
-    "arch/arm32/libc/",
+    f"arch/{globals.arch}/libc/",
     "kernel/libc/user.c",
 )
 
@@ -65,10 +68,6 @@ globals.IGNORES = (
 globals.OS = globals.run("uname -s")
 
 globals.DISK_PATH = "build/disk.img"
-
-globals.arch = "x86_32"
-if "arm32" in sys.argv:
-    globals.arch = "arm32"
 
 if globals.arch == "x86_32":
     globals.QEMU_BIN = "qemu-system-i386"

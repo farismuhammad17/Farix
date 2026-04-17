@@ -69,6 +69,6 @@ typedef struct {
 
 extern void elf_user_trampoline();
 
-task* exec(const char* path);
+task* exec_elf(const char* path);
 
 #endif

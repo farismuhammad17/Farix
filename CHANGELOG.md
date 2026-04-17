@@ -8,9 +8,13 @@
 > The ARM32 implementation is still WIP. x86_32 is perfectly functional though.
 
 - Shelf
-  - Implemented commands: `touch`, `mkdir`, `write`, `cat`, `ls`
+  - Implemented commands: `touch`, `mkdir`, `write`, `cat`, `ls`, `cd`, `rm`
+  - Arranged into `sh_utils`, `sh_fs`, `sh_tasks`
+  - Echoes initial text
+- ELF
+  - Renamed `exec` to `exec_elf`
 - Syscalls
-  - `SYS_MKDIR` User syscall
+  - `SYS_MKDIR`, `SYS_EXEC` user syscalls
   - Separated arch specific stubs from arch independent
 - Makefile
   - Compiles arch specific user libC code

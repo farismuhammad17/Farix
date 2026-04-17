@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "cmds.h"
 
-void cmd_tasks(UNUSED_ARG const char* args) {
+void cmd_tasks(const char* args) {
     TaskData info;
     uint32_t current_id = INIT_TASK_ID;
     int indent = 0;
@@ -96,6 +96,49 @@ void cmd_tasks(UNUSED_ARG const char* args) {
         if (finished) {
             if (current_id == 0) break; // Exit the main loop
             continue; // Start again with the new neighbor we found
+        }
+    }
+}
+
+void cmd_kill(const char* args) {
+    if (args[0] == '\0') {
+        sh_print("Usage: kill <pid>\n");
+        return;
+    }
+
+    TASK_KILL(atoi(args));
+}
+
+void cmd_tlist(const char* args) {
+    TaskListData data;
+
+    if (args[0] == '\0') {
+        for (uint32_t i = 0;; i++) {
+            if (GET_TASK_LIST(i, (uint32_t) &data) == SYS_ERROR) break;
+
+            sh_print("%u ", i);
+            for (int i = TASKS_LIST_LEN - 1; i >= 0; i--) {
+                sh_print("%d", (data.mask >> i) & 1);
+                if (i > 0 && i % 8 == 0) sh_print(" ");
+            }
+            sh_print("\n");
+        }
+    }
+
+    else {
+        uint32_t target = atoi(args);
+        if (GET_TASK_LIST(target, (uint32_t) &data) == SYS_ERROR) {
+            sh_print("tlist: List %u not found.\n", target);
+            return;
+        }
+
+        for (int i = 0; i < 16; i++) {
+            if (data.mask & (1 << i)) {
+                TaskData info;
+                if (GET_TASK_DATA(data.pids[i], (uint32_t) &info) == SYS_DONE) {
+                    sh_print("%-4u %s\n", info.id, info.name);
+                }
+            }
         }
     }
 }

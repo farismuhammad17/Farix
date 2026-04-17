@@ -56,9 +56,9 @@ void sh_print(const char* format, ...);
 void full_path_to(const char* filename, char* path_buffer);
 
 void cmd_help(const char* args);
-void cmd_clear(const char* args);
 void cmd_echo(const char* args);
 void cmd_secho(const char* args);
+void cmd_clear(const char* args);
 void cmd_memstat(const char* args);
 void cmd_heapstat(const char* args);
 void cmd_int(const char* args);
@@ -71,7 +71,6 @@ void cmd_touch(const char* args);
 void cmd_mkdir(const char* args);
 void cmd_rm(const char* args);
 void cmd_ls(const char* args);
-void cmd_exec(const char* args);
 
 void cmd_tasks(const char* args);
 void cmd_kill(const char* args);

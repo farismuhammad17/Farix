@@ -28,6 +28,9 @@ int   read   (int file, char *ptr, int len)          { return _read(file, ptr, l
 int   write  (int file, char *ptr, int len)          { return _write(file, ptr, len); }
 int   open   (const char *name, int flags, int mode) { return _open(name, flags, mode); }
 int   close  (int file)                              { return _close(file); }
+int   execve (const char *name,
+    char *const argv[],
+    char *const envp[])                              { return _execve(name, argv, envp); }
 int   mkdir  (const char *path, mode_t mode)         { return _mkdir(path, mode); }
 int   remove (const char* path)                      { return _remove(path); }
 int   lseek  (int file, int ptr, int dir)            { return _lseek(file, ptr, dir); }
@@ -61,6 +64,10 @@ int _open(const char *name, int flags, int mode) {
 
 int _close(int file) {
     return farix_syscall(SYS_CLOSE, (uint32_t) file, 0, 0);
+}
+
+int _execve(const char *name, char *const argv[], char *const envp[]) {
+    return farix_syscall(SYS_EXEC, (uint32_t) name, (uint32_t) argv, (uint32_t) envp);
 }
 
 int _mkdir(const char *path, mode_t mode) {

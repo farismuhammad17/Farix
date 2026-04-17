@@ -30,3 +30,4 @@ This is more of a journal of how this project was built. It helps to keep track 
 - [11 Apr: ACPI Implementation](journal_entries/11-apr-2026.md)
 - [14 Apr: Silicon Verification](journal_entries/14-apr-2026.md)
 - [15 Apr: Shelf](journal_entries/15-apr-2026.md)
+- [17 Apr: Finished Shelf](journal_entries/17-apr-2026.md)

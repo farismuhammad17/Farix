@@ -19,10 +19,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from pathlib import Path
 
+import makefile.globals
+
 root = Path.cwd()
 extns = ("c", "h", "s", "asm")
 
-ignores = (("newlib-cygwin", "libc_build_x86_32", "libc_build_arm32", "test", "acpi"))
+ignores = (
+    "newlib-cygwin",
+    "libc_build_x86_32",
+    "libc_build_arm32",
+    "test",
+    "acpi",
+)
 
 def check_block(block, file_path):
     if len(block) > 1:
@@ -41,7 +49,7 @@ def lint():
 
     for ext in extns:
         for file in root.rglob(f"*.{ext}"):
-            if any(p in file.parts for p in ignores):
+            if any(p in ignores for p in file.parts):
                 continue
 
             try:

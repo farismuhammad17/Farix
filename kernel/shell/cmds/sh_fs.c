@@ -204,5 +204,5 @@ void cmd_ls(const char* args) {
 
 void cmd_exec(const char* args) {
     if (args[0] != '\0')
-        exec(full_path_to(args));
+        exec_elf(full_path_to(args));
 }

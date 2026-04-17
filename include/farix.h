@@ -39,15 +39,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYS_WRITE               USER_MIN_SYSCALL + 3
 #define SYS_OPEN                USER_MIN_SYSCALL + 4
 #define SYS_CLOSE               USER_MIN_SYSCALL + 5
-#define SYS_MKDIR               USER_MIN_SYSCALL + 6
-#define SYS_REMOVE              USER_MIN_SYSCALL + 7
-#define SYS_DIRSCAN             USER_MIN_SYSCALL + 8
+#define SYS_EXEC                USER_MIN_SYSCALL + 6
+#define SYS_MKDIR               USER_MIN_SYSCALL + 7
+#define SYS_REMOVE              USER_MIN_SYSCALL + 8
 #define SYS_LSEEK               USER_MIN_SYSCALL + 9
 #define SYS_ISATTY              USER_MIN_SYSCALL + 10
 #define SYS_FSTAT               USER_MIN_SYSCALL + 11
 #define SYS_GETPID              USER_MIN_SYSCALL + 12
 #define SYS_KILL                USER_MIN_SYSCALL + 13
 #define SYS_SBRK                USER_MIN_SYSCALL + 14
+
+// Custom syscalls
+#define SYS_DIRSCAN             USER_MIN_SYSCALL + 15
 
 // Super user system calls
 #define SYS_UART_PUT            SUPER_MIN_SYSCALL + 1
@@ -100,6 +103,7 @@ int   _read                 (int file, char *ptr, int len);
 int   _write                (int file, char *ptr, int len);
 int   _open                 (const char *name, int flags, int mode);
 int   _close                (int file);
+int   _execve               (const char *name, char *const argv[], char *const envp[]);
 int   _mkdir                (const char *path, mode_t mode);
 int   _remove               (const char* path);
 int   _lseek                (int file, int ptr, int dir);
