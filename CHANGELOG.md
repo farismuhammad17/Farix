@@ -14,6 +14,7 @@
   - Separated arch specific stubs from arch independent
 - Makefile
   - Compiles arch specific user libC code
+  - `defs` command to index and locate functions
 
 ## Shelf - *15th April, 2026*
 

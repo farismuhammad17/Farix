@@ -18,6 +18,7 @@ Usage: \033[1m m [target] <architecture>\033[0m
   \033[1;32mapps\033[0m         Compile and add all apps into disk
   \033[1;32mcompile_apps\033[0m Compile all the files inside apps into ELF
   \033[1;32mdeploy_apps\033[0m  Deploy all ELF files inside apps folder
+  \033[1;32mdefs\033[0m         Interactive program to return definitions and usage of any function
   \033[1;32mhelp\033[0m         Display this menu
 
 \033[1;36mArchitectures:\033[0m

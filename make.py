@@ -30,6 +30,7 @@ import json
 from makefile       import globals
 from makefile.apps  import *
 from makefile.bin   import *
+from makefile.defs  import *
 from makefile.img   import *
 from makefile.qemu  import *
 from makefile.usb   import *
@@ -205,6 +206,9 @@ if __name__ == "__main__":
         compile_apps()
     elif target == "deploy_apps":
         deploy_apps()
+    elif target == "defs":
+        scan_files()
+        query_loop()
     elif target == "help":
         print(HELP)
     else:
