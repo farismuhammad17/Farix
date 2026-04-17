@@ -27,13 +27,18 @@ void cmd_ls(const char* args) {
     char* path;
 
     if (args[0] == '\0') {
-        path = "";
+        path = shell_directory;
     } else {
         path = full_path_to(args);
     }
 
     FileData buffer[MAX_FILES];
     size_t total = (size_t) fx_dirscan(path, buffer, MAX_FILES);
+
+    if (total == SYS_ERROR) { // response is stored in total
+        sh_print("ls: Could not read directory: %s\n", path);
+        return;
+    }
 
     for (size_t i = 0; i < total; i++) {
         if (buffer[i].isdir) {

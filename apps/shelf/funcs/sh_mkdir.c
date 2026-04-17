@@ -31,7 +31,7 @@ void cmd_mkdir(const char* args) {
     }
 
     char* path = full_path_to(args);
-    int res = mkdir(path, 0);
+    int   res  = mkdir(path, 0);
 
     if (res == SYS_ERROR) {
         sh_print("mkdir: could not create '%s'\n", args);

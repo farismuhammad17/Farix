@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -105,29 +106,45 @@ static uint32_t hex_to_int(char* s) {
     return res;
 }
 
+static void err_printf(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    char buffer[256];
+    int len = vsnprintf(buffer, sizeof(buffer), format, args);
+
+    if (len > 0) {
+        printf(buffer);
+        uart_print(buffer);
+    }
+
+    va_end(args);
+}
+
 // Dump general purpose registers for deeper debugging
 static void dump_register_info(syscalls_registers_x86_32_t* regs) {
-    printf("--- Register values ---\n");
-    printf("EAX: %lx EBX: %lx ECX: %lx EDX: %lx\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
-    printf("EDI: %lx ESI: %lx EBP: %lx ESP: %lx\n", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
+    err_printf("--- Register values ---\n");
+    err_printf("EAX: %lx EBX: %lx ECX: %lx EDX: %lx\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
+    err_printf("EDI: %lx ESI: %lx EBP: %lx ESP: %lx\n", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
 }
 
 // Dumps multitasking information in case of race condition errors
 static void dump_multitasking_info() {
     if (current_task == NULL) return;
 
-    printf("--- Multitasking ---\n");
-    printf("Name:  %s (ID:%lu)\n", current_task->name, current_task->id);
-    printf("Stack: 0x%08lx -> 0x%08lx\n", (uint32_t) current_task->stack_origin, current_task->stack_pointer);
-    printf("Page:  %p (PRIV:%lu)\n", (void*) current_task->page_directory, (uint32_t) current_task->privilege);
+    err_printf("--- Multitasking ---\n");
+    err_printf("Name:  %s (ID:%lu)\n", current_task->name, current_task->id);
+    err_printf("Stack: 0x%08lx -> 0x%08lx\n", (uint32_t) current_task->stack_origin, current_task->stack_pointer);
+    err_printf("Page:  %p (PRIV:%lu)\n", (void*) current_task->page_directory, (uint32_t) current_task->privilege);
 }
 
 static void panic_cmd_dump(uint32_t addr) {
     uint8_t* ptr = (uint8_t*) addr;
     for (int i = 0; i < 64; i++) {
         if (i % 16 == 0) printf("\n%08lx: ", (uint32_t)(ptr + i));
-        printf("%02x ", ptr[i]);
+        err_printf("%02x ", ptr[i]);
     }
+    err_printf("\r\n");
 }
 
 static void execute_panic_cmd(char cmd[]) {
@@ -146,7 +163,7 @@ static void execute_panic_cmd(char cmd[]) {
         cmd[4] == 'o' &&
         cmd[5] == 't'
     ) {
-        printf("Rebooting hardware...");
+        err_printf("Rebooting...\r\n");
         outb(0x64, 0xFE); // Pulse CPU reset line
     } else if (
         cmd[0] == 'h' &&
@@ -190,38 +207,37 @@ static void panic_shell() {
 void exception_handler(syscalls_registers_x86_32_t* regs) {
     asm volatile("cli");
 
-    uart_printf("Exception: %ld (%s)\n", regs->int_no, exception_messages[regs->int_no]);
-
     // BSOD
     terminal_change_color(0x1F); // Blue background, White foreground
     terminal_clear();
 
     if (regs->int_no < 32) {
-        printf("Exception: %ld (%s)\n", regs->int_no, exception_messages[regs->int_no]);
+        err_printf("Exception: %ld (%s)\n", regs->int_no, exception_messages[regs->int_no]);
     } else {
-        printf("Exception: %ld\n", regs->int_no);
+        err_printf("Exception: %ld\n", regs->int_no);
     }
 
-    printf("Error Code: %lx\n", regs->err_code);
-    printf("EIP: %lx  CS: %lx  EFLAGS: %lx\n", regs->eip, regs->cs, regs->eflags);
+    err_printf("Error Code: %lx\n", regs->err_code);
+    err_printf("EIP: %lx  CS: %lx  EFLAGS: %lx\n", regs->eip, regs->cs, regs->eflags);
 
     // Specifically for Page Faults
     if (regs->int_no == 14) {
         uint32_t faulting_address;
         asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
-        printf("Faulting Address (CR2): %lx\n", faulting_address);
 
-        printf("Reason: %s, %s, %s\n",
+        err_printf("Faulting Address (CR2): %lx\n", faulting_address);
+
+        err_printf("Reason: %s, %s, %s\n",
             (regs->err_code & PAGE_PRESENT) ? "Page unaccessible" : "Non-present page",
             (regs->err_code & PAGE_RW)      ? "Write fault" : "Read fault",
             (regs->err_code & PAGE_USER)    ? "User-mode" : "Kernel-mode");
     } else if (regs->int_no == 13) {
-        printf("Selector: %lx (%s)\n", regs->err_code & 0xFFF8,
+        err_printf("Selector: %lx (%s)\n", regs->err_code & 0xFFF8,
                 (regs->err_code & 0x04) ? "LDT" : "GDT");
     }
 
-    printf("Last init: %s\n", last_init);
-    printf("Last call: %s\n", last_call);
+    err_printf("Last init: %s\n", last_init);
+    err_printf("Last call: %s\n", last_call);
 
     dump_register_info(regs);
     dump_multitasking_info();
@@ -270,11 +286,11 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             FileData* buf = (FileData*) arg2;
             size_t count  = (size_t) arg3;
 
-            FileNode* head = fs_getall((char*) arg1);
+            FileNode* head = fs_getall((const char*) arg1);
             FileNode* temp = NULL;
 
             if (!head) {
-                regs->eax = SYS_ERROR;
+                regs->eax = 0;
                 break;
             }
 

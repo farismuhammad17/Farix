@@ -34,23 +34,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "fs/ramdisk.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
-#include "memory/pmm.h"
-#include "memory/vmm.h"
 #include "process/task.h"
-#include "shell/shell.h"
+// #include "shell/shell.h"
 
 #include "kernel.h"
 
 char* last_init = "Loaded";
 char* last_call = "Unassigned";
 
-void shell_thread() {
-    init_shell();
-    while (1) {
-        shell_update();  // Check if a command is ready
-        system_halt();
-    }
-}
+// void shell_thread() {
+//     init_shell();
+//     while (1) {
+//         shell_update();  // Check if a command is ready
+//         system_halt();
+//     }
+// }
 
 // Called before the architecture initialisations. Everything here
 // must be so raw; it should not depend on literally anything else.
@@ -94,7 +92,7 @@ void kmain() {
 
     vfs_mount(&fat32_ops); // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
 
-    // create_task(shell_thread, "Shell", 0);
+    // create_task(shell_thread, "Kernel Shell", 0);
     create_task(handle_mouse, "Terminal mouse handler", 0);
 
     task* shelf_task = exec("shelf.elf");

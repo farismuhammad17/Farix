@@ -81,8 +81,15 @@ int main() {
     char input[256];
     shell_directory[0] = '/';
 
+    printf(
+        "Farix Shelf (shell.elf)\n"
+        "Copyright (C) 2026 Faris Muhammad\n"
+        "License: GNU GPL v3 (Refer repository LICENSE for more information)\n"
+        "Type \"help\" for more information\n"
+    );
+
     while (1) {
-        printf("/> ");
+        printf("%s> ", shell_directory[0] == '\0' ? "/" : shell_directory);
 
         if (fgets(input, sizeof(input), stdin) == NULL) break;
         input[strcspn(input, "\n")] = 0;
@@ -187,6 +194,5 @@ void sh_print(const char* format, ...) {
     }
 }
 
-void cmd_cd(const char* args){}
 void cmd_rm(const char* args){}
 void cmd_exec(const char* args){}

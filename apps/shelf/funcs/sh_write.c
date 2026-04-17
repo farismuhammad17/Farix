@@ -54,7 +54,7 @@ void cmd_write(const char* args) {
     // O_TRUNC: If it exists, wipe it (so we start fresh)
     int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
-    if (fd == -1) {
+    if (fd == SYS_ERROR) {
         sh_print("write: Could not open '%s'\n", filename);
         return;
     }

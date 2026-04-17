@@ -66,6 +66,12 @@ void init_shell() {
     memset(shell_buffer, 0, MAX_SHELL_BUFFER_LEN);
     shell_buffer_ready = false;
 
+    printf(
+        "Farix Kernel Shell\n"
+        "Copyright (C) 2026 Faris Muhammad\n"
+        "License: GNU GPL v3 (Refer repository LICENSE for more information)\n"
+        "Type \"help\" for more information\n"
+    );
     printf("%s> ", shell_directory);
 }
 
