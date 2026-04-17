@@ -30,7 +30,9 @@ void cmd_cat(const char* args) {
         return;
     }
 
-    char* path = full_path_to(args);
+    char path[MAX_DIRECTORY_PATH_LEN];
+    full_path_to(args, path);
+
     int fd = open(path, O_RDONLY);
 
     if (fd == -1) {

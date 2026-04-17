@@ -28,7 +28,9 @@ void cmd_touch(const char* args) {
         return;
     }
 
-    char* path = full_path_to(args);
+    char path[MAX_DIRECTORY_PATH_LEN];
+    full_path_to(args, path);
+
     int fd = open(path, O_WRONLY | O_CREAT, 0644);
 
     if (fd != -1) {

@@ -27,6 +27,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "fs/fat32.h"
 
+// TODO: FAT32 funcs currently overwrite given path
+
 static FAT32Header* disk_info = NULL;
 
 FileOperations fat32_ops = {

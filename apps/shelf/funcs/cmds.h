@@ -52,8 +52,8 @@ typedef struct ShellCommand {
 
 extern ShellCommand command_table[];
 
-void  sh_print(const char* format, ...);
-char* full_path_to(const char* filename);
+void sh_print(const char* format, ...);
+void full_path_to(const char* filename, char* path_buffer);
 
 void cmd_help(const char* args);
 void cmd_clear(const char* args);

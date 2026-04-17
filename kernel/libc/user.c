@@ -29,6 +29,7 @@ int   write  (int file, char *ptr, int len)          { return _write(file, ptr, 
 int   open   (const char *name, int flags, int mode) { return _open(name, flags, mode); }
 int   close  (int file)                              { return _close(file); }
 int   mkdir  (const char *path, mode_t mode)         { return _mkdir(path, mode); }
+int   remove (const char* path)                      { return _remove(path); }
 int   lseek  (int file, int ptr, int dir)            { return _lseek(file, ptr, dir); }
 int   fstat  (int file, struct stat *st)             { return _fstat(file, st); }
 int   isatty (int file)                              { return _isatty(file); }
@@ -64,6 +65,10 @@ int _close(int file) {
 
 int _mkdir(const char *path, mode_t mode) {
     return farix_syscall(SYS_MKDIR, (uint32_t) path, (uint32_t) mode, 0);
+}
+
+int _remove(const char* path) {
+    return farix_syscall(SYS_REMOVE, (uint32_t) path, 0, 0);
 }
 
 int _fstat(int file, struct stat *st) {

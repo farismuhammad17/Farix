@@ -21,23 +21,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "funcs/cmds.h"
 
-static char path_buffer[MAX_SHELL_BUFFER_LEN];
-
-char* full_path_to(const char* filename) {
-    if (filename[0] == '/')
-        return (char*)(filename + 1); // Remove leading slash
+void full_path_to(const char* filename, char* path_buffer) {
+    // Absolute
+    if (filename[0] == '/') {
+        strcpy(path_buffer, filename + 1);
+        return;
+    }
 
     char* dir = shell_directory;
     if (dir[0] == '/') dir++;
 
-    if (dir[0] == '\0')
-        return (char*) filename;
+    // Root directory
+    if (dir[0] == '\0') {
+        strcpy(path_buffer, filename);
+        return;
+    }
 
     // dir + "/" + filename
-    memset(path_buffer, 0, sizeof(path_buffer));
     strcpy(path_buffer, dir);
     strcat(path_buffer, "/");
     strcat(path_buffer, filename);
-
-    return path_buffer;
 }

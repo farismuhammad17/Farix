@@ -21,30 +21,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "cmds.h"
 
-#define MAX_FILES 64
-
-void cmd_ls(const char* args) {
-    char path[MAX_DIRECTORY_PATH_LEN];
-
+void cmd_rm(const char* args) {
     if (args[0] == '\0') {
-        strncpy(path, shell_directory, MAX_DIRECTORY_PATH_LEN);
-    } else {
-        full_path_to(args, path);
-    }
-
-    FileData buffer[MAX_FILES];
-    size_t total = (size_t) fx_dirscan(path, buffer, MAX_FILES);
-
-    if (total == SYS_ERROR) { // response is stored in total
-        sh_print("ls: Could not read directory: %s\n", path);
+        sh_print("Usage: rm <path>\n");
         return;
     }
 
-    for (size_t i = 0; i < total; i++) {
-        if (buffer[i].isdir) {
-            sh_print("\033[36m%s\033[0m\n", buffer[i].name);
-        } else {
-            sh_print("%s\n", buffer[i].name);
-        }
-    }
+    char path[MAX_DIRECTORY_PATH_LEN];
+    full_path_to(args, path);
+
+    int res = remove(path);
+
+    if (res == SYS_ERROR) sh_print("rm: Could not delete '%s'\n", path);
 }

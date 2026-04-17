@@ -282,6 +282,11 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             break;
         }
 
+        case SYS_REMOVE: {
+            regs->eax = (uint32_t) (fs_remove((const char*) arg1) ? SYS_DONE : SYS_ERROR);
+            break;
+        }
+
         case SYS_DIRSCAN: {
             FileData* buf = (FileData*) arg2;
             size_t count  = (size_t) arg3;

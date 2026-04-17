@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string.h>
 #include <unistd.h>
 
+#include "farix.h"
+
 #include "cmds.h"
 
 void cmd_write(const char* args) {
@@ -30,11 +32,11 @@ void cmd_write(const char* args) {
     }
 
     // Separate filename from content
-    char filename[64];
+    char filename[MAX_FILENAME_LEN];
     const char* first_space = strchr(args, ' ');
 
     if (!first_space) {
-        sh_print("write: No content provided.\n");
+        sh_print("Usage: write <file> <content...>\n");
         return;
     }
 
@@ -46,7 +48,8 @@ void cmd_write(const char* args) {
 
     const char* content = first_space + 1; // Content starts after the space
 
-    char* path = full_path_to(filename);
+    char path[MAX_DIRECTORY_PATH_LEN];
+    full_path_to(args, path);
 
     // Open, Write, Close
     // O_WRONLY: Write only

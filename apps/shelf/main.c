@@ -194,5 +194,4 @@ void sh_print(const char* format, ...) {
     }
 }
 
-void cmd_rm(const char* args){}
 void cmd_exec(const char* args){}
