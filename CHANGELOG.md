@@ -2,10 +2,16 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## Shelf File Command - *16th April, 2026*
+## Slab allocator - *17th April, 2026*
 
 > [!WARNING]
 > The ARM32 implementation is still WIP. x86_32 is perfectly functional though.
+
+- Fastest possible slab allocator (no clue how to make it faster)
+- Makefile
+  - Windows support for 'm' command
+
+## Shelf File Command - *17th April, 2026*
 
 - Shelf
   - Implemented commands: `touch`, `mkdir`, `write`, `cat`, `ls`, `cd`, `rm`
