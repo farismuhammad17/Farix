@@ -36,6 +36,7 @@ from makefile.qemu  import *
 from makefile.usb   import *
 from makefile.deps  import *
 from makefile.libc  import *
+from makefile.lint  import *
 from makefile.utils import *
 from makefile.help  import *
 
@@ -209,6 +210,8 @@ if __name__ == "__main__":
     elif target == "defs":
         scan_files()
         query_loop()
+    elif target == "lint":
+        lint()
     elif target == "help":
         print(HELP)
     else:

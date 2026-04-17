@@ -15,6 +15,7 @@
 - Makefile
   - Compiles arch specific user libC code
   - `defs` command to index and locate functions
+  - Moved in `lint`
 
 ## Shelf - *15th April, 2026*
 
