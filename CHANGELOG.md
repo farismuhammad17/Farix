@@ -4,10 +4,9 @@
 
 ## Slab allocator - *17th April, 2026*
 
-> [!WARNING]
-> The ARM32 implementation is still WIP. x86_32 is perfectly functional though.
-
 - Fastest possible slab allocator (no clue how to make it faster)
+- Terminal
+  - No longer dependant on kernel shell
 - Makefile
   - Windows support for 'm' command
 

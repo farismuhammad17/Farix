@@ -31,11 +31,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/heap.h"
 #include "memory/vmm.h"
 #include "process/task.h"
-#include "shell/shell.h"
 
 #include "drivers/terminal.h"
-
-// TODO: Make terminal not depend stuff on shell_directory
 
 #define VGA_MEMORY 0xB8000
 
@@ -67,6 +64,7 @@ TerminalCmd*  cmd_history_tail  = NULL;
 int           cmd_history_count = 0;
 
 uint16_t* line_history[MAX_TERMINAL_LINE_HISTORY_LEN] = {0};
+uint16_t* last_line           = NULL;
 size_t    history_write_index = 0;
 size_t    history_total_count = 0;
 int       scroll_offset       = 0;
@@ -290,12 +288,8 @@ void cmd_history_up() {
         cmd_current_line = cmd_current_line->prev;
     }
 
-    while (cursor_x > strlen(shell_directory) + 2) {
-        echo_char('\b');
-    }
-
     printf("%s", cmd_current_line->command);
-    strcpy(shell_buffer, cmd_current_line->command);
+    strcpy(last_line, cmd_current_line->command);
 }
 
 void cmd_history_down() {
@@ -303,15 +297,11 @@ void cmd_history_down() {
 
     cmd_current_line = cmd_current_line->next;
 
-    while (cursor_x > strlen(shell_directory) + 2) {
-        echo_char('\b');
-    }
-
     if (cmd_current_line != NULL) {
         printf("%s", cmd_current_line->command);
-        strcpy(shell_buffer, cmd_current_line->command);
+        strcpy(last_line, cmd_current_line->command);
     } else {
-        shell_buffer[0] = '\0';
+        last_line[0] = '\0';
     }
 }
 
@@ -500,11 +490,7 @@ bool handle_special_chars(uint16_t c) {
             return true;
 
         case '\b':
-            size_t prompt_len = strlen(shell_directory) + 2;
-
-            if (cursor_x <= prompt_len) {
-                return true;
-            }
+            if (cursor_x <= 0) return true;
 
             if (cursor_x > 0) {
                 cursor_x--;

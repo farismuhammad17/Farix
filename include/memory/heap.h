@@ -32,9 +32,9 @@ typedef struct HeapSegment {
     size_t size;
     struct HeapSegment* next;
     struct HeapSegment* prev;
-    bool is_free;
     uint32_t magic;
     uint32_t caller;
+    bool is_free;
 } __attribute__((aligned(4))) HeapSegment;
 
 extern void*        heap_start;

@@ -34,68 +34,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "fs/ramdisk.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
-#include "memory/slab.h" // TODO REM
 #include "process/task.h"
 
 #include "kernel.h"
 
 char* last_init = "Loaded";
 char* last_call = "Unassigned";
-
-void slab_test() {
-    printf("--- Starting Slab64 Velocity Test ---\n");
-
-    // Initialize a slab for a dummy struct (e.g., 32 bytes)
-    // 32 bytes = shift 5. 64 objects * 32 = 2048 bytes (fits in 1 page)
-    Slab64* head = create_slab(32);
-    if (!head) { printf("no slab :("); return; }
-
-    // Allocate 130 objects
-    // This forces: Slab 1 (64) -> Slab 2 (64) -> Slab 3 (2)
-    void* ptrs[15000];
-    printf("Allocating 15000 objects...\n");
-    for (int i = 0; i < 15000; i++) {
-        ptrs[i] = slab_alloc(head);
-    }
-
-    // Check if the chain grew correctly
-    if (head->next && head->next->next) {
-        printf("Chain verified: 3 slabs created.\n");
-    }
-
-    // Free every second object in the middle slab
-    // This tests the & 0xFFFFF000 math and the bit_index shift.
-    printf("Fragmenting Slab 2...\n");
-    for (int i = 64; i < 128; i += 2) {
-        slab_free(ptrs[i]);
-    }
-
-    // Recovery Test: Re-allocate those holes
-    printf("Re-filling holes in Slab 2...\n");
-    for (int i = 0; i < 32; i++) {
-        void* p = slab_alloc(head);
-        // We don't need to save these, just proving it doesn't create Slab 4
-    }
-
-    // Deletion Test: Free EVERYTHING in Slab 2 and Slab 3
-    // This should trigger pmm_free_page for the tail slabs.
-    printf("Cleaning up trailing slabs...\n");
-    for (int i = 64; i < 130; i++) {
-        // Some might already be freed from step 3, but slab_free is safe
-        // (Just ensure you don't double free pointers you already freed!)
-        // For a clean test, let's just free the ones we know are active:
-        if (i % 2 != 0 || i >= 128) {
-            slab_free(ptrs[i]);
-        }
-    }
-
-    // Final State Check
-    if (head->next == NULL) {
-        printf("Cleanup Success: Only Head Slab remains.\n");
-    }
-
-    printf("--- Slab Test Passed: Maximum Velocity Confirmed ---\n");
-}
 
 // Called before the architecture initialisations. Everything here
 // must be so raw; it should not depend on literally anything else.
@@ -141,10 +85,8 @@ void kmain() {
 
     create_task(handle_mouse, "Terminal mouse handler", 0);
 
-    slab_test();
-
-    // task* shelf_task = exec_elf("shelf.elf");
-    // shelf_task->privilege = PRIV_SUPER;
+    task* shelf_task = exec_elf("shelf.elf");
+    shelf_task->privilege = PRIV_SUPER;
 
     last_init = "kmain";
 

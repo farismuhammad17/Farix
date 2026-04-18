@@ -154,15 +154,13 @@ globals.GRUB_CFG = (
 if not os.path.exists(globals.MAKE_CONF_JSON):
     with open(globals.MAKE_CONF_JSON, 'w') as mjson:
         json.dump({
-            "BOOT_USB_PATH": None,
-            "BOCKS_BIOS_PATH": None
+            "BOOT_USB_PATH": None
         }, mjson, indent=4)
 
 with open(globals.MAKE_CONF_JSON) as mjson:
     data = json.load(mjson)
 
-    globals.BOOT_USB_PATH   = data.get("BOOT_USB_PATH", None)
-    globals.BOCHS_BIOS_PATH = data.get("BOCHS_BIOS_PATH", None)
+    globals.BOOT_USB_PATH = data.get("BOOT_USB_PATH", None)
 
 # --- MAIN ---
 
