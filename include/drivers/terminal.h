@@ -46,7 +46,7 @@ typedef struct TerminalCmd {
     struct TerminalCmd* prev;
 } TerminalCmd;
 
-void init_terminal();
+void RARE_FUNC init_terminal();
 
 uint8_t  terminal_color_entry(uint8_t fg, uint8_t bg);
 uint16_t terminal_entry(unsigned char uc, uint8_t color);
@@ -70,13 +70,13 @@ void save_cmd_to_history(const char* command);
 void cmd_history_up();
 void cmd_history_down();
 
-void echo_at   (char c, uint8_t color, size_t x, size_t y);
-void echo_char (uint16_t c);
-void echo_raw  (const char* data, size_t len);
-void t_print   (const char* data);
-void t_printf  (const char* format, ...);
+void FREQ_FUNC echo_at   (char c, uint8_t color, size_t x, size_t y);
+void FREQ_FUNC echo_char (uint16_t c);
+void FREQ_FUNC echo_raw  (const char* data, size_t len);
+void FREQ_FUNC t_print   (const char* data);
+void FREQ_FUNC t_printf  (const char* format, ...);
 
-bool handle_special_chars(uint16_t c);
+bool FREQ_FUNC handle_special_chars(uint16_t c);
 void handle_mouse();
 void handle_ansi_char(uint16_t c);
 

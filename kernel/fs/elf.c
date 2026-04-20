@@ -45,19 +45,19 @@ void elf_user_trampoline() {
 
 task* exec_elf(const char* path) {
     File* file_obj = fs_get(path);
-    if (!file_obj || file_obj->size == 0) {
-        printf("ELF Error: File %s not found or empty\n", path);
+    if (unlikely(!file_obj || file_obj->size == 0)) {
+        printf("exec_elf: File %s not found or empty\n", path);
         return NULL;
     }
 
     uint8_t* file_buffer = (uint8_t*) kmalloc(file_obj->size);
-    if (!file_buffer) {
-        printf("ELF Error: Failed to allocate file buffer\n");
+    if (unlikely(!file_buffer)) {
+        printf("exec_elf: Failed to allocate file buffer\n");
         return NULL;
     }
 
-    if (!fs_read(path, file_buffer, file_obj->size, 0)) {
-        printf("ELF Error: Failed to read file data\n");
+    if (unlikely(!fs_read(path, file_buffer, file_obj->size, 0))) {
+        printf("exec_elf: Failed to read file data\n");
         kfree(file_buffer);
         return NULL;
     }
@@ -65,12 +65,13 @@ task* exec_elf(const char* path) {
     elf_header_t* header = (elf_header_t*) file_buffer;
 
     // An ELF file always starts with 0x7F, then 'E', 'L', and 'F'
-    if (header->e_ident[0] != ELFMAG0 ||
+    if (unlikely(
+        header->e_ident[0] != ELFMAG0 ||
         header->e_ident[1] != ELFMAG1 ||
         header->e_ident[2] != ELFMAG2 ||
-        header->e_ident[3] != ELFMAG3)
+        header->e_ident[3] != ELFMAG3))
     {
-        printf("ELF Error: Not a valid ELF executable\n");
+        printf("exec_elf: Not a valid ELF executable\n");
         kfree(file_buffer);
         return NULL;
     }
@@ -78,8 +79,8 @@ task* exec_elf(const char* path) {
     uint32_t* current_pd_phys = vmm_get_current_directory();
     uint32_t* user_pd_phys    = (uint32_t*) pmm_alloc_page();
 
-    if (!user_pd_phys) {
-        printf("ELF Error: Failed to allocate page directory\n");
+    if (unlikely(!user_pd_phys)) {
+        printf("exec_elf: Failed to allocate page directory\n");
         kfree(file_buffer);
         return NULL;
     }

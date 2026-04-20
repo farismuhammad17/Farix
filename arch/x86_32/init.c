@@ -41,7 +41,7 @@ extern void _init();
 void arch_kmain(uint32_t magic, multiboot_info* _mbi) {
     early_kmain();
 
-    if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
+    if (unlikely(magic != MULTIBOOT_BOOTLOADER_MAGIC)) {
         uart_print("OS Error: Invalid Multiboot Magic Number");
         while(1) asm volatile("hlt");
     }

@@ -32,3 +32,4 @@ This is more of a journal of how this project was built. It helps to keep track 
 - [15 Apr: Shelf](journal_entries/15-apr-2026.md)
 - [17 Apr: Finished Shelf & Slab Allocator](journal_entries/17-apr-2026.md)
 - [20 Apr: Docker build environment](journal_entries/20-apr-2026.md)
+- [Current](journal_entries/current.md)

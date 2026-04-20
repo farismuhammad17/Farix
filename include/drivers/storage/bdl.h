@@ -17,19 +17,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef PMM_H
-#define PMM_H
+#ifndef BDL_H
+#define BDL_H
 
-#include <stddef.h>
 #include <stdint.h>
 
-#define PAGE_SIZE    4096
-#define LOG2_PAGE_SIZE 12   // log_2(PAGE_SIZE)
-#define BITMAP_SIZE 32768   // 32768 integers * 32 bits * 4096 bytes = 4GB of RAM management.
+typedef struct BDLDevice {
+    int (*read)(uint32_t lba, void* buf);
+    int (*write)(uint32_t lba, void* buf);
+} BDLDevice;
 
-void RARE_FUNC init_pmm();
+void RARE_FUNC init_storage();
 
-void* pmm_alloc_page();
-void  pmm_free_page(void* addr);
+void RARE_FUNC bdl_mount(BDLDevice* dev);
+
+void bdl_read(uint32_t lba, void* buf);
+void bdl_write(uint32_t lba, void* buf);
 
 #endif

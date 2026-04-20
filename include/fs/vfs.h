@@ -45,7 +45,7 @@ typedef struct FileOperations {
     FileNode* (*getall) (const char* path);
 } FileOperations;
 
-void      vfs_mount (FileOperations* ops);
+void RARE_FUNC vfs_mount (FileOperations* ops);
 
 int       fs_read   (const char* name, void* buffer, size_t size, uint32_t offset);
 int       fs_write  (const char* name, const void* buffer, size_t size, uint32_t offset);

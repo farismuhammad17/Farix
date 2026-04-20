@@ -124,9 +124,13 @@ globals.ACPICA_ARCH_DEPENDANT   = os.path.join(globals.PROJECT_ROOT, f"include/a
 globals.CC = f"{globals.PREFIX}gcc"
 globals.AS = f"{globals.PREFIX}as"
 
-globals.CFLAGS = f"-ffreestanding -O2 -Wall -Wextra -fno-exceptions \
-    -fdiagnostics-color=always \
-    -Iinclude -I{globals.LIBC_INC} -I{globals.ACPICA_ARCH_INDEPENDANT} -I{globals.ACPICA_ARCH_DEPENDANT}"
+globals.CFLAGS = (
+    "-ffreestanding -O2 -Wall -Wextra -fno-exceptions "
+    "-fdiagnostics-color=always "
+    f"-Iinclude -I{globals.LIBC_INC} "
+    f"-I{globals.ACPICA_ARCH_INDEPENDANT} -I{globals.ACPICA_ARCH_DEPENDANT} "
+    "-include include/kernel.h"
+)
 
 globals.BOOT_OBJ = "build/boot.o"
 
@@ -144,7 +148,7 @@ globals.USER_LIBC_ARCH_OBJ = f"{globals.USER_BUILD_DIR}/user.o"
 globals.USER_ASM_OBJ  = f"{globals.USER_BUILD_DIR}/user_asm.o"
 
 globals.APPS_ROOT = "apps"
-globals.USER_CFLAGS = f"-ffreestanding -O2 -Iinclude -I{globals.LIBC_INC}"
+globals.USER_CFLAGS = f"-ffreestanding -O2 -Iinclude -I{globals.LIBC_INC} -include include/kernel.h"
 
 globals.MAKE_CONF_JSON = "make.conf.json"
 

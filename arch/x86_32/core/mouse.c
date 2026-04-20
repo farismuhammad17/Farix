@@ -27,20 +27,16 @@ MouseEvent mouse_buffer[MOUSE_BUFFER_LEN];
 volatile uint8_t buffer_head = 0;
 volatile uint8_t buffer_tail = 0;
 
-uint8_t    mouse_cycle = 0;
-int8_t     mouse_bytes[4];
+uint8_t mouse_cycle = 0;
+int8_t  mouse_bytes[4];
 
 void mouse_wait(uint8_t type) {
     // Wait for the PIC to be ready to send/receive data
     uint32_t timeout = 100000;
     if (type == 0) {
-        while (timeout--) {
-            if ((inb(0x64) & 1) == 1) return;
-        }
+        while (timeout--) if ((inb(0x64) & 1) == 1) return;
     } else {
-        while (timeout--) {
-            if ((inb(0x64) & 2) == 0) return;
-        }
+        while (timeout--) if ((inb(0x64) & 2) == 0) return;
     }
 }
 

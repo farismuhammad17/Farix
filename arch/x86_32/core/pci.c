@@ -60,9 +60,7 @@ void init_pci() {
         }
     }
 
-    if (pci_device_count == 0) {
-        t_print("init_pci: No devices found on bus");
-    }
+    if (pci_device_count == 0) t_print("init_pci: No devices found on bus");
 }
 
 uint32_t pci_read(uint8_t bus, uint8_t dev, uint8_t func, uint8_t reg) {

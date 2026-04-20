@@ -49,7 +49,7 @@ typedef struct GDTPointer {
 extern GDTEntry   gdt[6];
 extern GDTPointer gdt_ptr;
 
-void init_gdt();
-void gdt_set_entry(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran);
+void RARE_FUNC init_gdt();
+void RARE_FUNC gdt_set_entry(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran);
 
 #endif

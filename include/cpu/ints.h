@@ -20,6 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef INTS_H
 #define INTS_H
 
-void init_interrupts();
+void RARE_FUNC init_interrupts();
 
 #endif

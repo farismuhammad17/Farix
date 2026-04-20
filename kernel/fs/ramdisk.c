@@ -64,8 +64,8 @@ void init_ramdisk() {
 int ramdisk_read(const char* name, void* buffer, size_t size, uint32_t offset) {
     File* file = ramdisk_get(name);
 
-    if (!file || !file->data || file->is_directory) return -1;
-    if (offset >= file->size) return 0; // End of file
+    if (unlikely(!file || !file->data || file->is_directory)) return -1;
+    if (unlikely(offset >= file->size)) return 0; // End of file
 
     // Ensure we don't read past the end of the file
     size_t bytes_to_read = size;
@@ -81,12 +81,12 @@ int ramdisk_read(const char* name, void* buffer, size_t size, uint32_t offset) {
 
 int ramdisk_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
     File* file = ramdisk_get(name);
-    if (!file || file->is_directory) return -1;
+    if (unlikely(!file || file->is_directory)) return -1;
 
     // If we are writing beyond current capacity, we need more RAM
-    if (offset + size > file->size) {
+    if (unlikely(offset + size > file->size)) {
         uint8_t* new_data = (uint8_t*) kmalloc(offset + size);
-        if (!new_data) return -1;
+        if (unlikely(!new_data)) return -1;
 
         // If there was old data, preserve it
         if (file->data) {
@@ -142,17 +142,10 @@ int ramdisk_remove(const char* name) {
     uint32_t index = hash(name) % RAMDISK_HASH_SIZE;
     File* file = files_table[index];
 
-    if (file == NULL || strcmp(file->name, name) != 0) {
-        return 0;
-    }
+    if (unlikely(file == NULL || strcmp(file->name, name) != 0)) return 0;
 
-    if (file->data != NULL) {
-        kfree(file->data);
-    }
-
-    if (file->name != NULL) {
-        kfree((void*)file->name);
-    }
+    if (likely(file->data != NULL)) kfree(file->data);
+    if (likely(file->name != NULL)) kfree((void*) file->name);
 
     kfree(file);
     files_table[index] = NULL;

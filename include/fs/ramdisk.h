@@ -26,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 extern FileOperations ramdisk_ops;
 
-void      init_ramdisk();
+void RARE_FUNC init_ramdisk();
 
 int       ramdisk_read   (const char* name, void* buffer, size_t size, uint32_t offset);
 int       ramdisk_write  (const char* name, const void* buffer, size_t size, uint32_t offset);

@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-void init_timer(uint32_t frequency);
+void RARE_FUNC init_timer(uint32_t frequency);
 
 uint64_t get_timer_uptime_microseconds();
 void timer_stall(uint32_t microseconds);

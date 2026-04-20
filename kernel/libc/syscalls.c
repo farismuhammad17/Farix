@@ -143,7 +143,7 @@ int _write(int file, char *ptr, int len) {
 int _open(const char *name, int flags, int mode) {
     File* f = fs_get(name);
 
-    if (!f) {
+    if (unlikely(!f)) {
         if ((flags & O_CREAT) && fs_create(name)) {
             // TODO: Make fs_create write into a File* to use,
             // instead of looking up the same file that was just made
@@ -176,15 +176,11 @@ int _close(int file) {
 }
 
 int _mkdir(const char *path, mode_t mode) {
-    if (fs_mkdir(path)) {
-        return SYS_DONE;
-    }
-
-    return SYS_ERROR;
+    return fs_mkdir(path) ? SYS_DONE : SYS_ERROR;
 }
 
 int _fstat(int file, struct stat *st) {
-    if (!st) return -EFAULT;
+    if (unlikely(!st)) return -EFAULT;
 
     kmemset(st, 0, sizeof(struct stat));
 
@@ -214,7 +210,7 @@ int _isatty(int file) {
 }
 
 int _lseek(int file, int ptr, int dir) {
-    if (file >= 0 && file < FD_TABLE_MIN) return 0;
+    if (unlikely(file >= 0 && file < FD_TABLE_MIN)) return 0;
 
     if (file < FD_TABLE_MAX && fd_table[file]) {
         FileOpenHandle* f = (FileOpenHandle*) fd_table[file];
@@ -248,7 +244,7 @@ int _kill(int pid, int sig) {
 int getentropy(void *ptr, size_t len) {
     if (len > 256) {
         errno = EIO;
-        return -1;
+        return SYS_ERROR;
     }
 
     uint8_t *buf = (uint8_t *)ptr;

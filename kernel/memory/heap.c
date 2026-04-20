@@ -124,9 +124,7 @@ void kfree(void* ptr) {
 void kmemcpy(void* dest, const void* source, size_t n) {
     volatile uint8_t* dst = (volatile uint8_t*) dest;
     const uint8_t* src = (const uint8_t*) source;
-    for (size_t i = 0; i < n; i++) {
-        dst[i] = src[i];
-    }
+    for (size_t i = 0; i < n; i++) dst[i] = src[i];
 
     // Ensure writes are finished
     cpu_mem_barrier();

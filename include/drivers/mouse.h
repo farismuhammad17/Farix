@@ -34,7 +34,7 @@ extern MouseEvent mouse_buffer[16];
 extern volatile uint8_t buffer_head;
 extern volatile uint8_t buffer_tail;
 
-void init_mouse();
+void RARE_FUNC init_mouse();
 extern void mouse_handler();
 
 #endif

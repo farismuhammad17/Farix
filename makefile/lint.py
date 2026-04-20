@@ -82,6 +82,9 @@ def lint():
                     print(f"\033[92mTODO\033[0m       {file}")
                     print(f"    \033[90m{clean_line}\033[0m")
 
+                elif "LOG_CALL" in clean_line:
+                    print(f"\033[92mLOG_CALL\033[0m   {file}")
+
                 if clean_line.startswith("#include"):
                     current_block.append(clean_line)
                 else:

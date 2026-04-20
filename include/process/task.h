@@ -82,12 +82,12 @@ extern uint32_t next_pid;
 
 extern task_list* first_task_list;
 
-void init_multitasking();
+void RARE_FUNC init_multitasking();
 
 task* create_task(void (*entry_point)(), const char* name, const int privilege);
 void  kill_task(uint32_t id);
 
-void  schedule();
+void FREQ_FUNC schedule();
 
 task* get_task(uint32_t id);
 

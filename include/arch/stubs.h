@@ -40,6 +40,4 @@ void cpu_mem_barrier();
 
 void task_yield();
 
-void set_kernel_stack(uint32_t stack);
-
 #endif

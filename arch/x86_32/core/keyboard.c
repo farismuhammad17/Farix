@@ -97,14 +97,14 @@ void init_keyboard() {
     // Don't just read and ignore; check if it's actually 0xFA
     // If it's 0xFE, the keyboard is asking to Resend
     while (!(inb(0x64) & 0x01));
-    if (inb(0x60) != 0xFA) {
+    if (unlikely(inb(0x60) != 0xFA)) {
         t_print("init_keyboard: Reset failed or got NACK");
         return;
     }
 
     // Wait for Self-Test (0xAA)
     while (!(inb(0x64) & 0x01));
-    if (inb(0x60) != 0xAA) {
+    if (unlikely(inb(0x60) != 0xAA)) {
         t_print("init_keyboard: Keyboard hardware failure");
         return;
     }
@@ -129,13 +129,11 @@ extern void keyboard_handler() {
 
     if (scancode == 0xE0) {
         is_extended = true;
-    }
-    else if (is_extended) {
+    } else if (is_extended) {
         if (scancode == 0x48) push_to_kbd_buffer(KEY_UP);
         else if (scancode == 0x50) push_to_kbd_buffer(KEY_DOWN);
         is_extended = false;
-    }
-    else {
+    } else {
         if (scancode == 0x2A || scancode == 0x36) shift_pressed = true;
         else if (scancode == 0xAA || scancode == 0xB6) shift_pressed = false;
         else if (!(scancode & 0x80)) {
@@ -157,14 +155,13 @@ char keyboard_getc() {
         shift_pressed = true;
         return 0;
     }
+
     if (scancode == 0xAA || scancode == 0xB6) {
         shift_pressed = false;
         return 0;
     }
 
-    if (scancode & 0x80) {
-        return 0;
-    }
+    if (scancode & 0x80) return 0;
 
     size_t offset = shift_pressed ? 64 : 0;
 

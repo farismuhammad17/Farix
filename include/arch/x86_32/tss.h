@@ -34,7 +34,7 @@ typedef struct TSSEntry {
 
 extern TSSEntry tss_entry;
 
-void init_tss(uint32_t idx, uint32_t kss, uint32_t kesp);
-void set_kernel_stack(uint32_t stack);
+void RARE_FUNC init_tss(uint32_t idx, uint32_t kss, uint32_t kesp);
+void FREQ_FUNC set_kernel_stack(uint32_t stack);
 
 #endif

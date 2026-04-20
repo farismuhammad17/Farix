@@ -45,7 +45,7 @@ task_list* current_task_list = NULL;
 void task_trampoline() {
     system_int_on();
 
-    if (current_task && current_task->entry_func) {
+    if (likely(current_task && current_task->entry_func)) {
         current_task->entry_func();
     }
 
@@ -126,7 +126,7 @@ task* create_task(void (*entry_point)(), const char* name, const int privilege) 
     new_task->stack_pointer = (uint32_t) esp;
     new_task->stack_origin  = stack;
 
-    if (current_task_list->mask == TASK_LIST_MASK_FULL) {
+    if (unlikely(current_task_list->mask == TASK_LIST_MASK_FULL)) {
         task_list* new_task_list = (task_list*) kmalloc(sizeof(task_list));
         kmemset(new_task_list, 0, sizeof(task_list));
 
@@ -153,7 +153,7 @@ void kill_task(uint32_t id) {
 
     // Walk the lists
     while (list != NULL) {
-        if (list->mask == 0) { // TODO: Do something here, delete it, fix the linked list, etc.
+        if (unlikely(list->mask == 0)) { // TODO: Do something here, delete it, fix the linked list, etc.
             list = list->next;
             continue;
         }
@@ -172,7 +172,7 @@ void kill_task(uint32_t id) {
         list = list->next;
     }
 
-    if (target) {
+    if (likely(target)) {
         target->state = TASK_DEAD;
 
         task* p = target->parent;
@@ -223,9 +223,7 @@ void schedule() {
 
     current_task = next;
 
-    if (next->stack_origin) {
-        set_kernel_stack((uint32_t) next->stack_origin + 4096);
-    }
+    if (next->stack_origin) set_kernel_stack((uint32_t) next->stack_origin + 4096);
 
     vmm_switch_directory(next->page_directory);
 
@@ -236,7 +234,7 @@ task* get_task(uint32_t id) {
     task_list* list = first_task_list;
 
     while (list != NULL) {
-        if (list->mask == 0) {
+        if (unlikely(list->mask == 0)) {
             list = list->next;
             continue;
         }

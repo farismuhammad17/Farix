@@ -73,7 +73,7 @@ typedef struct FAT32File {
 
 extern FileOperations fat32_ops;
 
-void      init_fat32();
+void RARE_FUNC init_fat32();
 
 int       fat32_read   (const char* name, void* buffer, size_t size, uint32_t offset);
 int       fat32_write  (const char* name, const void* buffer, size_t size, uint32_t offset);

@@ -35,9 +35,9 @@ extern volatile int kbd_tail;
 extern bool shift_pressed;
 extern unsigned char kbd[128];
 
-void init_keyboard();
+void RARE_FUNC init_keyboard();
 extern void keyboard_handler();
 
-char keyboard_getc();
+char RARE_FUNC keyboard_getc();
 
 #endif

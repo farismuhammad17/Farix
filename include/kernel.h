@@ -28,9 +28,15 @@ extern char* last_call;
 
 #define LOG_CALL() last_call = __func__
 
-void early_kmain();
-void kmain();
+// Reorders the machine code to place these accordingly
+#define likely(x)   __builtin_expect(!!(x), 1)  // x is more likely to be true than false
+#define unlikely(x) __builtin_expect(!!(x), 0)  // x is more likely to be false than true
+#define FREQ_FUNC   __attribute__((hot))        // Frequently called functions
+#define RARE_FUNC   __attribute__((cold))       // Infrequently called functions
 
-void AcpiMappingCleanup();
+void RARE_FUNC early_kmain();
+void RARE_FUNC kmain();
+
+void RARE_FUNC AcpiMappingCleanup();
 
 #endif

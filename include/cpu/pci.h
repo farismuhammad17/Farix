@@ -22,6 +22,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#define PCI_CLASS_CODE_STORAGE 0x01
+#define PCI_ATA_SUBCLASS       0x01
+#define PCI_AHCI_SUBCLASS      0x06
+
 typedef struct {
     uint16_t vendor_id;
     uint16_t device_id;
@@ -35,7 +39,7 @@ typedef struct {
 extern pci_device_t pci_devices[32];
 extern int pci_device_count;
 
-void init_pci();
+void RARE_FUNC init_pci();
 
 uint32_t pci_read(uint8_t bus, uint8_t dev, uint8_t func, uint8_t reg);
 void pci_write(uint8_t bus, uint8_t dev, uint8_t func, uint8_t reg, uint32_t val);

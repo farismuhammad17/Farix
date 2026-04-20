@@ -24,9 +24,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cpu/ints.h"
 #include "cpu/timer.h"
 #include "drivers/acpi/acpi.h"
-#include "drivers/ata.h"
 #include "drivers/keyboard.h"
 #include "drivers/mouse.h"
+#include "drivers/storage/bdl.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "fs/elf.h"
@@ -73,7 +73,7 @@ void kmain() {
     AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);   last_init = "ACPI: enable subsystems";
     AcpiInitializeObjects(ACPI_FULL_INITIALIZATION); last_init = "ACPI";
 
-    init_ata(); last_init = "ATA";
+    init_storage(); last_init = "Storage";
 
     // Enable interrupts
     system_int_on();

@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
+#include "drivers/terminal.h"
+
 #include "fs/vfs.h"
 
 static FileOperations* current_fs_ops = NULL;
@@ -29,36 +31,64 @@ void vfs_mount(FileOperations* ops) {
 }
 
 int fs_read(const char* name, void* buffer, size_t size, uint32_t offset) {
-    if (!current_fs_ops || !current_fs_ops->read) return 0;
+    if (unlikely(!current_fs_ops || !current_fs_ops->read)) {
+        t_print("fs_read: File operation not found");
+        return 0;
+    }
+
     return current_fs_ops->read(name, buffer, size, offset);
 }
 
 int fs_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
-    if (!current_fs_ops || !current_fs_ops->write) return 0;
+    if (unlikely(!current_fs_ops || !current_fs_ops->write)) {
+        t_print("fs_write: File operation not found");
+        return 0;
+    }
+
     return current_fs_ops->write(name, buffer, size, offset);
 }
 
 int fs_create(const char* name) {
-    if (!current_fs_ops || !current_fs_ops->create) return 0;
+    if (unlikely(!current_fs_ops || !current_fs_ops->create)) {
+        t_print("fs_create: File operation not found");
+        return 0;
+    }
+
     return current_fs_ops->create(name);
 }
 
 int fs_mkdir(const char* name) {
-    if (!current_fs_ops || !current_fs_ops->mkdir) return 0;
+    if (unlikely(!current_fs_ops || !current_fs_ops->mkdir)) {
+        t_print("fs_mkdir: File operation not found");
+        return 0;
+    }
+
     return current_fs_ops->mkdir(name);
 }
 
 int fs_remove(const char* name) {
-    if (!current_fs_ops || !current_fs_ops->remove) return 0;
+    if (unlikely(!current_fs_ops || !current_fs_ops->remove)) {
+        t_print("fs_remove: File operation not found");
+        return 0;
+    }
+
     return current_fs_ops->remove(name);
 }
 
 File* fs_get(const char* name) {
-    if (!current_fs_ops || !current_fs_ops->get) return NULL;
+    if (unlikely(!current_fs_ops || !current_fs_ops->get)) {
+        t_print("fs_get: File operation not found");
+        return NULL;
+    }
+
     return current_fs_ops->get(name);
 }
 
 FileNode* fs_getall(const char* path) {
-    if (!current_fs_ops || !current_fs_ops->getall) return NULL;
+    if (unlikely(!current_fs_ops || !current_fs_ops->getall)) {
+        t_print("fs_getall: File operation not found");
+        return NULL;
+    }
+
     return current_fs_ops->getall(path);
 }

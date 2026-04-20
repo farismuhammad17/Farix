@@ -2,6 +2,20 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## Advanced Host Controller Interface - *Current*
+
+- `kernel.h` defines macros to improve efficiency without much change:-
+  - `unlikely(x)`: `x` is false most of the time
+  - `likely(x)`: `x` is true most of the time
+  - `RARE_FUNC`: Function is rarely used
+  - `FREQ_FUNC`: Function is frequently used
+- Spammed aforementioned macros throughout source code.
+- Storage
+  - Block Device (Abstraction) Layer for ATA and (WIP) AHCI.
+  - `init_ata` takes in PCI device object
+- MFuncs
+  - Compiler includes kernel.h
+
 ## Docker build environment - *20th April, 2026*
 
 - Dockerfile

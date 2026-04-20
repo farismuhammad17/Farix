@@ -41,7 +41,7 @@ extern void*        heap_start;
 extern void*        heap_end;
 extern HeapSegment* first_segment;
 
-void   init_heap();
+void RARE_FUNC init_heap();
 
 void*  kmalloc(size_t size);
 void   kfree(void* ptr);
@@ -51,7 +51,7 @@ void   kmemset(void* s, int c, size_t n);
 
 void   kheap_expand(size_t size);
 
-size_t get_heap_total();
-size_t get_heap_used();
+size_t RARE_FUNC get_heap_total();
+size_t RARE_FUNC get_heap_used();
 
 #endif

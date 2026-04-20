@@ -17,19 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef ATA_H
-#define ATA_H
+#include "drivers/storage/ahci.h"
 
-#define STATUS_BSY 0x80
-#define STATUS_DRQ 0x08
-
-#include <stdint.h>
-
-void init_ata();
-
-void ata_read_sector(uint32_t lba, uint8_t* buffer);
-void ata_write_sector(uint32_t lba, uint8_t* buffer);
-
-int  ata_wait_ready();
-
-#endif
+int HBA_PxCMD_ST  = 0x0001; // Start bit
+int HBA_PxCMD_FRE = 0x0010; // FIS Receive Enable bit
+int HBA_PxCMD_FR  = 0x4000; // FIS Running status
+int HBA_PxCMD_CR  = 0x8000; // Command List Running status
