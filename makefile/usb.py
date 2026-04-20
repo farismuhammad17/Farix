@@ -29,6 +29,13 @@ def clean_boot_usb():
     shutil.rmtree(makefile.globals.BOOT_USB_PATH, ignore_errors=True)
 
 def deploy_usb():
+    if makefile.globals.is_in_docker():
+        print("\x1b[31mCannot write to USB in docker. Run on native machine instead.\x1b[0m")
+        print("\x1b[90mWe set up Docker to only help someone who just cloned the repository to",
+            "compile the kernel, and get the farix.bin or farix.iso file. Unfortunately, docker",
+            "is an emulation, and thus, it is not possible to access USB devices outside of it.\x1b[0m", sep='\n')
+        return
+
     if not os.path.exists(makefile.globals.BOOT_USB_PATH):
         print(f"\x1b[31m(make.conf.json) Boot USB path '{makefile.globals.BOOT_USB_PATH}' not found.\x1b[0m")
         return

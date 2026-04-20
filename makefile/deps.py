@@ -24,6 +24,7 @@ import makefile.globals
 def get_deps():
     if not os.path.exists("newlib-cygwin"):
         print("Installing newlib...")
-        makefile.globals.run("git clone --depth 1 https://sourceware.org/git/newlib-cygwin.git")
+        makefile.globals.run("git clone --depth 1 https://sourceware.org/git/newlib-cygwin.git",
+            capture_output=False)
 
-    print("\x1b[33mInstalled dependencies.\x1b[0m")
+    print("\x1b[33mProcess completed.\x1b[0m")

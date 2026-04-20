@@ -2,6 +2,17 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## Docker build environment - *20th April, 2026*
+
+- Dockerfile
+  - `dock.cmd` to help run docker
+- MFuncs
+  - Ignore kshell during compilation
+  - Accept `i686-linux-gnu-gcc` as x86 compiler
+  - `get_deps` prints outputs
+  - Removed `err_len`
+  - QEMU and USB is restricted on Docker
+
 ## Slab allocator - *17th April, 2026*
 
 - Fastest possible slab allocator (no clue how to make it faster)

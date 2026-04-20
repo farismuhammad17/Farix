@@ -9,13 +9,23 @@
 
 # Setup
 
-If you're on Linux or Mac, you need to run `source m.env` (and potentially `chmod +x make.py` for Linux), which initialises `m` as a command. If you're on Windows, the [`m.bat`](m.bat) script will automatically provide that `m`. Regardless, to get the list of commands and instructions:
+To set up the development environment without manual configuration, use Docker. You can run `dock.cmd` to setup the container in one command.
+
+> [!NOTE]
+> The container provides a consistent Linux environment for compilation only. Due to display and performance limitations in containerised environments, emulation (QEMU) should be run natively on your host machine. If you choose not to use Docker, refer to the Dockerfile for the list of dependencies required for your local system.
+
+## m-Functions
+
+- **Inside Docker / Windows:** The `m` command is pre-configured.
+- **Linux / MacOS:** Run `source m.env` (and potentially `chmod +x make.py` for Linux) to initialise the alias.
+
+Regardless, to get the list of commands and instructions:
 
 ```bash
 m help
 ```
 
-If you have problems with this setup, you can use [`make.py`](make.py) directly, and run it like a normal python file in the terminal itself, and pass the necessary arguments after. The `m` is just for convenience.
+*If you have problems with this setup, you can use [`make.py`](make.py) directly, and run it like a normal python file in the terminal itself, and pass the necessary arguments after. The `m` is just for convenience.*
 
 ---
 

@@ -61,6 +61,11 @@ globals.IGNORES = (
     # kernel, even though it is part of the whole thing.
     f"arch/{globals.arch}/libc/",
     "kernel/libc/user.c",
+
+    # Since the introduction of the shelf app, the kernel shell
+    # is quite pointless, but, I have plans for it, so I'll leave
+    # it in the project folders, but I'll change it later.
+    "kernel/shell",
 )
 
 # --- INITIALIZATION ---
@@ -85,14 +90,15 @@ if globals.arch == "x86_32":
         "-serial stdio "
     )
 
-    if globals.shell_which("i686-elf-gcc"):
-        globals.PREFIX = "i686-elf-"
-    elif globals.shell_which("i386-elf-gcc"):
-        globals.PREFIX = "i386-elf-"
+    compilers = ("i686-linux-gnu-gcc", "i686-elf-gcc", "i386-elf-gcc")
+    for comp in compilers:
+        if globals.shell_which(comp):
+            globals.PREFIX = comp[:-3]
+            break
     else:
         print("Error: x86 cross-compiler not found")
         sys.exit(1)
-elif arch == "arm32":
+elif globals.arch == "arm32":
     globals.PREFIX = "arm-none-eabi-"
     globals.QEMU_BIN = "qemu-system-arm"
     globals.QEMU_FLAGS = f"-drive format=raw,file={globals.DISK_PATH},index=0,media=disk -serial stdio -M raspi2b"
@@ -170,8 +176,6 @@ if __name__ == "__main__":
         if arg[0] != '-' and not arg.isdigit():
             target = arg
             break
-
-    if "-elen" in sys.argv: err_len = int(sys.argv[sys.argv.index('-elen') + 1])
 
     if   target == globals.arch: farix_bin()
     elif target == "all":

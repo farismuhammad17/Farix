@@ -6,6 +6,9 @@
 .DS_Store
 __pycache__/
 
+# Docker
+.bash_history
+
 # Build
 build/
 libc_build*/

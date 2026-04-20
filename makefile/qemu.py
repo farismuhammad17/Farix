@@ -22,6 +22,13 @@ import os
 import makefile.globals
 
 def run_qemu(fullscreen=False):
+    if makefile.globals.is_in_docker():
+        print("\x1b[31mCannot emulate QEMU in docker. Run on native machine instead.\x1b[0m")
+        print("\x1b[90mWe set up Docker to only help someone who just cloned the repository to",
+            "compile the kernel, and get the farix.bin or farix.iso file. Unfortunately, docker",
+            "is an emulation, and thus, it is not possible to run an emulation through it.\x1b[0m", sep='\n')
+        return
+
     suffix = "-full-screen" if fullscreen else ""
 
     cmd = f"{makefile.globals.QEMU_BIN} -kernel farix.bin {makefile.globals.QEMU_FLAGS} {suffix}"

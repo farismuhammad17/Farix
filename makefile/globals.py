@@ -80,7 +80,6 @@ BOCHS_BIOS_PATH = None
 
 GRUB_CFG = None
 
-err_len = None
 def run(cmd, shell=True, check=True, capture_output=True):
     try:
         result = subprocess.run(
@@ -97,6 +96,7 @@ def run(cmd, shell=True, check=True, capture_output=True):
             return ""
 
         return result.stdout.strip() if result.stdout else ""
+
     except subprocess.CalledProcessError as e:
         print(f"\n\x1b[1;31m--- BUILD ERROR ---\x1b[0m")
         print(f"Command: {e.cmd}\n")
@@ -104,11 +104,7 @@ def run(cmd, shell=True, check=True, capture_output=True):
         err_msg = e.stderr
         if isinstance(err_msg, bytes):
             err_msg = err_msg.decode('utf-8', errors='replace')
-
-        if err_len:
-            print(f"Error:\n{'\n'.join(err_msg.splitlines()[:err_len])}")
-        else:
-            print(f"Error:\n{err_msg}")
+        print(f"Error:\n{e.stderr}")
 
         sys.exit(1)
 
@@ -170,3 +166,6 @@ def get_sources():
                     asm_sources.append(path)
 
     return c_sources, asm_sources
+
+def is_in_docker():
+    return os.path.exists('/.dockerenv')
