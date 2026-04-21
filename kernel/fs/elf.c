@@ -20,7 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <string.h>
 
-#include "arch/stubs.h"
+#include "hal.h"
+
 #include "fs/vfs.h"
 #include "memory/heap.h"
 #include "memory/pmm.h"

@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include "drivers/storage/ata.h"
+
 // Registers
 int REG_DATA     = 0x1F0; // Data port: 16-bit I/O
 int REG_ERROR    = 0x1F1; // Error register (Read) / Features (Write)

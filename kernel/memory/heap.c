@@ -22,7 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <stdio.h>
 
-#include "arch/stubs.h"
+#include "hal.h"
+
 #include "memory/pmm.h"
 #include "memory/vmm.h"
 

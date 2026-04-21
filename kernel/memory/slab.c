@@ -24,9 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "memory/slab.h"
 
-// Reorders the machine code to place these further away
-#define unlikely(x) __builtin_expect(!!(x), 0)
-
 Slab64* create_slab(uint16_t object_size) {
     Slab64* slab = (Slab64*) pmm_alloc_page();
     if (unlikely(!slab)) {
@@ -63,8 +60,8 @@ void delete_slab(Slab64* slab) {
 void* slab_alloc(Slab64* head) {
     Slab64* curr = head;
 
-    while (curr->free_slots == 0) {
-        if (curr->next == NULL) {
+    while (unlikely(curr->free_slots == 0)) {
+        if (unlikely(curr->next == NULL)) {
             curr->next = create_slab(1 << curr->obj_shift);
             curr->next->prev = curr;
             curr = curr->next; // Don't bother checking if a new slab is empty

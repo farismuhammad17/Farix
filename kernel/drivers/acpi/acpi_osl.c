@@ -21,7 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "arch/stubs.h"
+#include "hal.h"
+
 #include "cpu/pci.h"
 #include "cpu/timer.h"
 #include "drivers/uart.h"

@@ -127,7 +127,7 @@ globals.LIBC_INC = os.path.join(globals.LIBC_DIR, "include")
 globals.LIBC_LIB = os.path.join(globals.LIBC_DIR, "lib")
 
 globals.ACPICA_ARCH_INDEPENDANT = os.path.join(globals.PROJECT_ROOT, "include/drivers/acpi")
-globals.ACPICA_ARCH_DEPENDANT   = os.path.join(globals.PROJECT_ROOT, f"include/arch/{globals.arch}/acpi")
+globals.ACPICA_ARCH_DEPENDANT   = os.path.join(globals.PROJECT_ROOT, f"arch/{globals.arch}/include/acpi")
 
 globals.CC = f"{globals.PREFIX}gcc"
 globals.AS = f"{globals.PREFIX}as"
@@ -137,7 +137,8 @@ globals.CFLAGS = (
     "-fdiagnostics-color=always "
     f"-Iinclude -I{globals.LIBC_INC} "
     f"-I{globals.ACPICA_ARCH_INDEPENDANT} -I{globals.ACPICA_ARCH_DEPENDANT} "
-    "-include include/kernel.h"
+    "-include include/kernel.h "
+    f"-Iarch/{globals.arch} "
 )
 
 globals.BOOT_OBJ = "build/boot.o"

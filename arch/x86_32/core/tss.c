@@ -19,11 +19,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-#include "arch/x86_32/gdt.h"
+#include "include/gdt.h"
+
 #include "memory/heap.h"
 #include "memory/vmm.h"
 
-#include "arch/x86_32/tss.h"
+#include "include/tss.h"
 
 TSSEntry tss_entry;
 
@@ -36,7 +37,7 @@ void init_tss(uint32_t idx, uint32_t kss, uint32_t kesp) {
 
     kmemset(&tss_entry, 0, sizeof(TSSEntry));
 
-    tss_entry.ss0  = kss;     // Usually 0x10 (Kernel Data)
+    tss_entry.ss0  = kss; // Usually 0x10 (Kernel Data)
     tss_entry.esp0 = kesp;
 
     // Set the I/O map base to the size of the TSS to disable it

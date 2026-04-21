@@ -17,59 +17,60 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#ifndef X86_32_ASM_STUBS_H
+#define X86_32_ASM_STUBS_H
+
 #include <stdint.h>
 
 #include "memory/vmm.h"
 
-#include "arch/stubs.h"
-
-void outb(uint32_t port, uint8_t  val) {
+static inline void outb(uint32_t port, uint8_t  val) {
     asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
 }
 
-void outw(uint32_t port, uint16_t val) {
+static inline void outw(uint32_t port, uint16_t val) {
     asm volatile ( "outw %0, %1" : : "a"(val), "Nd"(port) );
 }
 
-void outl(uint16_t port, uint32_t val) {
+static inline void outl(uint16_t port, uint32_t val) {
     asm volatile ("outl %0, %1" : : "a"(val), "Nd"(port));
 }
 
-uint8_t inb(uint32_t port) {
+static inline uint8_t inb(uint32_t port) {
     uint8_t ret;
     asm volatile ( "inb %1, %0" : "=a"(ret) : "Nd"(port) );
     return ret;
 }
 
-uint16_t inw(uint32_t port) {
+static inline uint16_t inw(uint32_t port) {
     uint16_t ret;
     asm volatile ( "inw %1, %0" : "=a"(ret) : "Nd"(port) );
     return ret;
 }
 
-uint32_t inl(uint16_t port) {
+static inline uint32_t inl(uint16_t port) {
     uint32_t ret;
     asm volatile ("inl %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
 
-void system_halt() {
+static inline void system_halt() {
     asm volatile("hlt");
 }
 
-void system_int_on() {
+static inline void system_int_on() {
     asm volatile("sti");
 }
 
-void system_int_off() {
+static inline void system_int_off() {
     asm volatile("cli");
 }
 
-void system_pause() {
+static inline void system_pause() {
     asm volatile("pause" ::: "memory");
 }
 
-uint32_t asm_get_random(uint8_t *success) {
+static inline uint32_t asm_get_random(uint8_t *success) {
     uint32_t random_val;
 
     asm volatile(
@@ -83,10 +84,12 @@ uint32_t asm_get_random(uint8_t *success) {
     return random_val;
 }
 
-void cpu_mem_barrier() {
+static inline void cpu_mem_barrier() {
     asm volatile("" : : : "memory");
 }
 
-void task_yield() {
+static inline void task_yield() {
     asm volatile("int $0x20");
 }
+
+#endif

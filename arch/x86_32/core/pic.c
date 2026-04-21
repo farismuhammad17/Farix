@@ -17,9 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "arch/stubs.h"
+// Although inline assembly is useless if we know the architecture,
+// it makes the code more readable, hence the functions are nicer.
+#include "hal.h"
 
-#include "arch/x86_32/pic.h"
+#include "include/pic.h"
 
 void pic_remap() {
     // ICW1

@@ -25,7 +25,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 
-#include "arch/stubs.h"
+#include "hal.h"
+
 #include "drivers/keyboard.h"
 #include "drivers/mouse.h"
 #include "memory/heap.h"

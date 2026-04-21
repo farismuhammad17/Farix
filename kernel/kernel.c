@@ -20,7 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <stdio.h>
 
-#include "arch/stubs.h"
+#include "hal.h"
+
 #include "cpu/ints.h"
 #include "cpu/timer.h"
 #include "drivers/acpi/acpi.h"

@@ -19,7 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-#include "arch/stubs.h"
+#include "hal.h"
+
 #include "process/task.h"
 
 #define PIT_FREQ_HZ  1193182

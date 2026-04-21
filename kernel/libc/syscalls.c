@@ -24,7 +24,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "arch/stubs.h"
+#include "hal.h"
+
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "fs/vfs.h"

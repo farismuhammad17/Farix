@@ -4,6 +4,10 @@
 
 ## Advanced Host Controller Interface - *Current*
 
+- Arch
+  - Assembly stubs from `stubs.h` to `hal.h`
+  - All assembly stubs are inline
+  - Architecture includes (headers) now remain in arch folder
 - `kernel.h` defines macros to improve efficiency without much change:-
   - `unlikely(x)`: `x` is false most of the time
   - `likely(x)`: `x` is true most of the time
@@ -17,6 +21,7 @@
   - `PAGE_PCD` and `PAGE_PWT` flags for x86_32.
 - MFuncs
   - Compiler includes kernel.h
+  - Compiles with arch folder included for `hal.h`
 
 ## Docker build environment - *20th April, 2026*
 

@@ -20,11 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <stdio.h>
 
-#include "arch/stubs.h"
-#include "arch/x86_32/gdt.h"
-#include "arch/x86_32/multiboot.h"
-#include "arch/x86_32/pic.h"
-#include "arch/x86_32/tss.h"
+#include "include/gdt.h"
+#include "include/multiboot.h"
+#include "include/pic.h"
+#include "include/tss.h"
+
 #include "cpu/pci.h"
 #include "drivers/uart.h"
 #include "memory/heap.h"

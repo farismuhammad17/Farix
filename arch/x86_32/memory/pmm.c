@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
-#include "arch/x86_32/multiboot.h"
+#include "include/multiboot.h"
 
 #include "memory/pmm.h"
 
@@ -48,12 +48,11 @@ static void pmm_clear_bit(uint32_t page_number) {
 }
 
 // Check if a page is in use
-// CURRENTLY UNUSED
-// static bool pmm_test_bit(uint32_t page_number) {
-//     uint32_t index = page_number >> 5;
-//     uint32_t bit   = page_number & 31;
-//     return (pmm_bitmap[index] & (1 << bit));
-// }
+static bool pmm_test_bit(uint32_t page_number) {
+    uint32_t index = page_number >> 5;
+    uint32_t bit   = page_number & 31;
+    return (pmm_bitmap[index] & (1 << bit));
+}
 
 void init_pmm() {
     if (!(mbi->flags & (1 << 6))) return;

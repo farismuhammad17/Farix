@@ -23,7 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string.h>
 #include <sys/stat.h>
 
-#include "arch/stubs.h"
+#include "hal.h"
+
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
@@ -33,7 +34,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "process/task.h"
 
 #include "farix.h"
-#include "kernel.h"
 
 // For syscall_handler > SYS_INT_EXEC
 #define SYS_INT_EXEC_CASE(n) case n: asm volatile("int %0" :: "i"(n)); break;
@@ -122,14 +122,14 @@ static void err_printf(const char* format, ...) {
 }
 
 // Dump general purpose registers for deeper debugging
-static void dump_register_info(syscalls_registers_x86_32_t* regs) {
+static inline void dump_register_info(syscalls_registers_x86_32_t* regs) {
     err_printf("--- Register values ---\n");
     err_printf("EAX: %lx EBX: %lx ECX: %lx EDX: %lx\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
     err_printf("EDI: %lx ESI: %lx EBP: %lx ESP: %lx\n", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
 }
 
 // Dumps multitasking information in case of race condition errors
-static void dump_multitasking_info() {
+static inline void dump_multitasking_info() {
     if (current_task == NULL) return;
 
     err_printf("--- Multitasking ---\n");

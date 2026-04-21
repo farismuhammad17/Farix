@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "arch/stubs.h"
+#include "hal.h"
 
 #include "drivers/uart.h"
 
