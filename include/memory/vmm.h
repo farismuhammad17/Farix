@@ -35,6 +35,8 @@ extern const uintptr_t PAGE_PRESENT;
 extern const uintptr_t PAGE_RW;
 extern const uintptr_t PAGE_USER;
 extern const uintptr_t PAGE_CACHE;
+extern const uintptr_t PAGE_PWT;
+extern const uintptr_t PAGE_PCD;
 
 extern uint32_t* kernel_directory;
 

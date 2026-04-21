@@ -24,8 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "cpu/pci.h"
 
-#define MAX_TIMEOUT_DURATION 1000000
-
 // Registers
 extern int REG_DATA;
 extern int REG_ERROR;

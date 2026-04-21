@@ -13,6 +13,8 @@
 - Storage
   - Block Device (Abstraction) Layer for ATA and (WIP) AHCI.
   - `init_ata` takes in PCI device object
+- VMM
+  - `PAGE_PCD` and `PAGE_PWT` flags for x86_32.
 - MFuncs
   - Compiler includes kernel.h
 

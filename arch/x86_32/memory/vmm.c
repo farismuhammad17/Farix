@@ -24,10 +24,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "memory/vmm.h"
 
-const uintptr_t PAGE_PRESENT = 0x1; // 01 in binary  - If page is in RAM
-const uintptr_t PAGE_RW      = 0x2; // 10 in binary  - 0 = Read-only,   1 = Read/Write
-const uintptr_t PAGE_USER    = 0x4; // 100 in binary - 0 = Kernel only, 1 = Everyone
-const uintptr_t PAGE_CACHE   = 0x0; // Not present in x86, does nothing, but required stub
+const uintptr_t PAGE_PRESENT = 0x1;  // 10e0 in binary - If page is in RAM
+const uintptr_t PAGE_RW      = 0x2;  // 10e1 in binary - 0 = Read-only,   1 = Read/Write
+const uintptr_t PAGE_USER    = 0x4;  // 10e2 in binary - 0 = Kernel only, 1 = Everyone
+const uintptr_t PAGE_PWT     = 0x8;  // 10e3 in binary - Writes go to cache and memory immediately
+const uintptr_t PAGE_PCD     = 0x10; // 10e4 in binary - Completely disables CPU caching for that page
+const uintptr_t PAGE_CACHE   = 0x0;  // Not present in x86, does nothing, but required stub
 
 #define PAGING_BIT  0x80000000
 #define PAGE_WP_BIT 0x00010000

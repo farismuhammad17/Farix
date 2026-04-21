@@ -26,6 +26,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "drivers/storage/ata.h"
 
+#define MAX_TIMEOUT_DURATION 1000000
+
 static BDLDevice bdl_ata_device = {
     .read  = ata_read_sector,
     .write = ata_write_sector

@@ -22,3 +22,30 @@ This was purely for the fun of spamming these everywhere. It felt nice, even tho
 While moving through my own code, I realised there were plenty of... flaws, I suppose, just problems. I left `TODO` markings wherever I felt like it could have improvements, and I also removed a couple duplications.
 
 I'll think of how to fix AHCI later, I'm just going to push this WIP into a branch so that I can keep track of everything.
+
+*21st April, 2026*
+
+I tried to fix it out, ran it on a real computer, and it seems I might be getting close. I'm mostly switching between my own assumptions, documentation, and LLM (often useless). As of the current code, I get this in my computer:
+
+```
+init_ahci: Implementation is WIP
+init_ahci: MMIO mapped
+init_ahci: BIOS handoff complete
+ahci_wait: timeout waiting for register
+init_ahci: controller reset complete
+init_ahci: CAP=e730ff45 PI=11 VS=10300
+init_ahci: Port 0: DET=0 IPM=0 SIG=0
+init_ahci: Port 4: DET=0 IPM=0 SIG=0
+init_ahci: init complete
+ahci_read_sector: Unimplemented
+```
+
+And of course, since there is no system to read the files, shelf doesn't execute (not like it can, my computer doesn't have the application, I'll have to figure that out later). I can make it load into kernel shell I suppose, but whatever. I might have that later if the debugging becomes that annoying. As of now, I have no clue why. I booted the computer into Linux to verify that AHCI is present; it is, it just won't work for my kernel. I don't know why, I hate that I don't know why, and I wish someone actually wrote proper documentation. My only documented source is the OSDev wiki, only because literally nothing else exists. QEMU is worse (or better, I don't know).
+
+![AHCI fail :(](docs_assets/21_apr_2026_ahci_fail_1.png)
+
+*Yes, I went into the 6th March, 2026, journal entry to remember how to put images in markdown, and yes, I noticed the picture isn't there, I don't know what happened there, the date is probably (100%) wrong.*
+
+One fear I have of the AHCI is that, apparently, it *could* have access to my computer's actual hard disk. If I firetruck up the code, I *may* brick the entire computer. It's not important for me, but I only have two testing computers, and one programming computer. These testing computers are old computers that no one uses anymore, but I prefer having them around for these kind of stuff. If they stop working, then I have no way to test my kernel properly on real hardware. I definitely am not going to run it on my main computer.
+
+AHCI is the only scare part right now, has too much power, and depends on the PMM and VMM, which is never a good sign. The IDE mode, ATA, works perfectly fine, but AHCI seems to be an actual nuisance. I remember mentioning it in an older journal entry, and I said I was going to leave it for some time or something. It seems if I don't have this, the kernel is kinda useless, and everything I have made is useless. What's the use of a computer that runs everything perfectly but can't run anything? I might figure it out someday by just tinkering around, unfortunately, that day is definetely not today.

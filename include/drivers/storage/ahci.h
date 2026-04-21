@@ -66,6 +66,15 @@ typedef struct {
     hba_port_t ports[32]; // 0x100: Port registers start here
 } hba_mem_t;
 
+typedef struct {
+    uint16_t flags;
+    uint16_t prdtl; // Physical Region Descriptor Table Length: Number of PRDT entries (i.e., how many memory chunks)
+    uint32_t prdbc; // Physical Region Descriptor Byte Count: For controller to write how many bytes were transferred
+    uint32_t ctba;  // Command Table Base Address (low + high)
+    uint32_t ctbau;
+    uint32_t rsv[4];
+} hba_cmd_header_t;
+
 extern int HBA_PxCMD_ST;
 extern int HBA_PxCMD_FRE;
 extern int HBA_PxCMD_FR;
