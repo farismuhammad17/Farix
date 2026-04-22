@@ -34,10 +34,60 @@ typedef struct Slab64 {
     char data[] __attribute__((aligned(8)));
 } __attribute__((aligned(64))) Slab64;
 
-Slab64* create_slab(uint16_t object_size);
-void    delete_slab(Slab64* slab);
+typedef struct Slab32 {
+    uint32_t mask;
+    uint32_t free_slots;
+    uint32_t slab_magic;
+    uint16_t obj_shift;
 
-void* slab_alloc(Slab64* head);
-void  slab_free(void* ptr);
+    struct Slab32* next;
+    struct Slab32* prev;
+
+    char data[] __attribute__((aligned(8)));
+} __attribute__((aligned(64))) Slab32;
+
+typedef struct Slab16 {
+    uint16_t mask;
+    uint16_t free_slots;
+    uint32_t slab_magic;
+    uint16_t obj_shift;
+
+    struct Slab16* next;
+    struct Slab16* prev;
+
+    char data[] __attribute__((aligned(8)));
+} __attribute__((aligned(64))) Slab16;
+
+typedef struct Slab8 {
+    uint8_t mask;
+    uint8_t free_slots;
+    uint32_t slab_magic;
+    uint16_t obj_shift;
+
+    struct Slab8* next;
+    struct Slab8* prev;
+
+    char data[] __attribute__((aligned(8)));
+} __attribute__((aligned(64))) Slab8;
+
+Slab64* create_slab64 (uint16_t object_size);
+Slab32* create_slab32 (uint16_t object_size);
+Slab16* create_slab16 (uint16_t object_size);
+Slab8*  create_slab8  (uint16_t object_size);
+
+void    delete_slab64 (Slab64* slab);
+void    delete_slab32 (Slab32* slab);
+void    delete_slab16 (Slab16* slab);
+void    delete_slab8  (Slab8*  slab);
+
+void*   slab_alloc64  (Slab64* head);
+void*   slab_alloc32  (Slab32* head);
+void*   slab_alloc16  (Slab16* head);
+void*   slab_alloc8   (Slab8*  head);
+
+void    slab_free64   (void* ptr);
+void    slab_free32   (void* ptr);
+void    slab_free16   (void* ptr);
+void    slab_free8    (void* ptr);
 
 #endif

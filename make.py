@@ -84,14 +84,14 @@ if globals.arch == "x86_32":
         "-global i8042.extended-state=off "
 
         # IDE-mode (ATA)
-        # f"-drive file={globals.DISK_PATH},if=none,id=hd0,format=raw,media=disk "
-        # "-device piix4-ide,id=pci-ide0 "
-        # "-device ide-hd,bus=pci-ide0.0,drive=hd0 "
+        f"-drive file={globals.DISK_PATH},if=none,id=hd0,format=raw,media=disk "
+        "-device piix4-ide,id=pci-ide0 "
+        "-device ide-hd,bus=pci-ide0.0,drive=hd0 "
 
         # AHCI-mode (HBA)
-        f"-drive file={globals.DISK_PATH},if=none,id=disk0,format=raw,media=disk "
-        "-device ahci,id=ahci0 "
-        "-device ide-hd,drive=disk0,bus=ahci0.0 "
+        # f"-drive file={globals.DISK_PATH},if=none,id=disk0,format=raw,media=disk "
+        # "-device ahci,id=ahci0 "
+        # "-device ide-hd,drive=disk0,bus=ahci0.0 "
 
         "-device virtio-mouse-pci "
         "-vga std "

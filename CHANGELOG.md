@@ -2,7 +2,7 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## Advanced Host Controller Interface - *Current*
+## Slab allocated ACPI - *Current*
 
 - Arch
   - Assembly stubs from `stubs.h` to `hal.h`
@@ -19,6 +19,8 @@
   - `init_ata` takes in PCI device object
 - VMM
   - `PAGE_PCD` and `PAGE_PWT` flags for x86_32.
+- Slab
+  - Implemented `Slab32`, `Slab16`, `Slab8`
 - MFuncs
   - Compiler includes kernel.h
   - Compiles with arch folder included for `hal.h`

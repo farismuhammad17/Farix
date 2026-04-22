@@ -45,23 +45,26 @@ This prevents the "shredded memory" problem where many small free blocks exist b
 
 The heap is often for general purpose, but say we have a lot of the same objects. For that case, we can use the slab allocator to speed it up: just a collection of objects, all of the same type. This makes it so that the lookup is almost instant, since we can just skip by `sizeof(object)`.
 
+> [!NOTE]
+> Each of these functions and variables are suffixed with the number of objects they allocate. Each slab is a page big, thus `Slab64` can have objects of size `PAGE_SIZE / 64`. The valid slabs are: `Slab64`, `Slab32`, `Slab16`, and `Slab8`.
+
 ```c
-Slab64* create_slab(uint16_t object_size);
+Slab* create_slab(uint16_t object_size);
 ```
 
 This function creates a new slab: takes a single page, initialises all the values, and calculates (as fast as possible) the exponent of the power of 2 that is just over the provided `object_size`. Of course, we hope that the given object is not more than 64 bytes, and if we need that, we'll make a new slab struct for that. This is for less that 64 byte objects.
 
 ```c
-void delete_slab(Slab64* slab);
+void delete_slab(Slab* slab);
 ```
 
 This simply stitches the slabs together and frees it from the PMM. If you want to skip the checks entirely, simple free the slab from PMM yourself.
 
 ```c
-void* slab_alloc(Slab64* head);
+void* slab_alloc(Slab* head);
 ```
 
-This function finds the first free slab, and allocates to it. If no slab is found, we create a new one, and don't bother checking once more in the loop. We compute the index in the mask using `__builtin_ctzll`, which would translate to just one assembly instruction (cannot go faster than that).
+This function finds the first free slab, and allocates to it. If no slab is found, we create a new one, and don't bother checking once more in the loop. We compute the index in the mask using `__builtin_ctzll` or `__builtin_ctz`, which would translate to just one assembly instruction (cannot go faster than that).
 
 ```c
 void slab_free(void* ptr);

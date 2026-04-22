@@ -32,7 +32,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "process/task.h"
 
 #include "drivers/acpi/acpi.h"
-#include "kernel.h"
 
 #define OS_SLEEP_MAX_MICROSECONDS 3000000
 #define MAX_DEFERRED_UNMAPS 64

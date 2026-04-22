@@ -41,7 +41,6 @@ void pic_remap() {
     outb(PIC2_DATA, 0x01);
 
     /* For understanding:
-     *
      * 0 = Enabled | 1 = Disabled
      *
      * In the Master PIC (PIC1):
@@ -65,6 +64,10 @@ void pic_remap() {
      * 5   | 13  | FPU           | Disabled | Math co-processor.
      * 6   | 14  | Primary ATA   | Disabled | Hard Drive Controller.
      * 7   | 15  | Secondary ATA | Disabled | Second hard drive or CD-ROM controller.
+     *
+     * TODO:
+     * NOTE: For the APIC, PIC must be remapped, and then disabled.
+     * This is done by masking off all the bits, hence 0xFF.
      */
     outb(PIC1_DATA, 0b11101000);
     outb(PIC2_DATA, 0b11101111);

@@ -24,10 +24,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "memory/slab.h"
 
-Slab64* create_slab(uint16_t object_size) {
+Slab64* create_slab64(uint16_t object_size) {
     Slab64* slab = (Slab64*) pmm_alloc_page();
     if (unlikely(!slab)) {
-        uart_printf("create_slab: pmm_alloc_page failed\n");
+        uart_printf("create_slab64: pmm_alloc_page failed\n");
         return NULL;
     }
 
@@ -48,7 +48,7 @@ Slab64* create_slab(uint16_t object_size) {
     return slab;
 }
 
-void delete_slab(Slab64* slab) {
+void delete_slab64(Slab64* slab) {
     if (slab->prev)
         slab->prev->next = slab->next;
     if (slab->next)
@@ -57,12 +57,12 @@ void delete_slab(Slab64* slab) {
     pmm_free_page(slab);
 }
 
-void* slab_alloc(Slab64* head) {
+void* slab_alloc64(Slab64* head) {
     Slab64* curr = head;
 
     while (unlikely(curr->free_slots == 0)) {
         if (unlikely(curr->next == NULL)) {
-            curr->next = create_slab(1 << curr->obj_shift);
+            curr->next = create_slab64(1 << curr->obj_shift);
             curr->next->prev = curr;
             curr = curr->next; // Don't bother checking if a new slab is empty
             break;
@@ -78,13 +78,13 @@ void* slab_alloc(Slab64* head) {
     return (void*)((uintptr_t) curr->data + (slot << curr->obj_shift));
 }
 
-void slab_free(void* ptr) {
+void slab_free64(void* ptr) {
     // Jump to the start of the 4KB page this pointer lives in.
     // This works because the PMM always gives us page-aligned memory.
     Slab64* slab = (Slab64*)((uintptr_t) ptr & 0xFFFFF000);
 
     if (unlikely(slab->slab_magic != SLAB_MAGIC)) {
-        uart_printf("slab_free: Slab pointer %x has invalid magic", ptr);
+        uart_printf("slab_free64: Slab pointer %x has invalid magic", ptr);
         return;
     }
 
