@@ -64,4 +64,4 @@ I, thus, made slabs that hold 32 objects, 16, and 8, instead of just the 64. The
 
 *23nd April, 2026*
 
-Came home from school, didn't sleep. I was just bored, and I wrote the ACPI to use the slab allocator. I'll do some more later; I'm just tired, but I had a lot of plans, not sure if I'll finish them today.
+Came home from school, didn't sleep. I was just bored, and I wrote the ACPI to use the slab allocator. I'll do some more later; I'm just tired, but I had a lot of plans, not sure if I'll finish them today. I just made it start using interrupts, so I hope it won't overwrite my IDT or something. I have no clue if the HAL will work once I try to get more architectures, but I'm not bothered, as long as it works on x86 (32 bit too), it's fine for me.
