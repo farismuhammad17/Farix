@@ -92,4 +92,23 @@ static inline void task_yield() {
     asm volatile("int $0x20");
 }
 
+static inline uint32_t save_disable_interrupts() {
+    uint32_t flags;
+    asm volatile(
+        "pushf\n\t"
+        "pop %0\n\t"
+        "cli"
+        : "=rm"(flags) :: "memory"
+    );
+    return flags;
+}
+
+static inline void restore_interrupts(uint32_t flags) {
+    asm volatile(
+        "push %0\n\t"
+        "popf"
+        : : "rm"(flags) : "memory", "cc"
+    );
+}
+
 #endif

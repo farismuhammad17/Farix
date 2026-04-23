@@ -411,12 +411,11 @@ ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Time
     if (!Handle) return AE_BAD_PARAMETER;
     acpi_semaphore_t* sem = (acpi_semaphore_t*) Handle;
 
-    // TODO: check if (sem->units >= Units).
-    // If not, you'd yield the thread.
-    // But we aren't letting ACPICA anywhere yet, so it doesn't matter
-    if (sem->units >= Units) {
-        sem->units -= Units;
-        return AE_OK;
+    // We must loop because another task might grab the units
+    // the moment we wake up from a yield.
+    while (sem->units < Units) {
+        task_yield();
+        if (Timeout == 0) return AE_TIME;
     }
 
     sem->units -= Units;
@@ -468,16 +467,7 @@ void AcpiOsDeleteLock(ACPI_SPINLOCK Handle) { }
 // current execution flow from being interrupted or preempted while holding a resource that other
 // cores may also attempt to access.
 ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle) {
-    ACPI_CPU_FLAGS flags;
-    asm volatile(
-        "pushf\n\t"
-        "pop %0\n\t"
-        "cli"
-        : "=rm"(flags)
-        :
-        : "memory"
-    );
-    return flags;
+    return (ACPI_CPU_FLAGS) save_disable_interrupts();
 }
 
 // This function releases a previously acquired spinlock and restores the processor to its previous
@@ -485,14 +475,7 @@ ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle) {
 // This ensures that the local interrupt state is correctly balanced and the resource is made available
 // to other processors.
 void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags) {
-    // Restore the flags (this will re-enable interrupts IF they were on before)
-    asm volatile(
-        "push %0\n\t"
-        "popf"
-        :
-        : "rm"(Flags)
-        : "memory", "cc"
-    );
+    restore_interrupts((uint32_t) Flags);
 }
 
 // --- I/O ---

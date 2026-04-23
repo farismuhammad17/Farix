@@ -2,7 +2,7 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## Slab allocated ACPI - *Current*
+## Slab allocated ACPI - *23rd April, 2026*
 
 - Arch
   - Assembly stubs from `stubs.h` to `hal.h`
@@ -14,12 +14,18 @@
   - `RARE_FUNC`: Function is rarely used
   - `FREQ_FUNC`: Function is frequently used
 - Spammed aforementioned macros throughout source code.
+- Interrupts
+  - Added `set_interrupt_kernel`, `set_interrupt_user`, `clear_interrupt`
 - Storage
   - Block Device (Abstraction) Layer for ATA and (WIP) AHCI.
   - `init_ata` takes in PCI device object
 - ACPI
   - Uses slab allocator
   - Interrupts
+  - Proper semaphore wait function
+  - Abstracted inline assembly
+- HAL
+  - Added `save_disable_interrupts`, `restore_interrupts`
 - VMM
   - `PAGE_PCD` and `PAGE_PWT` flags for x86_32.
 - Slab
