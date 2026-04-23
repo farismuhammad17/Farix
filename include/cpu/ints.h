@@ -22,4 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 void RARE_FUNC init_interrupts();
 
+// Use void* for the handler to remain flexible for different function types
+void set_interrupt_kernel (uint8_t vector, void* handler);
+void set_interrupt_user   (uint8_t vector, void* handler);
+void clear_interrupt      (uint8_t vector);
+
 #endif

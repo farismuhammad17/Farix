@@ -119,3 +119,16 @@ void init_interrupts() {
 
     asm volatile("lidt %0" : : "m"(idtp));
 }
+
+void set_interrupt_kernel(uint8_t vector, void* handler) {
+    // sel is 0x08 because that's the Kernel Code Segment
+    idt_set_gate(vector, (uint32_t) handler, 0x08, IDT_GATE_KERNEL);
+}
+
+void set_interrupt_user(uint8_t vector, void* handler) {
+    idt_set_gate(vector, (uint32_t) handler, 0x08, IDT_GATE_USER);
+}
+
+void clear_interrupt(uint8_t vector) {
+    idt_set_gate(vector, (uint32_t) default_handler_stub, 0x08, IDT_GATE_KERNEL);
+}

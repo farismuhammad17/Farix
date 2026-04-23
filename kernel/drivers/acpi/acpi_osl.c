@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
+#include "cpu/ints.h"
 #include "cpu/pci.h"
 #include "cpu/timer.h"
 #include "drivers/uart.h"
@@ -90,6 +91,9 @@ ACPI_STATUS AcpiOsTerminate() {
 // with the provided Context. It returns AE_OK if the mapping succeeds
 // or AE_ALREADY_EXISTS if the slot is taken.
 ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine, void *Context) {
+    // ACPICA gives us an IRQ (0-15). We map it to the IDT range (32-47).
+    uint8_t vector = (uint8_t)(32 + InterruptNumber);
+    set_interrupt_kernel(vector, (void*) ServiceRoutine);
     return AE_OK;
 }
 
@@ -99,6 +103,8 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDL
 // or system shutdown to prevent the kernel from jumping to invalid memory
 // addresses when an ACPI interrupt occurs.
 ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER ServiceRoutine) {
+    uint8_t vector = (uint8_t)(32 + InterruptNumber);
+    clear_interrupt(vector);
     return AE_OK;
 }
 
