@@ -1,6 +1,6 @@
 [Back to journal.md](../journal.md)
 
-# Advanced Host Controller Interface
+# Slab allocated ACPI
 
 *20th April, 2026*
 
@@ -55,3 +55,13 @@ AHCI is the only scare part right now, has too much power, and depends on the PM
 I later got bored, and realised my assembly stubs take precious microseconds from the total runtime. To solve this, I changed everything to make this one file a header file, then the rest of the kernel can use this header for its assembly functions. The compilation sequence accommodates for it too. I suppose it's not much, but it probably compounds a lot, and doing this early is better than never. Also makes the code ever so slightly cleaner. I also took advantage of that and moved all the headers to the arch folder, just so the separation is slightly cleaner. I changes nothing code-wise, but it does for future me.
 
 As for the ARM32 architecture... it's quite cooked, I'm not even bothered over it anymore. To be frank, I only left it in the code just because I wanted it to be clear that adding a new architecture is possible. I just don't get ARM, so until I find the time to actually go and study the RISC architecture model, I'm not going to fix it. I only leave it there, so that future HAL won't be a hassle. If I don't have it, I might make the code "too" x86, and, thus, make porting a nightmare.
+
+*22nd April, 2026*
+
+I realise a small annoyance in the dependancies: For the AHCI, I need the APIC; for the APIC, I need the ACPI; for the ACPI, I need proper ACPICA; for the ACPICA, I need to make it work through slabs, because currently, it's terrible. It has this PMM/VMM dance to allocate memory, and it's honestly the biggest waste of memory in the entire kernel. The solution is to use slabs, but I want to use it in a very particular way, but that requires me to have differently sized slabs.
+
+I, thus, made slabs that hold 32 objects, 16, and 8, instead of just the 64. The code is wet, and I can't be bothered: the slab is for absolute speed, it is better for me to optimise specific slabs easily as a result. With my slabs, I should be able to make the ACPI use memory better.
+
+*23nd April, 2026*
+
+Came home from school, didn't sleep. I was just bored, and I wrote the ACPI to use the slab allocator. I'll do some more later; I'm just tired, but I had a lot of plans, not sure if I'll finish them today.

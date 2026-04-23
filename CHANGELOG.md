@@ -17,6 +17,8 @@
 - Storage
   - Block Device (Abstraction) Layer for ATA and (WIP) AHCI.
   - `init_ata` takes in PCI device object
+- ACPI
+  - Uses slab allocator
 - VMM
   - `PAGE_PCD` and `PAGE_PWT` flags for x86_32.
 - Slab

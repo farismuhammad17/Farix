@@ -27,8 +27,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cpu/timer.h"
 #include "drivers/uart.h"
 #include "memory/heap.h"
-#include "memory/pmm.h"
 #include "memory/vmm.h"
+#include "memory/pmm.h"
+#include "memory/slab.h"
 #include "process/task.h"
 
 #include "drivers/acpi/acpi.h"
@@ -47,10 +48,25 @@ static size_t unmap_count = 0;
 
 static ACPI_PHYSICAL_ADDRESS AcpiRSDP = NULL;
 
+static Slab64* acpi_head64 = NULL;
+static Slab32* acpi_head32 = NULL;
+static Slab16* acpi_head16 = NULL;
+static Slab8*  acpi_head8  = NULL;
+
 // --- INITIALISATION ---
 
 // This is the first init_acpi function
 ACPI_STATUS AcpiOsInitialize() {
+    acpi_head64 = create_slab64(64);  // 64-byte objects
+    acpi_head32 = create_slab32(128); // 128-byte objects
+    acpi_head16 = create_slab16(256); // 256-byte objects
+    acpi_head8  = create_slab8(512);  // 512-byte objects
+
+    if (unlikely(!acpi_head64 || !acpi_head32 || !acpi_head16 || !acpi_head8)) {
+        uart_printf("ACPI OSL: Failed to initialize slab pools\n");
+        return AE_NO_MEMORY;
+    }
+
     AcpiRSDP = AcpiOsGetRootPointer();
 
     if (AcpiRSDP == 0) return AE_NOT_FOUND;
@@ -240,7 +256,23 @@ void AcpiMappingCleanup() {
 // If the allocation fails due to insufficient heap space, it returns NULL. It must provide
 // 8-byte aligned memory.
 void* AcpiOsAllocate(ACPI_SIZE Size) {
-    void* ptr = kmalloc(Size);
+    void* ptr = NULL;
+
+    // We check from smallest capacity (large objects) to largest capacity (small objects)
+
+    if (Size <= 64) {
+        ptr = slab_alloc64(acpi_head64);
+    } else if (Size <= 128) {
+        ptr = slab_alloc32(acpi_head32);
+    } else if (Size <= 256) {
+        ptr = slab_alloc16(acpi_head16);
+    } else if (Size <= 512) {
+        ptr = slab_alloc8(acpi_head8);
+    } else {
+        // Fallback for stuff we can't slab
+        ptr = kmalloc(Size);
+    }
+
     if (ptr) kmemset(ptr, 0, Size);
     return ptr;
 }
@@ -250,16 +282,43 @@ void* AcpiOsAllocate(ACPI_SIZE Size) {
 // purpose is to return the specified memory to the kernel's heap, preventing leaks within the
 // ACPI subsystem.
 void AcpiOsFree(void *Memory) {
-    kfree(Memory);
+    if (!Memory) return;
+
+    // This works because every Slab header is at the very beginning of a PMM page.
+    uintptr_t page_base = (uintptr_t) Memory & 0xFFFFF000;
+
+    // Cast it to a generic Slab pointer to check the magic
+    // We can use Slab8 as a template since slab_magic is at the same offset in all of them
+    Slab8* slab = (Slab8*) page_base;
+
+    if (likely(slab->slab_magic == SLAB_MAGIC)) {
+        // We look at the capacity (free_slots at init) or obj_shift.
+        // Based on our initialization: 6=64, 7=128, 8=256, 9=512
+        switch (slab->obj_shift) {
+            case 6:  slab_free64(Memory); break;
+            case 7:  slab_free32(Memory); break;
+            case 8:  slab_free16(Memory); break;
+            case 9:  slab_free8(Memory);  break;
+            default:
+                uart_printf("AcpiOsFree: Slab has magic but invalid shift: %d\n", slab->obj_shift);
+                break;
+        }
+    }
+
+    // Not a slab
+    else kfree(Memory);
 }
 
 // This function initializes a local memory cache for frequently allocated fixed-size objects.
 // It requires a name string, object size, and maximum depth. It returns an ACPI_STATUS code and
 // provides a handle to the new cache via a pointer. This optimization reduces fragmentation and
 // overhead during frequent interpreter allocations.
-// TODO: Use proper slab allocation
 ACPI_STATUS AcpiOsCreateCache(char *CacheName, UINT16 ObjectSize, UINT16 MaxDepth, ACPI_CACHE_T **ReturnCache) {
+    if (!ReturnCache || ObjectSize == 0) return AE_BAD_PARAMETER;
+
+    // We use the Size as the handle.
     *ReturnCache = (ACPI_CACHE_T*)(uintptr_t) ObjectSize;
+
     return AE_OK;
 }
 
