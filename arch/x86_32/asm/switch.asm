@@ -19,8 +19,6 @@
 section .text
 
 global switch_task
-extern timer_handler
-global timer_handler_stub
 
 switch_task:
     pusha
@@ -32,9 +30,3 @@ switch_task:
 
     popa
     ret
-
-timer_handler_stub:
-    pusha                ; Save everything before calling C
-    call timer_handler
-    popa                 ; Restore everything (potentially from a NEW task stack!)
-    iret                 ; Finish the hardware interrupt properly

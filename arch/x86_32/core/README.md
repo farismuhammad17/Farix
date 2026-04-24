@@ -2,7 +2,7 @@ This folder contains all the core drivers and specific hardware components that 
 
 # PIC (Programmable Interrupt Controller)
 
-The PIC acts as the CPU's receptionist for hardware signals. Since the CPU has only one main interrupt pin, the PIC manages up to 15 hardware interrupt lines (IRQs), prioritizes them, and feeds them to the processor one by one. In x86 systems, this is handled by two chips: the **Master** and the **Slave**, connected in a "cascade" configuration where the Slave signals the Master through IRQ 2.
+The PIC acts as the CPU's receptionist for hardware signals. Since the CPU has only one main interrupt pin, the PIC manages up to 15 hardware interrupt lines (IRQs), prioritises them, and feeds them to the processor one by one. In x86 systems, this is handled by two chips: the **Master** and the **Slave**, connected in a "cascade" configuration where the Slave signals the Master through IRQ 2.
 
 By default, the PIC maps hardware interrupts to the same IDT indices reserved for CPU exceptions (0–31). To prevent a timer tick from being confused with a "Division by Zero" error, the kernel must perform a **PIC Remap** to move hardware interrupts to a safe range (indices 32–47).
 
@@ -10,7 +10,7 @@ By default, the PIC maps hardware interrupts to the same IDT indices reserved fo
 void pic_remap();
 ```
 
-Sends a sequence of Initialization Command Words (ICW) to both PIC chips. This process resets the controllers, establishes the Master/Slave relationship, and remaps the interrupt vectors. Specifically, it maps IRQ 0–7 to IDT entries 32–39 and IRQ 8–15 to IDT entries 40–47. 
+Sends a sequence of Initialisation Command Words (ICW) to both PIC chips. This process resets the controllers, establishes the Master/Slave relationship, and remaps the interrupt vectors. Specifically, it maps IRQ 0–7 to IDT entries 32–39 and IRQ 8–15 to IDT entries 40–47.
 
 Finally, it applies an **Interrupt Mask** by writing to the PIC data ports. This allows the kernel to selectively enable only the hardware it is ready to handle (like the Timer and Keyboard) while ignoring "noisy" or unused lines.
 
@@ -29,12 +29,11 @@ These writes to the Mask Registers use bitfields where a `0` enables the interru
 | **4** | **COM1** | **Enabled** | Used for serial debugging and logs. |
 | **12** | **PS/2 Mouse** | **Enabled** | Processes cursor movement and clicks. |
 
-```c
-outb(0x20, 0x20); // Master EOI
-outb(0xA0, 0x20); // Slave EOI
-```
-
 The **End of Interrupt (EOI)** signal. After a hardware interrupt is handled, the kernel must send this command to the PIC. Without it, the PIC will assume the CPU is still busy and will refuse to send any further interrupts from that device.
+
+# APIC (Advanced Programmable Interrupt Controller)
+
+The entire PIC is for legacy hardware, and is unfortunately quite unusable for the modern world. As a result, the APIC is implemented. The entire thing works similarly. The ACPI provides the APIC's required pointer, the MADT; using which, we map the VMM to the CPU's desired address. There, we write to the local APIC and unmask the required interrupts for the IDT to function.
 
 # PCI (Peripheral Component Interconnect)
 
@@ -63,7 +62,7 @@ Accesses the **PCI Configuration Space** using I/O ports `0xCF8` (Address) and `
 
 # IDT (Interrupt Descriptor Table)
 
-The Interrupt Descriptor Table (IDT) is the x86 architecture’s mechanism for handling asynchronous events and exceptions. It functions as a jump table containing 256 "gates," where each entry points to a specific function (handler) that the CPU should execute when a corresponding interrupt occurs. 
+The Interrupt Descriptor Table (IDT) is the x86 architecture’s mechanism for handling asynchronous events and exceptions. It functions as a jump table containing 256 "gates," where each entry points to a specific function (handler) that the CPU should execute when a corresponding interrupt occurs.
 
 Without a properly configured IDT, any hardware event, like a keypress, or software error, like a division by zero, would cause the CPU to enter a "Triple Fault" and reboot (which looks like a crash). The IDT provides the bridge between hardware signals and the kernel’s high-level C logic.
 
@@ -97,7 +96,7 @@ A helper function that packs base addresses, segment limits, and access flags in
 
 # TSS (Task State Segment)
 
-In a multitasking environment, the CPU needs a mechanism to safely transition between different execution contexts, specifically when moving from User Mode (Ring 3) to Kernel Mode (Ring 0). The Task State Segment (TSS) is a dedicated structure that stores critical processor state information used by the hardware during these transitions. 
+In a multitasking environment, the CPU needs a mechanism to safely transition between different execution contexts, specifically when moving from User Mode (Ring 3) to Kernel Mode (Ring 0). The Task State Segment (TSS) is a dedicated structure that stores critical processor state information used by the hardware during these transitions.
 
 While modern x86 kernels primarily use software-based multitasking rather than the hardware task-switching features of the TSS, the structure remains mandatory for one vital purpose: defining the **Kernel Stack Pointer**. When an interrupt or system call occurs while the CPU is in Ring 3, the hardware automatically consults the TSS to locate a valid, secure stack in Ring 0 to prevent user applications from corrupting kernel execution.
 

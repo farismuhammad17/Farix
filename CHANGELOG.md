@@ -2,6 +2,26 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## Advanced Programmable Interrupt Controller - *24th April, 2026*
+
+- PIC
+  - Renamed `pic_remap` to `init_pic`
+  - Masked off PIC (for APIC)
+- IDT
+  - Added `reset_interrupts`
+  - Added `apic_spurious_handler_stub`
+  - Moved `timer_handler_stub` from `switch.asm` to `idt.asm`
+  - Replaced `default_handler_stub` with `isr15` (Unknown interrupt)
+- Panic
+  - Added `peek` command
+  - Replaced `printf` with more reliable `echo_raw`
+  - Fixed panic shell printing problems
+- MFuncs
+  - Added `--log` flag
+  - `lint` detects if functions should be static
+  - Made `x1b` default for ANSI escape codes
+  - Performance counter for compiling to `bin`
+
 ## Slab allocated ACPI - *23rd April, 2026*
 
 - Arch

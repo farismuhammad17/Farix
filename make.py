@@ -170,6 +170,8 @@ globals.GRUB_CFG = (
     "}\n"
 )
 
+globals.LOGGING = '--log' in sys.argv
+
 if not os.path.exists(globals.MAKE_CONF_JSON):
     with open(globals.MAKE_CONF_JSON, 'w') as mjson:
         json.dump({

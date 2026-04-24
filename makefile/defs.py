@@ -30,7 +30,7 @@ FUNC_USAGE_PATTERN = re.compile(r'\b([a-zA-Z_]\w*)\s*\(')
 data = {}
 
 def scan_files():
-    print(f"Deep scanning \033[32m{os.path.abspath(ROOT_DIR)}... \033[90m(Please wait)\033[0m")
+    print(f"Deep scanning \x1b[32m{os.path.abspath(ROOT_DIR)}... \x1b[90m(Please wait)\x1b[0m")
 
     file_count = 0
     for root, _, filenames in os.walk(ROOT_DIR):
@@ -40,10 +40,10 @@ def scan_files():
 
             path = os.path.join(root, file)
 
-            # \r moves to start of line; \033[K clears the line to avoid leftover text
+            # \r moves to start of line; \x1b[K clears the line to avoid leftover text
             # We truncate the path slightly if it's too long for a standard terminal
             display_path = (path[:75] + '..') if len(path) > 77 else path
-            print(f"\r\033[KScanning: \033[94m{display_path}\033[0m", end="", flush=True)
+            print(f"\r\x1b[KScanning: \x1b[94m{display_path}\x1b[0m", end="", flush=True)
 
             try:
                 with open(path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -72,12 +72,12 @@ def scan_files():
             except Exception:
                 continue
 
-    print(f"\r\033[KIndex complete: {file_count} files processed, {len(data)} functions mapped.\n")
+    print(f"\r\x1b[KIndex complete: {file_count} files processed, {len(data)} functions mapped.\n")
 
 def query_loop():
     while True:
         try:
-            query = input("\033[1;34mFunction > \033[0m").strip()
+            query = input("\x1b[1;34mFunction > \x1b[0m").strip()
 
             if query.lower() in ("quit", "exit", "q"):
                 break
@@ -89,14 +89,14 @@ def query_loop():
 
             if query in data:
                 info = data[query]
-                print(f"\n\033[1;32m{query}:\033[0m")
+                print(f"\n\x1b[1;32m{query}:\x1b[0m")
 
                 for h in sorted(info["headers"]):
-                    print(f"\033[1;33m[Header]\033[0m {h}")
+                    print(f"\x1b[1;33m[Header]\x1b[0m {h}")
                 for b in sorted(info["bodies"]):
-                    print(f"\033[1;36m[Body]  \033[0m {b}")
+                    print(f"\x1b[1;36m[Body]  \x1b[0m {b}")
 
-                print("\033[1m[Used in]\033[0m")
+                print("\x1b[1m[Used in]\x1b[0m")
                 if info["used_in"]:
                     for u in sorted(info["used_in"]):
                         print(f"  {u}")
@@ -105,6 +105,6 @@ def query_loop():
 
                 print()
             else:
-                print(f"\033[91m'{query}' not found in the codebase.\033[0m\n")
+                print(f"\x1b[91m'{query}' not found in the codebase.\x1b[0m\n")
         except KeyboardInterrupt:
             break

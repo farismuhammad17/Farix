@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "include/pic.h"
 
-void pic_remap() {
+void init_pic() {
     // ICW1
     outb(PIC1_COMMAND, 0x11);
     outb(PIC2_COMMAND, 0x11);
@@ -65,12 +65,15 @@ void pic_remap() {
      * 6   | 14  | Primary ATA   | Disabled | Hard Drive Controller.
      * 7   | 15  | Secondary ATA | Disabled | Second hard drive or CD-ROM controller.
      *
-     * TODO:
      * NOTE: For the APIC, PIC must be remapped, and then disabled.
      * This is done by masking off all the bits, hence 0xFF.
+     * Else, they would be:
+         outb(PIC1_DATA, 0b11101000);
+         outb(PIC2_DATA, 0b11101111);
      */
-    outb(PIC1_DATA, 0b11101000);
-    outb(PIC2_DATA, 0b11101111);
+
+    outb(PIC1_DATA, 0xFF);
+    outb(PIC2_DATA, 0xFF);
 
     outb(0x64, 0xAE); // Enable keyboard
     while (inb(0x64) & 0x01) {

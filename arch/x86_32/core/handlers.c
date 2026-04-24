@@ -114,7 +114,7 @@ static void err_printf(const char* format, ...) {
     int len = vsnprintf(buffer, sizeof(buffer), format, args);
 
     if (len > 0) {
-        printf(buffer);
+        echo_raw(buffer, len);
         uart_print(buffer);
     }
 
@@ -141,10 +141,15 @@ static inline void dump_multitasking_info() {
 static void panic_cmd_dump(uint32_t addr) {
     uint8_t* ptr = (uint8_t*) addr;
     for (int i = 0; i < 64; i++) {
-        if (i % 16 == 0) printf("\n%08lx: ", (uint32_t)(ptr + i));
+        if (i % 16 == 0) err_printf("\n%08lx: ", (uint32_t)(ptr + i));
         err_printf("%02x ", ptr[i]);
     }
     err_printf("\r\n");
+}
+
+static void panic_cmd_peek(uint32_t addr) {
+    uint32_t value = *(volatile uint32_t*)addr;
+    err_printf("\n0x%08lx = 0x%08lx", addr, value);
 }
 
 static void execute_panic_cmd(char cmd[]) {
@@ -155,6 +160,13 @@ static void execute_panic_cmd(char cmd[]) {
         cmd[3] == 'p'
     ) {
         panic_cmd_dump(hex_to_int(&cmd[5]));
+    } else if (
+        cmd[0] == 'p' &&
+        cmd[1] == 'e' &&
+        cmd[2] == 'e' &&
+        cmd[3] == 'k'
+    ) {
+        panic_cmd_peek(hex_to_int(&cmd[5]));
     } else if (
         cmd[0] == 'r' &&
         cmd[1] == 'e' &&
@@ -171,34 +183,34 @@ static void execute_panic_cmd(char cmd[]) {
         cmd[2] == 'l' &&
         cmd[3] == 'p'
     ) {
-        printf("\ndump <hex>\nreboot");
-    } else printf("\nUnknown command: %s", cmd);
+        err_printf("\ndump <hex>\npeek <addr>\nreboot");
+    } else err_printf("\nUnknown command: %s (use help)", cmd);
 }
 
-// TODO IMP: Panic shell doesn't properly print, even though it is working
+// TODO IMP: Move panic shell out into dedicated file
 static void panic_shell() {
     // Flush any leftover keys from the crash event
     while (inb(0x64) & 0x01) inb(0x60);
 
-    printf("\n> ");
+    echo_raw("\n> ", 3);
     char cmd[64];
     int i = 0;
 
     while (1) {
         char c = keyboard_getc();
-        if (c == 0) continue;
-
-        else if (c == '\n') {
-            cmd[i] = '\0';
-            execute_panic_cmd(cmd);
-            i = 0;
-            printf("\n> ");
-        } else if (c == '\b' && i > 0) {
-            i--;
-            printf("\b \b");
-        } else if (i < 63) {
-            cmd[i++] = c;
-            printf("%c", c);
+        if (c != 0) {
+            if (c == '\n') {
+                cmd[i] = '\0';
+                execute_panic_cmd(cmd);
+                i = 0;
+                echo_raw("\n> ", 3);
+            } else if (c == '\b' && i > 0) {
+                i--;
+                echo_raw("\b \b", 3);
+            } else if (i < 63) {
+                cmd[i++] = c;
+                echo_raw((const char*) &c, 1);
+            }
         }
     }
 }
@@ -220,20 +232,25 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
     err_printf("Error Code: %lx\n", regs->err_code);
     err_printf("EIP: %lx  CS: %lx  EFLAGS: %lx\n", regs->eip, regs->cs, regs->eflags);
 
-    // Specifically for Page Faults
-    if (regs->int_no == 14) {
-        uint32_t faulting_address;
-        asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
+    switch (regs->int_no) {
+        case 13: { // GPF
+            err_printf("Selector: %lx (%s)\n", regs->err_code & 0xFFF8,
+                    (regs->err_code & 0x04) ? "LDT" : "GDT");
+            break;
+        }
 
-        err_printf("Faulting Address (CR2): %lx\n", faulting_address);
+        case 14: { // Page fault
+            uint32_t faulting_address;
+            asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
 
-        err_printf("Reason: %s, %s, %s\n",
-            (regs->err_code & PAGE_PRESENT) ? "Page unaccessible" : "Non-present page",
-            (regs->err_code & PAGE_RW)      ? "Write fault" : "Read fault",
-            (regs->err_code & PAGE_USER)    ? "User-mode" : "Kernel-mode");
-    } else if (regs->int_no == 13) {
-        err_printf("Selector: %lx (%s)\n", regs->err_code & 0xFFF8,
-                (regs->err_code & 0x04) ? "LDT" : "GDT");
+            err_printf("Faulting Address (CR2): %lx\n", faulting_address);
+            err_printf("Reason: %s, %s, %s\n",
+                (regs->err_code & PAGE_PRESENT) ? "Page unaccessible" : "Non-present page",
+                (regs->err_code & PAGE_RW)      ? "Write fault" : "Read fault",
+                (regs->err_code & PAGE_USER)    ? "User-mode" : "Kernel-mode");
+
+            break;
+        }
     }
 
     err_printf("Last init: %s\n", last_init);

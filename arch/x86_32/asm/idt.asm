@@ -17,19 +17,24 @@
 
 section .text
 
-global default_handler_stub
+global timer_handler_stub
 global keyboard_handler_stub
 global mouse_handler_stub
 global syscall_handler_stub
+global apic_spurious_handler_stub
+
+extern timer_handler
 extern keyboard_handler
 extern mouse_handler
 extern syscall_handler
 extern exception_handler
+extern apic_spurious_handler
 
-default_handler_stub:
-    mov dword [0xB8000], 0x0F210F21
-    cli
-    hlt
+timer_handler_stub:
+    pushad
+    call timer_handler
+    popad
+    iretd
 
 keyboard_handler_stub:
     pushad
@@ -65,6 +70,12 @@ syscall_handler_stub:
     add esp, 8        ; Clean up int_no and err_code
 
     iretd             ; Return to Ring 3
+
+apic_spurious_handler_stub:
+    pushad
+    call apic_spurious_handler
+    popad
+    iretd
 
 %macro ISR_NOERRCODE 1
 global isr%1

@@ -33,8 +33,7 @@ static uint32_t divisor = NULL;
 void timer_handler() {
     system_ticks++;
 
-    // Send EOI to the PIC
-    outb(0x20, 0x20);
+    irq_send_eoi();
     schedule(); // Swap tasks
 }
 

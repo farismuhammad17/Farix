@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
+#include "cpu/irq.h"
+
 #include "drivers/mouse.h"
 
 MouseEvent mouse_buffer[MOUSE_BUFFER_LEN];
@@ -30,7 +32,7 @@ volatile uint8_t buffer_tail = 0;
 uint8_t mouse_cycle = 0;
 int8_t  mouse_bytes[4];
 
-void mouse_wait(uint8_t type) {
+static void mouse_wait(uint8_t type) {
     // Wait for the PIC to be ready to send/receive data
     uint32_t timeout = 100000;
     if (type == 0) {
@@ -40,7 +42,7 @@ void mouse_wait(uint8_t type) {
     }
 }
 
-void mouse_write(uint8_t data) {
+static void mouse_write(uint8_t data) {
     mouse_wait(1);      // Wait for controller to be ready to take a command
     outb(0x64, 0xD4);   // Tell controller: "Next byte is for the mouse"
     mouse_wait(1);      // Wait for controller to be ready to take the data
@@ -50,7 +52,7 @@ void mouse_write(uint8_t data) {
     inb(0x60);     // Read and discard ACK
 }
 
-void mouse_reset() {
+static void mouse_reset() {
     mouse_write(0xFF);  // Reset command
     mouse_wait(0);
     inb(0x60);          // Read ACK
@@ -124,6 +126,5 @@ extern void mouse_handler() {
     }
 
 end:
-    outb(0xA0, 0x20); // EOI Slave
-    outb(0x20, 0x20); // EOI Master
+    irq_send_eoi();
 }

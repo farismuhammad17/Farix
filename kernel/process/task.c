@@ -43,7 +43,7 @@ uint32_t next_pid  = INIT_TASK_ID;
 task_list* first_task_list = NULL;
 task_list* current_task_list = NULL;
 
-void task_trampoline() {
+static void task_trampoline() {
     system_int_on();
 
     if (likely(current_task && current_task->entry_func)) {

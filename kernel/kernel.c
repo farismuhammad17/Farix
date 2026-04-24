@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "hal.h"
 
 #include "cpu/ints.h"
+#include "cpu/irq.h"
 #include "cpu/timer.h"
 #include "drivers/acpi/acpi.h"
 #include "drivers/keyboard.h"
@@ -62,17 +63,19 @@ void kmain() {
     init_heap();       last_init = "Heap";
     init_terminal();   last_init = "Terminal";
 
-    init_keyboard();   last_init = "Keyboard";
-    init_mouse();      last_init = "Mouse";
-
-    init_multitasking();   last_init = "Multitasking";
-    init_timer(THREAD_HZ); last_init = "Timer"; // 100 Hz, i.e. every 10 ms
-
     AcpiInitializeSubsystem();                       last_init = "ACPI: init subsystems";
     AcpiInitializeTables(NULL, 16, FALSE);           last_init = "ACPI: init tables";
     AcpiLoadTables();                                last_init = "ACPI: load tables";
     AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);   last_init = "ACPI: enable subsystems";
     AcpiInitializeObjects(ACPI_FULL_INITIALIZATION); last_init = "ACPI";
+
+    init_irq_controller(); last_init = "IRQ Controller";
+
+    init_multitasking();   last_init = "Multitasking";
+    init_timer(THREAD_HZ); last_init = "Timer"; // 100 Hz, i.e. every 10 ms
+
+    init_keyboard();   last_init = "Keyboard";
+    init_mouse();      last_init = "Mouse";
 
     init_storage(); last_init = "Storage";
 

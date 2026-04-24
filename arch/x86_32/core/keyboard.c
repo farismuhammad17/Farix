@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
+#include "cpu/irq.h"
 #include "drivers/terminal.h"
 
 #include "drivers/keyboard.h"
@@ -52,7 +53,7 @@ char kbd_buffer[KBD_BUFFER_LEN];
 volatile int kbd_head = 0;
 volatile int kbd_tail = 0;
 
-void push_to_kbd_buffer(char c) {
+static void push_to_kbd_buffer(char c) {
     int next = (kbd_head + 1) % KBD_BUFFER_LEN;
     if (next != kbd_tail) {
         kbd_buffer[kbd_head] = c;
@@ -116,7 +117,7 @@ void init_keyboard() {
 extern void keyboard_handler() {
     uint8_t status = inb(0x64);
     if (!(status & 0x01) || (status & 0x20) || !keyboard_ready) { // Data is not ready ready OR it is mouse data OR the keyboard is not ready.
-        outb(0x20, 0x20);
+        irq_send_eoi();
         return;
     }
 
@@ -144,7 +145,7 @@ extern void keyboard_handler() {
         }
     }
 
-    outb(0x20, 0x20);
+    irq_send_eoi();
 }
 
 char keyboard_getc() {

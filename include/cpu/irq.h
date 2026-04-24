@@ -17,16 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef PIC_H
-#define PIC_H
+#ifndef IRQ_H
+#define IRQ_H
 
-#define PIC1    		0x20
-#define PIC1_COMMAND	PIC1
-#define PIC1_DATA   (PIC1+1)
-#define PIC2	    	0xA0
-#define PIC2_COMMAND	PIC2
-#define PIC2_DATA	(PIC2+1)
+void RARE_FUNC init_irq_controller();
 
-void RARE_FUNC init_pic();
+void irq_send_eoi();
 
 #endif

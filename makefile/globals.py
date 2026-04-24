@@ -80,6 +80,9 @@ BOCHS_BIOS_PATH = None
 
 GRUB_CFG = None
 
+LOGGING = True
+LOG_FILE = open("build.log", 'w', encoding="utf-8")
+
 def run(cmd, shell=True, check=True, capture_output=True):
     try:
         result = subprocess.run(
@@ -91,6 +94,13 @@ def run(cmd, shell=True, check=True, capture_output=True):
             encoding='utf-8',
             errors='replace'
         )
+
+        if LOGGING:
+            LOG_FILE.write(f"{cmd}\n\n")
+            if result.stdout:
+                LOG_FILE.write(result.stdout)
+            if result.stderr:
+                LOG_FILE.write(result.stderr)
 
         if not capture_output:
             return ""

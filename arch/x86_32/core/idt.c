@@ -40,11 +40,11 @@ typedef struct idt_ptr {
 } __attribute__((packed)) idt_ptr;
 
 // Defined in idt.asm
-void default_handler_stub();
 void timer_handler_stub();
 void keyboard_handler_stub();
 void mouse_handler_stub();
 void syscall_handler_stub();
+void apic_spurious_handler_stub();
 void isr0();  void isr1();  void isr2();  void isr3();
 void isr4();  void isr5();  void isr6();  void isr7();
 void isr8();  void isr9();  void isr10(); void isr11();
@@ -54,8 +54,8 @@ void isr20(); void isr21(); void isr22(); void isr23();
 void isr24(); void isr25(); void isr26(); void isr27();
 void isr28(); void isr29(); void isr30(); void isr31();
 
-struct idt_entry idt[256];
-struct idt_ptr   idtp;
+static struct idt_entry idt[256];
+static struct idt_ptr   idtp;
 
 static void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
     idt[num].base_low  = (base & 0xFFFF);        // Lower 16 bits
@@ -71,14 +71,16 @@ void init_interrupts() {
     idtp.base  = (uint32_t) &idt;                      // The memory address of the IDT array
 
     for (int i = 0; i < 256; i++) {
-        uint32_t base = (uint32_t) default_handler_stub;
-        idt_set_gate(i, base, 0x08, IDT_GATE_KERNEL);
+        idt_set_gate(i, (uint32_t) isr15, 0x08, IDT_GATE_KERNEL);
     }
 
     // Hardware IRQs
     idt_set_gate(32, (uint32_t) timer_handler_stub,    0x08, IDT_GATE_KERNEL);
     idt_set_gate(33, (uint32_t) keyboard_handler_stub, 0x08, IDT_GATE_KERNEL);
     idt_set_gate(44, (uint32_t) mouse_handler_stub,    0x08, IDT_GATE_KERNEL);
+
+    // APIC spurious interrupts
+    idt_set_gate(255, (uint32_t) apic_spurious_handler_stub, 0x08, IDT_GATE_KERNEL);
 
     // Syscall
     idt_set_gate(128, (uint32_t) syscall_handler_stub, 0x08, IDT_GATE_USER);
@@ -117,7 +119,7 @@ void init_interrupts() {
     idt_set_gate(30, (uint32_t) isr30, 0x08, IDT_GATE_KERNEL);
     idt_set_gate(31, (uint32_t) isr31, 0x08, IDT_GATE_KERNEL);
 
-    asm volatile("lidt %0" : : "m"(idtp));
+    reset_interrupts();
 }
 
 void set_interrupt_kernel(uint8_t vector, void* handler) {
@@ -130,5 +132,9 @@ void set_interrupt_user(uint8_t vector, void* handler) {
 }
 
 void clear_interrupt(uint8_t vector) {
-    idt_set_gate(vector, (uint32_t) default_handler_stub, 0x08, IDT_GATE_KERNEL);
+    idt_set_gate(vector, (uint32_t) isr15, 0x08, IDT_GATE_KERNEL);
+}
+
+void reset_interrupts() {
+    asm volatile("lidt %0" : : "m"(idtp));
 }
