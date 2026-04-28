@@ -18,7 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-import time
 
 import makefile.globals
 
@@ -90,10 +89,6 @@ def farix_bin_arm32():
     print("\x1b[1;32mProcess completed\x1b[0m")
 
 def farix_bin():
-    start_time = time.perf_counter()
     match makefile.globals.arch:
         case "x86_32": farix_bin_x86_32()
         case "arm32": farix_bin_arm32()
-    end_time = time.perf_counter()
-
-    print(f"[Compiled in {end_time - start_time:.6f}s]\n")

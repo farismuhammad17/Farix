@@ -22,11 +22,33 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define THREAD_HZ 100
 
-// Debug to know the last init
-extern char* last_init;
-extern char* last_call;
+#define __DEBUG__ 1
 
-#define LOG_CALL() last_call = __func__
+#ifdef __DEBUG__
+    #define MAX_LOG_LEN 16
+
+    extern const char* call_log[MAX_LOG_LEN];
+    extern int log_index;
+    extern int last_call_finished;
+
+    static inline void start_call_log(const char* func_name) {
+        int idx = log_index % MAX_LOG_LEN;
+        log_index++;
+
+        call_log[idx] = func_name;
+        last_call_finished = 0;
+    }
+
+    static inline void end_call_log(void* res) {
+        last_call_finished = 1;
+    }
+
+    #define LOG_CALL() \
+        start_call_log(__func__); \
+        int _sentinel __attribute__((cleanup(end_call_log))) = 0
+#else
+    #define LOG_CALL()
+#endif
 
 // Reorders the machine code to place these accordingly
 #define likely(x)   __builtin_expect(!!(x), 1)  // x is more likely to be true than false
@@ -36,7 +58,5 @@ extern char* last_call;
 
 void RARE_FUNC early_kmain();
 void RARE_FUNC kmain();
-
-void RARE_FUNC AcpiMappingCleanup();
 
 #endif

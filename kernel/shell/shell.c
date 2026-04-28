@@ -24,8 +24,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 
+#include "hal.h"
+
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
+#include "process/task.h"
 
 #include "shell/commands.h"
 #include "shell/shell.h"
@@ -124,15 +127,15 @@ void shell_parse(const char* input) {
 
     char* segments[2];
     size_t num_segments = 0;
-    char* pipe_ptr = strchr((char*)input, '|');
+    char* pipe_ptr = strchr((char*) input, '|');
 
     if (pipe_ptr != NULL) {
         *pipe_ptr = '\0';
-        segments[0] = (char*)input;
+        segments[0] = (char*) input;
         segments[1] = pipe_ptr + 1;
         num_segments = 2;
     } else {
-        segments[0] = (char*)input;
+        segments[0] = (char*) input;
         num_segments = 1;
     }
 

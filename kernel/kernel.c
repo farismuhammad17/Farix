@@ -40,15 +40,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "kernel.h"
 
-char* last_init = "Loaded";
-char* last_call = "Unassigned";
+const char* call_log[MAX_LOG_LEN] = {0};
+int log_index = 0;
+int last_call_finished = 0;
 
 // Called before the architecture initialisations. Everything here
 // must be so raw; it should not depend on literally anything else.
 void early_kmain() {
     terminal_clear_phys();
 
-    init_uart(); last_init = "UART";
+    init_uart();
 }
 
 void kmain() {
@@ -59,31 +60,31 @@ void kmain() {
     // This function is a general kernel_main function, and does not
     // care about the architecture it's running on.
 
-    init_interrupts(); last_init = "Interrupts";
-    init_heap();       last_init = "Heap";
-    init_terminal();   last_init = "Terminal";
+    init_interrupts();
+    init_heap();
+    init_terminal();
 
-    AcpiInitializeSubsystem();                       last_init = "ACPI: init subsystems";
-    AcpiInitializeTables(NULL, 16, FALSE);           last_init = "ACPI: init tables";
-    AcpiLoadTables();                                last_init = "ACPI: load tables";
-    AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);   last_init = "ACPI: enable subsystems";
-    AcpiInitializeObjects(ACPI_FULL_INITIALIZATION); last_init = "ACPI";
+    AcpiInitializeSubsystem();
+    AcpiInitializeTables(NULL, 16, FALSE);
+    AcpiLoadTables();
+    AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
+    AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
 
-    init_irq_controller(); last_init = "IRQ Controller";
+    init_irq_controller();
 
-    init_multitasking();   last_init = "Multitasking";
-    init_timer(THREAD_HZ); last_init = "Timer"; // 100 Hz, i.e. every 10 ms
+    init_multitasking();
+    init_timer(THREAD_HZ);
 
-    init_keyboard();   last_init = "Keyboard";
-    init_mouse();      last_init = "Mouse";
+    init_keyboard();
+    init_mouse();
 
-    init_storage(); last_init = "Storage";
+    init_storage();
 
     // Enable interrupts
     system_int_on();
 
-    init_ramdisk(); last_init = "RAMDISK";
-    init_fat32();   last_init = "FAT32";
+    init_ramdisk();
+    init_fat32();
 
     vfs_mount(&fat32_ops); // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
 
@@ -91,8 +92,6 @@ void kmain() {
 
     task* shelf_task = exec_elf("shelf.elf");
     shelf_task->privilege = PRIV_SUPER;
-
-    last_init = "kmain";
 
     // The OS must NEVER die.
     // Interrupts take back control from this loop whenever

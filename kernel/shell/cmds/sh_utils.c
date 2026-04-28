@@ -20,7 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <string.h>
 
-#include "arch/stubs.h"
+#include "hal.h"
+
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "memory/heap.h"

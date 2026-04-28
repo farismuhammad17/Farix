@@ -2,6 +2,18 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## Current
+
+- Organised around code
+- Added `__DEBUG__` macro to `kernel.h`
+- ARM32
+  - Made ACPICA compile in ARM32
+- HAL
+  - Replaced `stubs.c` for `hal.h` for inline functions
+- MFuncs
+  - Added `config` command
+  - Performance counter moved for the whole program instead
+
 ## Advanced Programmable Interrupt Controller - *24th April, 2026*
 
 - PIC

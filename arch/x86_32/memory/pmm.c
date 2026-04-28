@@ -93,7 +93,7 @@ void init_pmm() {
 
 void* pmm_alloc_page() {
     for (uint32_t i = 0; i < BITMAP_SIZE; i++) { // First-Fit algorithm
-        if (pmm_bitmap[i] != 0xFFFFFFFF) {
+        if (unlikely(pmm_bitmap[i] != 0xFFFFFFFF)) {
             for (uint32_t j = 0; j < 32; j++) {
                 uint32_t bit = (1 << j);
 

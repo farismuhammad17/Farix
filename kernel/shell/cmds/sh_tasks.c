@@ -19,7 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
 
-#include "arch/stubs.h"
+#include "hal.h"
+
 #include "process/task.h"
 #include "shell/shell.h"
 

@@ -39,6 +39,7 @@ Usage: \x1b[1m m [target] <architecture>\x1b[0m
   \x1b[1;32mdeploy_apps\x1b[0m  Deploy all ELF files inside apps folder
   \x1b[1;32mdefs\x1b[0m         Interactive program to return definitions and usage of any function
   \x1b[1;32mlint\x1b[0m         Lint the code \x1b[90m(Useful for developing)\x1b[0m
+  \x1b[1;32mconfig\x1b[0m       Change configuration settings
   \x1b[1;32mhelp\x1b[0m         Display this menu
 
 \x1b[1;36mArchitectures:\x1b[0m

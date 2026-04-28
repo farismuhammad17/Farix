@@ -27,22 +27,41 @@ import time
 import re
 import json
 
-from makefile       import globals
-from makefile.apps  import *
-from makefile.bin   import *
-from makefile.defs  import *
-from makefile.img   import *
-from makefile.qemu  import *
-from makefile.usb   import *
-from makefile.deps  import *
-from makefile.libc  import *
-from makefile.lint  import *
-from makefile.utils import *
-from makefile.help  import *
+from makefile        import globals
+from makefile.apps   import *
+from makefile.bin    import *
+from makefile.config import *
+from makefile.defs   import *
+from makefile.img    import *
+from makefile.qemu   import *
+from makefile.usb    import *
+from makefile.deps   import *
+from makefile.libc   import *
+from makefile.lint   import *
+from makefile.utils  import *
+from makefile.help   import *
 
-globals.arch = "x86_32"
+DEFAULT_ARCH = "x86_32"
+
+globals.MAKE_CONF_JSON = "make.conf.json"
+
+if not os.path.exists(globals.MAKE_CONF_JSON):
+    with open(globals.MAKE_CONF_JSON, 'w') as mjson:
+        json.dump({
+            "BOOT_USB_PATH": None,
+            "DEFAULT_ARCH": DEFAULT_ARCH
+        }, mjson, indent=4)
+
+with open(globals.MAKE_CONF_JSON) as mjson:
+    data = json.load(mjson)
+
+    globals.BOOT_USB_PATH = data.get("BOOT_USB_PATH", None)
+    globals.arch = data.get("DEFAULT_ARCH", DEFAULT_ARCH)
+
 if "arm32" in sys.argv:
     globals.arch = "arm32"
+elif "x86_32" in sys.argv:
+    globals.arch = "x86_32"
 
 globals.IGNORES = (
     # These ACPI stuff come with ACPICA, having these make it easier to
@@ -112,8 +131,8 @@ elif globals.arch == "arm32":
     globals.QEMU_FLAGS = f"-drive format=raw,file={globals.DISK_PATH},index=0,media=disk -serial stdio -M raspi2b"
     globals.ASM_ASSEMBLER = "arm-none-eabi-as"
 else:
-    print("\x1b[31mInvalid architecture\x1b[0m")
-    sys.exit(1)
+    print(f"\x1b[31mInvalid architecture: {globals.arch}\x1b[0m (Fallback: {DEFAULT_ARCH})")
+    globals.arch = DEFAULT_ARCH
 
 globals.TARGET_DIR = globals.PREFIX.rstrip('-')
 
@@ -159,8 +178,6 @@ globals.USER_ASM_OBJ  = f"{globals.USER_BUILD_DIR}/user_asm.o"
 globals.APPS_ROOT = "apps"
 globals.USER_CFLAGS = f"-ffreestanding -O2 -Iinclude -I{globals.LIBC_INC} -include include/kernel.h"
 
-globals.MAKE_CONF_JSON = "make.conf.json"
-
 globals.GRUB_CFG = (
     "set timeout=0\n"
     "set default=0\n\n"
@@ -172,17 +189,6 @@ globals.GRUB_CFG = (
 
 globals.LOGGING = '--log' in sys.argv
 
-if not os.path.exists(globals.MAKE_CONF_JSON):
-    with open(globals.MAKE_CONF_JSON, 'w') as mjson:
-        json.dump({
-            "BOOT_USB_PATH": None
-        }, mjson, indent=4)
-
-with open(globals.MAKE_CONF_JSON) as mjson:
-    data = json.load(mjson)
-
-    globals.BOOT_USB_PATH = data.get("BOOT_USB_PATH", None)
-
 # --- MAIN ---
 
 if __name__ == "__main__":
@@ -192,8 +198,10 @@ if __name__ == "__main__":
             target = arg
             break
 
+    start_time = time.perf_counter()
+
     if   target == globals.arch: farix_bin()
-    elif target == "all":
+    elif target in ("all", "*"):
         if not os.path.exists("farix.bin"): farix_bin()
         if not os.path.exists(globals.DISK_PATH): disk_img()
         compile_apps()
@@ -228,7 +236,12 @@ if __name__ == "__main__":
         query_loop()
     elif target == "lint":
         lint()
+    elif target == "config":
+        config_mjson()
     elif target == "help":
         print(HELP)
     else:
         print("\x1b[31mUnknown command\x1b[0m")
+
+    end_time = time.perf_counter()
+    print(f"\x1b[90m[Process completed in {end_time - start_time:.6f}s]\x1b[0m\n")

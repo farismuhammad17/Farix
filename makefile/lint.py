@@ -55,6 +55,9 @@ def lint():
     for file in root.rglob("README-UNFINISHED.md"):
         print(f"\x1b[93mREADME     \x1b[0m{file}")
 
+    if "#define __DEBUG__ 1" in (root / Path("include/kernel.h")).read_text(encoding="utf-8"):
+        print(f"\x1b[93mDEBUG MODE \x1b[0m__DEBUG__ defined to 1 (not 0)")
+
     for ext in extns:
         for file in root.rglob(f"*.{ext}"):
             if any(p in ignores for p in file.parts):

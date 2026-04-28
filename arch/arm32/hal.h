@@ -17,68 +17,56 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "arch/stubs.h"
+#ifndef ARM32_HAL_H
+#define ARM32_HAL_H
 
-#include "drivers/ata.h"
-#include "drivers/keyboard.h"
-#include "drivers/mouse.h"
+#include <stdint.h>
 
-// Future implementation
-
-// For avoiding unused argument compiler warnings cleanly
-// TODO: Remove after these empty functions are done
-#define UNUSED_ARG __attribute__((unused))
-
-char kbd_buffer[KBD_BUFFER_LEN];
-volatile int kbd_head;
-volatile int kbd_tail;
-void init_keyboard() {}
-void handle_mouse() {}
-void init_mouse() {}
-void init_ata() {}
-void ata_read_sector(UNUSED_ARG uint32_t lba, UNUSED_ARG uint8_t* buffer) {}
-void ata_write_sector(UNUSED_ARG uint32_t lba, UNUSED_ARG uint8_t* buffer) {}
-void ata_wait_ready() {}
-
-void outb(uint32_t port, uint8_t val) {
+static inline void outb(uint32_t port, uint8_t val) {
     *(volatile uint8_t*) port = val;
 }
 
-void outw(uint32_t port, uint16_t val) {
+static inline void outw(uint32_t port, uint16_t val) {
     *(volatile uint16_t*) port = val;
 }
 
-uint8_t inb(uint32_t port) {
+static inline void outl(uint32_t port, uint32_t val) {
+    *(volatile uint32_t*) port = val;
+}
+
+static inline uint8_t inb(uint32_t port) {
     return *(volatile uint8_t*) port;
 }
 
-uint16_t inw(uint32_t port) {
+static inline uint16_t inw(uint32_t port) {
     return *(volatile uint16_t*) port;
 }
 
-// TODO: inl, outl
+static inline uint32_t inl(uint32_t port) {
+    return *(volatile uint32_t*) port;
+}
 
-void system_halt() {
+static inline void system_halt() {
     asm volatile("wfi");
 }
 
-void system_int_on() {
+static inline void system_int_on() {
     asm volatile("cpsie i");
 }
 
-void system_int_off() {
+static inline void system_int_off() {
     asm volatile("cpsid i");
 }
 
-void system_pause() {
+static inline void system_pause() {
     asm volatile("yield" ::: "memory");
 }
 
-uint32_t asm_get_random(uint8_t *success) {
+static inline uint32_t asm_get_random(uint8_t *success) {
     uint32_t val = 0;
     uint32_t sec = 0;
 
-    __asm__ volatile (
+    asm volatile (
         "ldr r1, =0x3F104004 \n\t"
         "ldr r0, [r1]        \n\t"
         "lsr r0, r0, #24     \n\t"
@@ -100,16 +88,38 @@ uint32_t asm_get_random(uint8_t *success) {
     return val;
 }
 
-void cpu_mem_barrier() {
+static inline void cpu_mem_barrier() {
     asm volatile("dmb sy" ::: "memory");
 }
 
-void task_yield() {
+static inline void task_yield() {
     // 0x80 is a common convention for "yield" or "syscall"
     asm volatile("svc 0x80" ::: "memory");
 }
 
-void set_kernel_stack(uint32_t stack) {
+static inline uint32_t save_disable_interrupts() {
+    uint32_t flags;
+    asm volatile(
+        "mrs %0, cpsr      \n\t" // Move CPSR to register
+        "cpsid i           \n\t" // Change Processor State: Disable Interrupts
+        : "=r"(flags)
+        :
+        : "memory"
+    );
+    return flags;
+}
+
+static inline void restore_interrupts(uint32_t flags) {
+    asm volatile(
+        "msr cpsr_c, %0    \n\t" // Move register to CPSR (control field)
+        :
+        : "r"(flags)
+        : "memory", "cc"
+    );
+}
+
+// TODO REM
+static inline void set_kernel_stack(uint32_t stack) {
     // We need to switch to SVC mode to change its banked SP,
     // then switch back to whatever mode we were in.
     asm volatile (
@@ -120,3 +130,5 @@ void set_kernel_stack(uint32_t stack) {
         : : "r" (stack) : "r1", "cc", "memory"
     );
 }
+
+#endif

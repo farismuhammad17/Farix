@@ -41,7 +41,7 @@ void init_pci() {
                     continue;
                 }
 
-                if (pci_device_count >= 32) {
+                if (unlikely(pci_device_count >= 32)) {
                     t_print("init_pci: pci_devices limit reached");
                     return;
                 }

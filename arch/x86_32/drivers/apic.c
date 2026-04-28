@@ -84,7 +84,7 @@ extern void apic_spurious_handler() {
 
 static void parse_madt(ACPI_TABLE_MADT* madt) {
     uint8_t* ptr = (uint8_t*)(madt + 1);
-    uint8_t* end = (uint8_t*)madt + madt->Header.Length;
+    uint8_t* end = (uint8_t*) madt + madt->Header.Length;
 
     while (ptr < end) {
         ACPI_SUBTABLE_HEADER* sub = (ACPI_SUBTABLE_HEADER*) ptr;

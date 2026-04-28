@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Name: acintel.h - VC specific defines, etc.
+ * Name: acgcc.h - GCC specific defines, etc.
  *
  *****************************************************************************/
 
@@ -149,50 +149,87 @@
  *
  *****************************************************************************/
 
-#ifndef __ACINTEL_H__
-#define __ACINTEL_H__
+#ifndef __ACGCC_H__
+#define __ACGCC_H__
 
 /*
  * Use compiler specific <stdarg.h> is a good practice for even when
  * -nostdinc is specified (i.e., ACPI_USE_STANDARD_HEADERS undefined.
  */
 #ifndef va_arg
+#ifdef ACPI_USE_BUILTIN_STDARG
+typedef __builtin_va_list       va_list;
+#define va_start(v, l)          __builtin_va_start(v, l)
+#define va_end(v)               __builtin_va_end(v)
+#define va_arg(v, l)            __builtin_va_arg(v, l)
+#define va_copy(d, s)           __builtin_va_copy(d, s)
+#else
 #include <stdarg.h>
 #endif
+#endif
 
-/* Configuration specific to Intel 64-bit C compiler */
+#define ACPI_INLINE             __inline__
 
-#define COMPILER_DEPENDENT_INT64    __int64
-#define COMPILER_DEPENDENT_UINT64   unsigned __int64
-#define ACPI_INLINE                 __inline
+/* Function name is used for debug output. Non-ANSI, compiler-dependent */
+
+#define ACPI_GET_FUNCTION_NAME          __func__
 
 /*
- * Calling conventions:
- *
- * ACPI_SYSTEM_XFACE        - Interfaces to host OS (handlers, threads)
- * ACPI_EXTERNAL_XFACE      - External ACPI interfaces
- * ACPI_INTERNAL_XFACE      - Internal ACPI interfaces
- * ACPI_INTERNAL_VAR_XFACE  - Internal variable-parameter list interfaces
+ * This macro is used to tag functions as "printf-like" because
+ * some compilers (like GCC) can catch printf format string problems.
  */
-#define ACPI_SYSTEM_XFACE
-#define ACPI_EXTERNAL_XFACE
-#define ACPI_INTERNAL_XFACE
-#define ACPI_INTERNAL_VAR_XFACE
+#define ACPI_PRINTF_LIKE(c) __attribute__ ((__format__ (__printf__, c, c+1)))
 
-/* remark 981 - operands evaluated in no particular order */
-#pragma warning(disable:981)
+/*
+ * Some compilers complain about unused variables. Sometimes we don't want to
+ * use all the variables (for example, _AcpiModuleName). This allows us
+ * to tell the compiler warning in a per-variable manner that a variable
+ * is unused.
+ */
+#define ACPI_UNUSED_VAR __attribute__ ((unused))
 
-/* warn C4100: unreferenced formal parameter */
-#pragma warning(disable:4100)
+/* GCC supports __VA_ARGS__ in macros */
 
-/* warn C4127: conditional expression is constant */
-#pragma warning(disable:4127)
+#define COMPILER_VA_MACRO               1
 
-/* warn C4706: assignment within conditional expression */
-#pragma warning(disable:4706)
+/* GCC supports native multiply/shift on 32-bit platforms */
 
-/* warn C4214: bit field types other than int */
-#pragma warning(disable:4214)
+#define ACPI_USE_NATIVE_MATH64
 
+/* GCC did not support __has_attribute until 5.1. */
 
-#endif /* __ACINTEL_H__ */
+#ifndef __has_attribute
+#define __has_attribute(x) 0
+#endif
+
+/*
+ * Explicitly mark intentional explicit fallthrough to silence
+ * -Wimplicit-fallthrough in GCC 7.1+.
+ */
+
+#if __has_attribute(__fallthrough__)
+#define ACPI_FALLTHROUGH __attribute__((__fallthrough__))
+#endif
+
+/*
+ * Flexible array members are not allowed to be part of a union under
+ * C99, but this is not for any technical reason. Work around the
+ * limitation.
+ */
+#ifndef __cplusplus
+#define ACPI_FLEX_ARRAY(TYPE, NAME)             \
+        struct {                                \
+                struct { } __Empty_ ## NAME;    \
+                TYPE NAME[];                    \
+        }
+#endif
+
+/*
+ * Explicitly mark strings that lack a terminating NUL character so
+ * that ACPICA can be built with -Wunterminated-string-initialization.
+ */
+#if __has_attribute(__nonstring__)
+#define ACPI_NONSTRING __attribute__((__nonstring__))
+#endif
+
+#endif /* __ACGCC_H__ */

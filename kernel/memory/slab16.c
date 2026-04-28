@@ -21,15 +21,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "drivers/uart.h"
 #include "memory/pmm.h"
+#include "memory/vmm.h"
 
 #include "memory/slab.h"
 
 Slab16* create_slab16(uint16_t object_size) {
-    Slab16* slab = (Slab16*) pmm_alloc_page();
-    if (unlikely(!slab)) {
+    LOG_CALL();
+    void* phys = pmm_alloc_page();
+    if (unlikely(!phys)) {
         uart_printf("create_slab16: pmm_alloc_page failed\n");
         return NULL;
     }
+
+    // Convert the physical page address to a virtual one
+    Slab16* slab = (Slab16*) PHYSICAL_TO_VIRTUAL(phys);
+    vmm_map_page(vmm_get_current_directory(), phys, (void*) slab, PAGE_PRESENT | PAGE_RW);
 
     slab->mask       = 0;
     slab->free_slots = 16;
@@ -49,6 +55,7 @@ Slab16* create_slab16(uint16_t object_size) {
 }
 
 void delete_slab16(Slab16* slab) {
+    LOG_CALL();
     if (slab->prev)
         slab->prev->next = slab->next;
     if (slab->next)
@@ -58,6 +65,7 @@ void delete_slab16(Slab16* slab) {
 }
 
 void* slab_alloc16(Slab16* head) {
+    LOG_CALL();
     Slab16* curr = head;
 
     while (unlikely(curr->free_slots == 0)) {
@@ -79,6 +87,7 @@ void* slab_alloc16(Slab16* head) {
 }
 
 void slab_free16(void* ptr) {
+    LOG_CALL();
     // Jump to the start of the 4KB page this pointer lives in.
     // This works because the PMM always gives us page-aligned memory.
     Slab16* slab = (Slab16*)((uintptr_t) ptr & 0xFFFFF000);

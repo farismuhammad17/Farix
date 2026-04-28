@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cpu/ints.h"
 #include "cpu/pci.h"
 #include "cpu/timer.h"
+#include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
@@ -37,6 +38,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define OS_SLEEP_MAX_MICROSECONDS 3000000
 #define MAX_DEFERRED_UNMAPS 64
 
+#define ACPI_SLAB64_SIZE PAGE_SIZE >> 6
+#define ACPI_SLAB32_SIZE PAGE_SIZE >> 5
+#define ACPI_SLAB16_SIZE PAGE_SIZE >> 4
+#define ACPI_SLAB8_SIZE  PAGE_SIZE >> 3
+
 typedef struct {
     uint32_t units;
     uint32_t max_units;
@@ -46,7 +52,7 @@ typedef struct {
 static void*  unmap_queue[MAX_DEFERRED_UNMAPS];
 static size_t unmap_count = 0;
 
-static ACPI_PHYSICAL_ADDRESS AcpiRSDP = NULL;
+static ACPI_PHYSICAL_ADDRESS AcpiRSDP = 0;
 
 static Slab64* acpi_head64 = NULL;
 static Slab32* acpi_head32 = NULL;
@@ -57,10 +63,10 @@ static Slab8*  acpi_head8  = NULL;
 
 // This is the first init_acpi function
 ACPI_STATUS AcpiOsInitialize() {
-    acpi_head64 = create_slab64(64);  // 64-byte objects
-    acpi_head32 = create_slab32(128); // 128-byte objects
-    acpi_head16 = create_slab16(256); // 256-byte objects
-    acpi_head8  = create_slab8(512);  // 512-byte objects
+    acpi_head64 = create_slab64(ACPI_SLAB64_SIZE);
+    acpi_head32 = create_slab32(ACPI_SLAB32_SIZE);
+    acpi_head16 = create_slab16(ACPI_SLAB16_SIZE);
+    acpi_head8  = create_slab8(ACPI_SLAB8_SIZE);
 
     if (unlikely(!acpi_head64 || !acpi_head32 || !acpi_head16 || !acpi_head8)) {
         uart_printf("ACPI OSL: Failed to initialize slab pools\n");
@@ -80,7 +86,6 @@ ACPI_STATUS AcpiOsInitialize() {
 // This is a cleanup function ACPICA uses once it is done, and is part
 // of the shutdown sequence.
 ACPI_STATUS AcpiOsTerminate() {
-    AcpiMappingCleanup();
     return AE_OK;
 }
 
@@ -126,7 +131,7 @@ ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, void (*Function)(void *), void
 // AcpiOsInitialize function, because the location of it is specific, and its not
 // going to move away from where it is.
 ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
-    if (AcpiRSDP != NULL) return AcpiRSDP;
+    if (likely(AcpiRSDP != 0)) return AcpiRSDP;
 
     // Scan the BIOS memory for "RSD PTR "
     for (uint32_t addr = 0x000E0000; addr < 0x000FFFFF; addr += 16) {
@@ -248,14 +253,6 @@ void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
     // }
 }
 
-// Defined in arch/kernel.h
-void AcpiMappingCleanup() {
-    for (size_t i = 0; i < unmap_count; i++)
-        pmm_free_page(vmm_unmap_page(unmap_queue[i]));
-
-    unmap_count = 0;
-}
-
 // This function performs dynamic memory allocation for the ACPICA subsystem. It requires the
 // Size of the requested block in bytes and returns a virtual pointer to the allocated memory.
 // If the allocation fails due to insufficient heap space, it returns NULL. It must provide
@@ -265,13 +262,13 @@ void* AcpiOsAllocate(ACPI_SIZE Size) {
 
     // We check from smallest capacity (large objects) to largest capacity (small objects)
 
-    if (Size <= 64) {
+    if (Size <= ACPI_SLAB64_SIZE) {
         ptr = slab_alloc64(acpi_head64);
-    } else if (Size <= 128) {
+    } else if (Size <= ACPI_SLAB32_SIZE) {
         ptr = slab_alloc32(acpi_head32);
-    } else if (Size <= 256) {
+    } else if (Size <= ACPI_SLAB16_SIZE) {
         ptr = slab_alloc16(acpi_head16);
-    } else if (Size <= 512) {
+    } else if (Size <= ACPI_SLAB8_SIZE) {
         ptr = slab_alloc8(acpi_head8);
     } else {
         // Fallback for stuff we can't slab

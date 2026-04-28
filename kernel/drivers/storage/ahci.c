@@ -170,16 +170,9 @@ void ahci_probe_port(volatile hba_port_t* port, int port_no) {
     hba_cmd_header_t* cmd = (hba_cmd_header_t*) clb_phys;
 
     for (int i = 0; i < 32; i++) {
-        uintptr_t ct_phys = pmm_alloc_page();
-        uintptr_t ct_virt = AHCI_BASE_VIRT + 0x3000;
-
-        vmm_map_page(pd, ct_phys, ct_virt,
-            PAGE_PRESENT | PAGE_RW | PAGE_PCD);
+        uintptr_t ct_phys = (uintptr_t) pmm_alloc_page();
 
         cmd[i].ctba = ct_phys;
-        kmemset((void*) ct_virt, 0, 4096);
-
-        cmd[i].ctba = (uint32_t) ct_virt;
         cmd[i].ctbau = 0;
         cmd[i].prdtl = 0;
     }

@@ -32,7 +32,7 @@ arch = None
 QEMU_BIN = None
 QEMU_FLAGS = None
 
-PREFIX = None
+PREFIX = ""
 
 ASM_ASSEMBLER = None
 

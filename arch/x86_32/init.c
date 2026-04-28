@@ -48,15 +48,15 @@ void arch_kmain(uint32_t magic, multiboot_info* _mbi) {
 
     mbi = _mbi;
 
-    init_pic(); last_init = "PIC";
-    init_pci(); last_init = "PCI";
+    init_pic();
+    init_pci();
 
-    init_pmm(); last_init = "PMM";
-    init_vmm(); last_init = "VMM";
+    init_pmm();
+    init_vmm();
 
-    init_gdt(); last_init = "GDT";
+    init_gdt();
 
-    _init();    last_init = "CRTI";
+    _init();
 
     kmain();
 }

@@ -82,12 +82,10 @@ void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags) {
     uint32_t* pd_virt  = (uint32_t*) PHYSICAL_TO_VIRTUAL(pd_phys);
 
     // Check if the Page Table exists
-    if (!(pd_virt[pd_index] & PAGE_PRESENT)) {
+    if (unlikely(!(pd_virt[pd_index] & PAGE_PRESENT))) {
         uint32_t phys_table = (uint32_t) pmm_alloc_page();
 
         // Link it in the PD
-        // Note: I removed PAGE_USER, if this causes some errors
-        // to the ELF executor, im gona crash out
         pd_virt[pd_index] = phys_table | PAGE_PRESENT | PAGE_RW | PAGE_USER;
 
         // Zero out the new table
@@ -115,7 +113,7 @@ uint32_t vmm_unmap_page(void* virt) {
 
     uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(vmm_get_current_directory());
 
-    if (!(pd_virt[pd_index] & PAGE_PRESENT)) return 0;
+    if (unlikely(!(pd_virt[pd_index] & PAGE_PRESENT))) return 0;
 
     uint32_t pt_phys = pd_virt[pd_index] & ~0xFFF;
     uint32_t* pt_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pt_phys);
@@ -148,7 +146,7 @@ uint32_t* vmm_copy_kernel_directory() {
 // Uses physical addresses
 void vmm_switch_directory(uint32_t* page_directory) {
     // Only switch if we're not current already there
-    if (vmm_get_current_directory() != page_directory)
+    if (unlikely(vmm_get_current_directory() != page_directory))
         asm volatile("mov %0, %%cr3" : : "r"(page_directory) : "memory");
 }
 
@@ -188,12 +186,12 @@ int vmm_is_mapped(uint32_t* pd_phys, void* virt) {
 
     uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pd_phys);
 
-    if (!(pd_virt[pd_index] & PAGE_PRESENT)) return 0;
+    if (unlikely(!(pd_virt[pd_index] & PAGE_PRESENT))) return 0;
 
     uint32_t pt_phys = pd_virt[pd_index] & ~0xFFF;
     uint32_t* pt_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pt_phys);
 
-    if (!(pt_virt[pt_index] & PAGE_PRESENT)) return 0;
+    if (unlikely(!(pt_virt[pt_index] & PAGE_PRESENT))) return 0;
 
     return 1;
 }

@@ -17,8 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef X86_32_ASM_STUBS_H
-#define X86_32_ASM_STUBS_H
+#ifndef X86_32_HAL_H
+#define X86_32_HAL_H
 
 #include <stdint.h>
 

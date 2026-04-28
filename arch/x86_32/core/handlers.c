@@ -148,7 +148,7 @@ static void panic_cmd_dump(uint32_t addr) {
 }
 
 static void panic_cmd_peek(uint32_t addr) {
-    uint32_t value = *(volatile uint32_t*)addr;
+    uint32_t value = *(volatile uint32_t*) addr;
     err_printf("\n0x%08lx = 0x%08lx", addr, value);
 }
 
@@ -253,8 +253,14 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
         }
     }
 
-    err_printf("Last init: %s\n", last_init);
-    err_printf("Last call: %s\n", last_call);
+    if (__DEBUG__) {
+        err_printf("Call log: ");
+        for (size_t i = 0; i < MAX_LOG_LEN - 1; i++) {
+            err_printf("%s, ", call_log[i]);
+        }
+        err_printf("%s (%s)\n", call_log[MAX_LOG_LEN],
+            last_call_finished ? "Finished" : "Unfinished");
+    }
 
     dump_register_info(regs);
     dump_multitasking_info();
