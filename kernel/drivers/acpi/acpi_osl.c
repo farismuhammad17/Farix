@@ -54,28 +54,33 @@ static size_t unmap_count = 0;
 
 static ACPI_PHYSICAL_ADDRESS AcpiRSDP = 0;
 
-static Slab64* acpi_head64 = NULL;
-static Slab32* acpi_head32 = NULL;
-static Slab16* acpi_head16 = NULL;
-static Slab8*  acpi_head8  = NULL;
+static Slab64* acpi_slab_head64 = NULL;
+static Slab32* acpi_slab_head32 = NULL;
+static Slab16* acpi_slab_head16 = NULL;
+static Slab8*  acpi_slab_head8  = NULL;
 
 // --- INITIALISATION ---
 
 // This is the first init_acpi function
 ACPI_STATUS AcpiOsInitialize() {
-    acpi_head64 = create_slab64(ACPI_SLAB64_SIZE);
-    acpi_head32 = create_slab32(ACPI_SLAB32_SIZE);
-    acpi_head16 = create_slab16(ACPI_SLAB16_SIZE);
-    acpi_head8  = create_slab8(ACPI_SLAB8_SIZE);
+    acpi_slab_head64 = create_slab64(ACPI_SLAB64_SIZE);
+    acpi_slab_head32 = create_slab32(ACPI_SLAB32_SIZE);
+    acpi_slab_head16 = create_slab16(ACPI_SLAB16_SIZE);
+    acpi_slab_head8  = create_slab8(ACPI_SLAB8_SIZE);
 
-    if (unlikely(!acpi_head64 || !acpi_head32 || !acpi_head16 || !acpi_head8)) {
-        uart_printf("ACPI OSL: Failed to initialize slab pools\n");
+    if (unlikely(!acpi_slab_head64 || !acpi_slab_head32 || !acpi_slab_head16 || !acpi_slab_head8)) {
+        t_print("AcpiOsInitialize: Failed to initialize slab pools");
+        uart_print("AcpiOsInitialize: Failed to initialize slab pools\n");
         return AE_NO_MEMORY;
     }
 
     AcpiRSDP = AcpiOsGetRootPointer();
 
-    if (AcpiRSDP == 0) return AE_NOT_FOUND;
+    if (unlikely(AcpiRSDP == 0)) {
+        t_print("AcpiOsInitialize: AcpiOsGetRootPointer: RSDP not found");
+        uart_print("AcpiOsInitialize: AcpiOsGetRootPointer: RSDP not found\n");
+        return AE_NOT_FOUND;
+    }
 
     ACPI_PHYSICAL_ADDRESS found_rsdp = 0;
     AcpiFindRootPointer(&found_rsdp);
@@ -145,8 +150,6 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
         }
     }
 
-    t_print("AcpiGetRootPointer (ACPI): AcpiOsGetRootPointer: RSDP NOT FOUND");
-    uart_printf("AcpiGetRootPointer (ACPI): AcpiOsGetRootPointer: RSDP NOT FOUND\n");
     return 0;
 }
 
@@ -263,19 +266,19 @@ void* AcpiOsAllocate(ACPI_SIZE Size) {
     // We check from smallest capacity (large objects) to largest capacity (small objects)
 
     if (Size <= ACPI_SLAB64_SIZE) {
-        ptr = slab_alloc64(acpi_head64);
+        ptr = slab_alloc64(acpi_slab_head64);
     } else if (Size <= ACPI_SLAB32_SIZE) {
-        ptr = slab_alloc32(acpi_head32);
+        ptr = slab_alloc32(acpi_slab_head32);
     } else if (Size <= ACPI_SLAB16_SIZE) {
-        ptr = slab_alloc16(acpi_head16);
+        ptr = slab_alloc16(acpi_slab_head16);
     } else if (Size <= ACPI_SLAB8_SIZE) {
-        ptr = slab_alloc8(acpi_head8);
+        ptr = slab_alloc8(acpi_slab_head8);
     } else {
         // Fallback for stuff we can't slab
         ptr = kmalloc(Size);
     }
 
-    if (ptr) kmemset(ptr, 0, Size);
+    if (ptr) memset(ptr, 0, Size);
     return ptr;
 }
 
@@ -290,19 +293,18 @@ void AcpiOsFree(void *Memory) {
     uintptr_t page_base = (uintptr_t) Memory & 0xFFFFF000;
 
     // Cast it to a generic Slab pointer to check the magic
-    // We can use Slab8 as a template since slab_magic is at the same offset in all of them
+    // We can use Slab8 as a template since magic is at the same offset in all of them
     Slab8* slab = (Slab8*) page_base;
 
-    if (likely(slab->slab_magic == SLAB_MAGIC)) {
-        // We look at the capacity (free_slots at init) or obj_shift.
-        // Based on our initialization: 6=64, 7=128, 8=256, 9=512
-        switch (slab->obj_shift) {
-            case 6:  slab_free64(Memory); break;
-            case 7:  slab_free32(Memory); break;
-            case 8:  slab_free16(Memory); break;
-            case 9:  slab_free8(Memory);  break;
+    if (likely(IS_SLAB(slab->magic))) {
+        switch (slab->magic) {
+            case SLAB64_MAGIC :  slab_free64(Memory); break;
+            case SLAB32_MAGIC :  slab_free32(Memory); break;
+            case SLAB16_MAGIC :  slab_free16(Memory); break;
+            case SLAB8_MAGIC  :  slab_free8(Memory);  break;
             default:
-                uart_printf("AcpiOsFree: Slab has magic but invalid shift: %d\n", slab->obj_shift);
+                t_print("AcpiOsFree: Invalid slab magic");
+                uart_print("AcpiOsFree: Invalid slab magic\n");
                 break;
         }
     }
@@ -445,7 +447,7 @@ ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle) {
 // to protect small, critical sections of code where blocking is not permitted, ensuring mutual exclusion
 // at the hardware level.
 ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK *OutHandle) {
-    void* lock = kmalloc(sizeof(uint32_t));
+    void* lock = slab_alloc64(acpi_slab_head64);
     if (!lock) return AE_NO_MEMORY;
 
     *(uint32_t*) lock = 0;
@@ -457,7 +459,11 @@ ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK *OutHandle) {
 // This function destroys a previously created spinlock and releases any associated kernel resources.
 // It takes the spinlock handle as its argument and returns nothing (void). This must only be called
 // when the lock is no longer required and is not currently held by any processor.
-void AcpiOsDeleteLock(ACPI_SPINLOCK Handle) { }
+void AcpiOsDeleteLock(ACPI_SPINLOCK Handle) {
+    if (Handle) {
+        slab_free64((void*) Handle);
+    }
+}
 
 // This function disables interrupts on the local processor and acquires the specified spinlock. It
 // takes the spinlock handle and returns the current CPU flags (interrupt state). This prevents the

@@ -34,3 +34,4 @@ This is more of a journal of how this project was built. It helps to keep track 
 - [20 Apr: Docker build environment](journal_entries/20-apr-2026.md)
 - [23 Apr: Slab allocated ACPI](journal_entries/23-apr-2026.md)
 - [24 Apr: Advanced Programmable Interrupt Controller](journal_entries/24-apr-2026.md)
+- [1 May: Fixed Slab memory problems](journal_entries/1-may-2026.md)

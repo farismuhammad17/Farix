@@ -160,6 +160,14 @@ globals.CFLAGS = (
     f"-Iarch/{globals.arch} "
 )
 
+globals.ACPICA_SRC = "kernel/drivers/acpi"
+globals.ACPICA_CFLAGS = (
+    "-ffreestanding -O2 -Wall -Wextra -fno-exceptions "
+    "-fdiagnostics-color=always "
+    f"-Iinclude -I{globals.LIBC_INC} "
+    f"-I{globals.ACPICA_ARCH_INDEPENDANT} -I{globals.ACPICA_ARCH_DEPENDANT} "
+)
+
 globals.BOOT_OBJ = "build/boot.o"
 
 globals.CRTBEGIN = globals.run(f"{globals.CC} {globals.CFLAGS} -print-file-name=crtbegin.o")

@@ -55,6 +55,9 @@ AS = None
 
 CFLAGS = None
 
+ACPICA_SRC = None
+ACPICA_CFLAGS = None
+
 BOOT_OBJ = None
 
 CRTBEGIN = None
@@ -97,6 +100,7 @@ def run(cmd, shell=True, check=True, capture_output=True):
 
         if LOGGING:
             LOG_FILE.write(f"{cmd}\n\n")
+
             if result.stdout:
                 LOG_FILE.write(result.stdout)
             if result.stderr:

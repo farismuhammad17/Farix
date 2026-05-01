@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "memory/pmm.h"
 
@@ -90,9 +91,7 @@ void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags) {
 
         // Zero out the new table
         uint32_t* table_ptr = (uint32_t*) PHYSICAL_TO_VIRTUAL(phys_table);
-        for (int i = 0; i < 1024; i++) {
-            table_ptr[i] = 0;
-        }
+        memset(table_ptr, 0, PAGE_SIZE);
     }
 
     // Get the virtual address of the Page Table

@@ -42,7 +42,10 @@ def farix_bin_x86_32():
     for s, o in zip(other_asm_srcs, other_asm_objs):
         makefile.globals.build_object(s, o, f"nasm -f elf32 {{src}} -o {{obj}}")
     for s, o in zip(c_srcs, c_objs):
-        makefile.globals.build_object(s, o, f"{makefile.globals.CC} -c {{src}} -o {{obj}} {makefile.globals.CFLAGS}")
+        if s.startswith(makefile.globals.ACPICA_SRC) and not s.endswith("acpi_osl.c"):
+            makefile.globals.build_object(s, o, f"{makefile.globals.CC} -c {{src}} -o {{obj}} {makefile.globals.ACPICA_CFLAGS}")
+        else:
+            makefile.globals.build_object(s, o, f"{makefile.globals.CC} -c {{src}} -o {{obj}} {makefile.globals.CFLAGS}")
 
     ld_flags = "-T arch/x86_32/linker.ld -ffreestanding -O2 -nostdlib"
 

@@ -18,7 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <stddef.h>
+#include <string.h>
 
+#include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
@@ -26,10 +28,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/slab.h"
 
 Slab8* create_slab8(uint16_t object_size) {
-    LOG_CALL();
     void* phys = pmm_alloc_page();
     if (unlikely(!phys)) {
-        uart_printf("create_slab8: pmm_alloc_page failed\n");
+        t_print("create_slab8: pmm_alloc_page failed\n");
+        uart_print("create_slab8: pmm_alloc_page failed\n");
         return NULL;
     }
 
@@ -37,35 +39,46 @@ Slab8* create_slab8(uint16_t object_size) {
     Slab8* slab = (Slab8*) PHYSICAL_TO_VIRTUAL(phys);
     vmm_map_page(vmm_get_current_directory(), phys, (void*) slab, PAGE_PRESENT | PAGE_RW);
 
-    slab->mask       = 0;
-    slab->free_slots = 8;
-    slab->next       = NULL;
-    slab->prev       = NULL;
-    slab->slab_magic = SLAB_MAGIC;
+    // Zero out the page
+    memset(slab, 0, PAGE_SIZE);
+
+    slab->next  = NULL;
+    slab->prev  = NULL;
+    slab->magic = SLAB8_MAGIC;
 
     // Slabs use powers of 2 for faster calculations
-    if (unlikely(object_size <= 1)) {
-        slab->obj_shift = 0;
+    slab->obj_shift = (object_size <= 1) ? 0 : (32 - __builtin_clz(object_size - 1));
+
+    uint32_t actual_capacity = (PAGE_SIZE - (uintptr_t) slab->data + (uintptr_t) slab) >> slab->obj_shift;
+    if (actual_capacity > 8) actual_capacity = 8;
+
+    slab->free_slots = actual_capacity;
+
+    if (actual_capacity < 8) {
+        slab->mask = ~((1ULL << actual_capacity) - 1);
     } else {
-        // Find exponent of smallest power of 2 greater than given size
-        slab->obj_shift = 32 - __builtin_clz(object_size - 1);
+        slab->mask = 0;
     }
 
     return slab;
 }
 
 void delete_slab8(Slab8* slab) {
-    LOG_CALL();
     if (slab->prev)
         slab->prev->next = slab->next;
     if (slab->next)
         slab->next->prev = slab->prev;
 
-    pmm_free_page(slab);
+    pmm_free_page((void*) vmm_unmap_page(slab));
 }
 
 void* slab_alloc8(Slab8* head) {
-    LOG_CALL();
+    if (unlikely(!head || head->magic != SLAB8_MAGIC)) {
+        t_print("slab_alloc8: Invalid head");
+        uart_print("slab_alloc8: Invalid head\n");
+        return NULL;
+    }
+
     Slab8* curr = head;
 
     while (unlikely(curr->free_slots == 0)) {
@@ -83,16 +96,24 @@ void* slab_alloc8(Slab8* head) {
     curr->mask |= (1U << slot);
     curr->free_slots--;
 
-    return (void*)((uintptr_t) curr->data + (slot << curr->obj_shift));
+    uintptr_t addr = (uintptr_t) curr->data + (slot << curr->obj_shift);
+
+    // Verify pointer is in the same page
+    if (unlikely((addr & 0xFFFFF000) != ((uintptr_t) curr & 0xFFFFF000))) {
+        t_printf("slab_alloc8: Page boundary overflow");
+        uart_printf("slab_alloc8: Page boundary overflow");
+        return NULL;
+    }
+
+    return (void*) addr;
 }
 
 void slab_free8(void* ptr) {
-    LOG_CALL();
     // Jump to the start of the 4KB page this pointer lives in.
     // This works because the PMM always gives us page-aligned memory.
     Slab8* slab = (Slab8*)((uintptr_t) ptr & 0xFFFFF000);
 
-    if (unlikely(slab->slab_magic != SLAB_MAGIC)) {
+    if (unlikely(slab->magic != SLAB8_MAGIC)) {
         uart_printf("slab_free8: Slab pointer %x has invalid magic", ptr);
         return;
     }
@@ -115,6 +136,6 @@ void slab_free8(void* ptr) {
             slab->next->prev = slab->prev;
 
         // Return the memory to the PMM
-        pmm_free_page(slab);
+        pmm_free_page((void*) vmm_unmap_page(slab));
     }
 }

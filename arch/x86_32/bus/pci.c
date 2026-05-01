@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
+#include "drivers/terminal.h"
+
 #include "cpu/pci.h"
 
 pci_device_t pci_devices[32];

@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
+#include "fs/elf.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
@@ -130,12 +131,26 @@ static inline void dump_register_info(syscalls_registers_x86_32_t* regs) {
 
 // Dumps multitasking information in case of race condition errors
 static inline void dump_multitasking_info() {
-    if (current_task == NULL) return;
+    if (unlikely(current_task == NULL)) return;
 
     err_printf("--- Multitasking ---\n");
     err_printf("Name:  %s (ID:%lu)\n", current_task->name, current_task->id);
     err_printf("Stack: 0x%08lx -> 0x%08lx\n", (uint32_t) current_task->stack_origin, current_task->stack_pointer);
     err_printf("Page:  %p (PRIV:%lu)\n", (void*) current_task->page_directory, (uint32_t) current_task->privilege);
+}
+
+// Dumps call log
+static inline void dump_call_log(int funcs_per_line) {
+    if (likely(!__DEBUG__)) return;
+
+    err_printf("--- Call log ---\n");
+    for (size_t i = 0; i < MAX_LOG_LEN; i++) {
+        err_printf("%d:%s ", i, call_log[i]);
+        if ((i + 1) % funcs_per_line == 0) {
+            err_printf("\n");
+        }
+    }
+    err_printf("(%s at %d)\n", last_call_finished ? "Finished" : "Unfinished", log_index);
 }
 
 static void panic_cmd_dump(uint32_t addr) {
@@ -229,6 +244,10 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
         err_printf("Exception: %ld\n", regs->int_no);
     }
 
+    if (unlikely(__DEBUG__)) {
+        err_printf("Logged number: %d | ", logged_num);
+    }
+
     err_printf("Error Code: %lx\n", regs->err_code);
     err_printf("EIP: %lx  CS: %lx  EFLAGS: %lx\n", regs->eip, regs->cs, regs->eflags);
 
@@ -253,17 +272,11 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
         }
     }
 
-    if (__DEBUG__) {
-        err_printf("Call log: ");
-        for (size_t i = 0; i < MAX_LOG_LEN - 1; i++) {
-            err_printf("%s, ", call_log[i]);
-        }
-        err_printf("%s (%s)\n", call_log[MAX_LOG_LEN],
-            last_call_finished ? "Finished" : "Unfinished");
-    }
-
+    dump_call_log(3);
     dump_register_info(regs);
     dump_multitasking_info();
+
+    asm volatile("hlt");
 
     panic_shell();
 }

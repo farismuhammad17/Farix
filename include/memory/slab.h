@@ -20,12 +20,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef SLAB_H
 #define SLAB_H
 
-#define SLAB_MAGIC 0x51AB51AB
+#define SLAB64_MAGIC 0x51AB6464
+#define SLAB32_MAGIC 0x51AB3232
+#define SLAB16_MAGIC 0x51AB1616
+#define SLAB8_MAGIC  0x51AB0808
+
+#define IS_SLAB(magic) ((magic & 0xFFFF0000) == 0x51AB0000)
 
 typedef struct Slab64 {
     uint64_t mask;
     uint64_t free_slots;
-    uint32_t slab_magic;
+    uint32_t magic;
     uint16_t obj_shift;
 
     struct Slab64* next;
@@ -37,7 +42,7 @@ typedef struct Slab64 {
 typedef struct Slab32 {
     uint32_t mask;
     uint32_t free_slots;
-    uint32_t slab_magic;
+    uint32_t magic;
     uint16_t obj_shift;
 
     struct Slab32* next;
@@ -49,7 +54,7 @@ typedef struct Slab32 {
 typedef struct Slab16 {
     uint16_t mask;
     uint16_t free_slots;
-    uint32_t slab_magic;
+    uint32_t magic;
     uint16_t obj_shift;
 
     struct Slab16* next;
@@ -61,7 +66,7 @@ typedef struct Slab16 {
 typedef struct Slab8 {
     uint8_t mask;
     uint8_t free_slots;
-    uint32_t slab_magic;
+    uint32_t magic;
     uint16_t obj_shift;
 
     struct Slab8* next;

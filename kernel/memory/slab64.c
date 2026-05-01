@@ -18,7 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <stddef.h>
+#include <string.h>
 
+#include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
@@ -26,11 +28,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/slab.h"
 
 Slab64* create_slab64(uint16_t object_size) {
-    LOG_CALL();
-
     void* phys = pmm_alloc_page();
     if (unlikely(!phys)) {
-        uart_printf("create_slab64: pmm_alloc_page failed\n");
+        t_print("create_slab64: pmm_alloc_page failed");
+        uart_print("create_slab64: pmm_alloc_page failed\n");
         return NULL;
     }
 
@@ -38,35 +39,47 @@ Slab64* create_slab64(uint16_t object_size) {
     Slab64* slab = (Slab64*) PHYSICAL_TO_VIRTUAL(phys);
     vmm_map_page(vmm_get_current_directory(), phys, (void*) slab, PAGE_PRESENT | PAGE_RW);
 
-    slab->mask       = 0;
-    slab->free_slots = 64;
-    slab->next       = NULL;
-    slab->prev       = NULL;
-    slab->slab_magic = SLAB_MAGIC;
+    // Zero out the page
+    memset(slab, 0, PAGE_SIZE);
+
+    slab->next  = NULL;
+    slab->prev  = NULL;
+    slab->magic = SLAB64_MAGIC;
 
     // Slabs use powers of 2 for faster calculations
-    if (unlikely(object_size <= 1)) {
-        slab->obj_shift = 0;
+    slab->obj_shift = (object_size <= 1) ? 0 : (32 - __builtin_clz(object_size - 1));
+
+    uint32_t actual_capacity = (PAGE_SIZE - (uintptr_t) slab->data + (uintptr_t) slab) >> slab->obj_shift;
+    if (actual_capacity > 64) actual_capacity = 64;
+
+    slab->free_slots = actual_capacity;
+
+    // Mask out unusable bits
+    if (actual_capacity < 64) {
+        slab->mask = ~((1ULL << actual_capacity) - 1);
     } else {
-        // Find exponent of smallest power of 2 greater than given size
-        slab->obj_shift = 32 - __builtin_clz(object_size - 1);
+        slab->mask = 0;
     }
 
     return slab;
 }
 
 void delete_slab64(Slab64* slab) {
-    LOG_CALL();
     if (slab->prev)
         slab->prev->next = slab->next;
     if (slab->next)
         slab->next->prev = slab->prev;
 
-    pmm_free_page(slab);
+    pmm_free_page((void*) vmm_unmap_page(slab));
 }
 
 void* slab_alloc64(Slab64* head) {
-    LOG_CALL();
+    if (unlikely(!head || head->magic != SLAB64_MAGIC)) {
+        t_print("slab_alloc64: Invalid head");
+        uart_print("slab_alloc64: Invalid head\n");
+        return NULL;
+    }
+
     Slab64* curr = head;
 
     while (unlikely(curr->free_slots == 0)) {
@@ -81,19 +94,31 @@ void* slab_alloc64(Slab64* head) {
     }
 
     int slot = __builtin_ctzll(~curr->mask);
+
+    uintptr_t addr = (uintptr_t) curr->data + (slot << curr->obj_shift);
+
+    uintptr_t slab_limit = (uintptr_t) curr + PAGE_SIZE;
+    uintptr_t object_end = addr + (1 << curr->obj_shift);
+
+    if (unlikely(object_end > slab_limit)) {
+        t_printf("slab_alloc64: Allocation out of bounds");
+        uart_printf("slab_alloc64: Slab at %p, Object at %p extends to %p (Limit: %p)\n",
+                    curr, addr, object_end, slab_limit);
+        return NULL;
+    }
+
     curr->mask |= (1ULL << slot);
     curr->free_slots--;
 
-    return (void*)((uintptr_t) curr->data + (slot << curr->obj_shift));
+    return (void*) addr;
 }
 
 void slab_free64(void* ptr) {
-    LOG_CALL();
     // Jump to the start of the 4KB page this pointer lives in.
     // This works because the PMM always gives us page-aligned memory.
     Slab64* slab = (Slab64*)((uintptr_t) ptr & 0xFFFFF000);
 
-    if (unlikely(slab->slab_magic != SLAB_MAGIC)) {
+    if (unlikely(slab->magic != SLAB64_MAGIC)) {
         uart_printf("slab_free64: Slab pointer %x has invalid magic", ptr);
         return;
     }
@@ -116,6 +141,6 @@ void slab_free64(void* ptr) {
             slab->next->prev = slab->prev;
 
         // Return the memory to the PMM
-        pmm_free_page(slab);
+        pmm_free_page((void*) vmm_unmap_page(slab));
     }
 }

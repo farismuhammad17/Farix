@@ -2,7 +2,7 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
-## Current
+## Fixed Slab memory problems - *1st May, 2026*
 
 - Organised around code
 - Added `__DEBUG__` macro to `kernel.h`
@@ -10,9 +10,21 @@
   - Made ACPICA compile in ARM32
 - HAL
   - Replaced `stubs.c` for `hal.h` for inline functions
+- Debugging
+  - Added call logging
+  - Added `LOG_NUM`
+  - Implemented toggle value `__DEBUG__
+- Interrupts
+  - Removed `reset_interrupts`
+- Slab
+  - Different magics for each slab
+  - Renamed `slab_magic` to `magic`
+- ACPI
+  - Uses slabs instead of heap (if possible)
 - MFuncs
   - Added `config` command
   - Performance counter moved for the whole program instead
+  - Separate C flags for ACPICA
 
 ## Advanced Programmable Interrupt Controller - *24th April, 2026*
 

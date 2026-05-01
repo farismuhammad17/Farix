@@ -21,14 +21,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
+#include "cpu/irq.h"
+
 #include "process/task.h"
 
 #define PIT_FREQ_HZ  1193182
 #define PIT_FREQ_MHZ 1.193
 
 static uint64_t system_ticks = 0;
-static uint64_t timer_freq = NULL;
-static uint32_t divisor = NULL;
+static uint64_t timer_freq   = -1;
+static uint32_t divisor      = -1;
 
 void timer_handler() {
     system_ticks++;

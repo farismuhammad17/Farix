@@ -40,6 +40,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "kernel.h"
 
+int logged_num = 0;
+
 const char* call_log[MAX_LOG_LEN] = {0};
 int log_index = 0;
 int last_call_finished = 0;

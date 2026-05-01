@@ -119,7 +119,7 @@ void init_interrupts() {
     idt_set_gate(30, (uint32_t) isr30, 0x08, IDT_GATE_KERNEL);
     idt_set_gate(31, (uint32_t) isr31, 0x08, IDT_GATE_KERNEL);
 
-    reset_interrupts();
+    asm volatile("lidt %0" : : "m"(idtp));
 }
 
 void set_interrupt_kernel(uint8_t vector, void* handler) {
@@ -133,8 +133,4 @@ void set_interrupt_user(uint8_t vector, void* handler) {
 
 void clear_interrupt(uint8_t vector) {
     idt_set_gate(vector, (uint32_t) isr15, 0x08, IDT_GATE_KERNEL);
-}
-
-void reset_interrupts() {
-    asm volatile("lidt %0" : : "m"(idtp));
 }

@@ -75,7 +75,7 @@ def lint():
             content = "".join(lines)
 
             if "Copyright (C)" not in content:
-                print(f"\x1b[93mCOPYRIGHT \x1b[0m {file}")
+                print(f"\x1b[91mCOPYRIGHT \x1b[0m {file}")
 
             current_block = []
 
@@ -83,18 +83,18 @@ def lint():
                 clean_line = line.strip()
 
                 if "TODO REM" in clean_line:
-                    print(f"\x1b[92mTODO REM\x1b[0m   {file}")
+                    print(f"\x1b[93mTODO REM\x1b[0m   {file}")
 
                 elif "TODO IMP" in clean_line:
-                    print(f"\x1b[92mTODO IMP\x1b[0m   {file}")
+                    print(f"\x1b[95mTODO IMP\x1b[0m   {file}")
                     print(f"    \x1b[90m{clean_line}\x1b[0m")
 
                 elif "TODO" in clean_line:
                     print(f"\x1b[92mTODO\x1b[0m       {file}")
                     print(f"    \x1b[90m{clean_line}\x1b[0m")
 
-                elif "LOG_CALL" in clean_line and file.parts[-1] != "kernel.h":
-                    print(f"\x1b[92mLOG_CALL\x1b[0m   {file}")
+                elif ("LOG_CALL" in clean_line or "LOG_NUM" in clean_line) and file.parts[-1] != "kernel.h":
+                    print(f"\x1b[96mLOG_FUNC\x1b[0m   {file}")
 
                 if clean_line.startswith("#include"):
                     current_block.append(clean_line)

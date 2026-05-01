@@ -52,7 +52,7 @@ void init_irq_controller() {
     }
 
     uint32_t lapic_phys = (uint32_t) ((ACPI_TABLE_MADT*) ACPI_MADT_P)->Address;
-             lapic_virt = PHYSICAL_TO_VIRTUAL(lapic_phys);
+             lapic_virt = (uint32_t) PHYSICAL_TO_VIRTUAL(lapic_phys);
 
     vmm_map_page(kernel_directory, (void*) lapic_phys, (void*) lapic_virt,
              PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
@@ -93,7 +93,7 @@ static void parse_madt(ACPI_TABLE_MADT* madt) {
             ACPI_MADT_IO_APIC* io = (ACPI_MADT_IO_APIC*) sub;
 
             // Map IO-APIC
-            ioapic_virt = PHYSICAL_TO_VIRTUAL(io->Address);
+            ioapic_virt = (uint32_t) PHYSICAL_TO_VIRTUAL(io->Address);
             vmm_map_page(kernel_directory, (void*) io->Address, (void*) ioapic_virt,
                          PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
         }

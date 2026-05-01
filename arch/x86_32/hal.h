@@ -22,35 +22,33 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-#include "memory/vmm.h"
-
 static inline void outb(uint32_t port, uint8_t  val) {
-    asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
+    asm volatile("outb %0, %1" : : "a"(val), "Nd"(port) );
 }
 
 static inline void outw(uint32_t port, uint16_t val) {
-    asm volatile ( "outw %0, %1" : : "a"(val), "Nd"(port) );
+    asm volatile("outw %0, %1" : : "a"(val), "Nd"(port) );
 }
 
 static inline void outl(uint16_t port, uint32_t val) {
-    asm volatile ("outl %0, %1" : : "a"(val), "Nd"(port));
+    asm volatile("outl %0, %1" : : "a"(val), "Nd"(port));
 }
 
 static inline uint8_t inb(uint32_t port) {
     uint8_t ret;
-    asm volatile ( "inb %1, %0" : "=a"(ret) : "Nd"(port) );
+    asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port) );
     return ret;
 }
 
 static inline uint16_t inw(uint32_t port) {
     uint16_t ret;
-    asm volatile ( "inw %1, %0" : "=a"(ret) : "Nd"(port) );
+    asm volatile("inw %1, %0" : "=a"(ret) : "Nd"(port) );
     return ret;
 }
 
 static inline uint32_t inl(uint16_t port) {
     uint32_t ret;
-    asm volatile ("inl %1, %0" : "=a"(ret) : "Nd"(port));
+    asm volatile("inl %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
 
@@ -76,9 +74,7 @@ static inline uint32_t asm_get_random(uint8_t *success) {
     asm volatile(
         "rdrand %0; "
         "setc %1"
-        : "=r" (random_val), "=m" (*success)
-        :
-        : "cc"
+        : "=r" (random_val), "=m" (*success) : : "cc"
     );
 
     return random_val;
@@ -95,19 +91,20 @@ static inline void task_yield() {
 static inline uint32_t save_disable_interrupts() {
     uint32_t flags;
     asm volatile(
-        "pushf\n\t"
-        "pop %0\n\t"
+        "refe: \n\t"
+        "pushfl\n\t"
+        "popl %0\n\t"
         "cli"
-        : "=rm"(flags) :: "memory"
+        : "=r"(flags) :: "memory"
     );
     return flags;
 }
 
 static inline void restore_interrupts(uint32_t flags) {
     asm volatile(
-        "push %0\n\t"
-        "popf"
-        : : "rm"(flags) : "memory", "cc"
+        "pushl %0\n\t"
+        "popfl"
+        : : "r"(flags) : "memory", "cc"
     );
 }
 

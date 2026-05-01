@@ -28,6 +28,5 @@ void RARE_FUNC init_interrupts();
 void set_interrupt_kernel (uint8_t vector, void* handler);
 void set_interrupt_user   (uint8_t vector, void* handler);
 void clear_interrupt      (uint8_t vector);
-void reset_interrupts     ();
 
 #endif
