@@ -20,22 +20,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import shutil
 
-import makefile.globals
+import makefile.globals as m
 
 JUNK = (
     "build",
     "farix.bin",
-    "bochsout.txt",
-    "bochsrc.txt",
-    "copy.txt",
-    "snapshot.txt"
+    "farix.iso",
 )
 
 def clean(args):
     todelete = []
 
     if "apps" in args:
-        todelete = [makefile.globals.USER_BUILD_DIR]
+        todelete = [m.USER_BUILD_DIR]
     else:
         todelete = list(JUNK)
         for nonjunk in args:

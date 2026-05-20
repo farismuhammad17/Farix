@@ -24,54 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "fs/vfs.h"
 
-typedef struct FAT32Header {
-    uint8_t  boot_jmp[3];
-    uint8_t  oem_name[8];
-    uint16_t bytes_per_sector;
-    uint8_t  sectors_per_cluster;
-    uint16_t reserved_sectors;
-    uint8_t  fat_count;
-    uint16_t root_dir_entries;
-    uint16_t total_sectors_16;
-    uint8_t  media_type;
-    uint16_t fat_size_16;
-    uint16_t sectors_per_track;
-    uint16_t head_count;
-    uint32_t hidden_sectors;
-    uint32_t total_sectors_32;
-
-    // FAT32 Extended Section
-    uint32_t sectors_per_fat;
-    uint16_t flags;
-    uint16_t version;
-    uint32_t root_cluster;      // Files' entry point
-    uint16_t fs_info_sector;
-    uint16_t backup_boot_sector;
-    uint8_t  reserved[12];
-    uint8_t  drive_num;
-    uint8_t  reserved1;
-    uint8_t  boot_sig;          // 0x28 or 0x29
-    uint32_t volume_id;
-    uint8_t  volume_label[11];
-    uint8_t  fs_type[8];        // Should say "FAT32   " (hopefully)
-} __attribute__((packed)) FAT32Header;
-
-typedef struct FAT32File {
-    uint8_t  name[11];      // 8 chars name, 3 extension
-    uint8_t  attributes;    // If folder, read-only, etc.
-    uint8_t  reservedNT;
-    uint8_t  creation_time_tenth;
-    uint16_t creation_time;
-    uint16_t creation_date;
-    uint16_t last_access_date;
-    uint16_t cluster_high;  // Top 16 bits of the address
-    uint16_t write_time;
-    uint16_t write_date;
-    uint16_t cluster_low;   // Bottom 16 bits of the address
-    uint32_t size;          // File size in bytes
-} __attribute__((packed)) FAT32File;
-
-extern FileOperations fat32_ops;
+extern VFS fat32_vfs;
 
 void RARE_FUNC init_fat32();
 
@@ -82,5 +35,7 @@ int       fat32_mkdir  (const char* name);
 int       fat32_remove (const char* name);
 File*     fat32_get    (const char* name);
 FileNode* fat32_getall (const char* path);
+
+int fat32_check_write_safety(uint32_t lba);
 
 #endif

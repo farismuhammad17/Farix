@@ -2,6 +2,43 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## Functioning AHCI - *19th May, 2026*
+
+- PMM
+  - Added `pmm_alloc_pages`
+- IRQ
+  - `irq_unmask` made public
+- IDT
+  - Added `ahci_interrupt_handler_stub`
+  - Added gate `46` for AHCI interrupts
+  - `mouse_handler_stub` no longer pauses interrupts
+- PCI
+  - `progif` stored in `init_pci`
+- Terminal
+  - `err_print` and `err_printf` for easier formatting
+  - Removed `t_printf`
+- VFS
+  - Renamed `FileOperations` to `VFS`
+  - Added write safety function
+- FAT32
+  - Added static `write_path_filename`
+  - Cleaned up code
+  - Used 12 byte header reserved for pre-calculated `data_lba` and `total_clusters`
+  - Added write safety function
+- Multitasking
+  - Header throws compiler error for invalid `TASKS_LIST_LEN` value
+- Shell
+  - Boot into kernel shell option
+  - Kernel boots into `shell.elf` if present, else uses kernel shell
+- MFuncs
+  - Bochs emulation support
+  - ISO build functionality
+  - Multithreaded compiling
+  - Added `-threads` (`-t`) argument
+  - Use `argparse` for cleaner arguments
+  - `defs` command returns closest matches upon unfound inputted command
+  - `defs` command now works for macros and variables too
+
 ## Fixed Slab memory problems - *1st May, 2026*
 
 - Organised around code
@@ -13,7 +50,7 @@
 - Debugging
   - Added call logging
   - Added `LOG_NUM`
-  - Implemented toggle value `__DEBUG__
+  - Implemented toggle value `__DEBUG__`
 - Interrupts
   - Removed `reset_interrupts`
 - Slab

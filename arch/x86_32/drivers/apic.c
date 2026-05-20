@@ -22,7 +22,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cpu/ints.h"
 #include "drivers/acpi/acpi.h"
 #include "drivers/terminal.h"
-#include "drivers/uart.h"
 #include "memory/vmm.h"
 
 #include "cpu/irq.h"
@@ -34,20 +33,18 @@ static uint8_t  irq0_pin = 2; // Default PIT pin
 static ACPI_TABLE_HEADER* ACPI_MADT_P;
 
 static void parse_madt(ACPI_TABLE_MADT* madt);
-static void ioapic_set_entry(uint8_t pin, uint64_t data);
-static void irq_unmask(uint8_t pin, uint8_t vector);
 
 static inline void lapic_write(uint32_t reg, uint32_t data);
 static inline uint32_t lapic_read(uint32_t reg);
 
+static inline void ioapic_set_entry(uint8_t pin, uint64_t data);
 static inline void ioapic_write(uintptr_t base, uint32_t reg, uint32_t val);
 
 void init_irq_controller() {
     ACPI_STATUS status = AcpiGetTable("APIC", 1, &ACPI_MADT_P);
 
     if (unlikely(!ACPI_SUCCESS(status))) {
-        uart_print("init_irq_controller: ACPI unable to get APIC table (MADT)");
-        t_print("init_irq_controller: ACPI unable to get APIC table (MADT)");
+        err_print("init_irq_controller: ACPI unable to get APIC table (MADT)");
         return;
     }
 
@@ -74,10 +71,16 @@ void irq_send_eoi() {
     lapic_write(0xB0, 0);
 }
 
+void irq_unmask(uint8_t pin, uint8_t vector) {
+    // 0x00000000000000xx: Just the vector in the low byte
+    // Bit 16 (Mask) is 0 by default, meaning "Enabled"
+    ioapic_set_entry(pin, (uint64_t) vector);
+}
+
 // Defined in idt.asm
-extern void apic_spurious_handler() {
-    uart_print("APIC: Called Spurious handler");
-    t_print("APIC: Called Spurious handler");
+void apic_spurious_handler() {
+    err_print("apic_spurious_handler: Called");
+    irq_send_eoi();
 }
 
 // --- Helper functions ---
@@ -107,17 +110,11 @@ static void parse_madt(ACPI_TABLE_MADT* madt) {
     }
 }
 
-static void ioapic_set_entry(uint8_t pin, uint64_t data) {
+static inline void ioapic_set_entry(uint8_t pin, uint64_t data) {
     // Each pin has two 32-bit registers starting at 0x10
     // 0x10 + (pin * 2) is the low bits, +1 is the high bits
     ioapic_write(ioapic_virt, 0x10 + (pin * 2), (uint32_t) data);
     ioapic_write(ioapic_virt, 0x10 + (pin * 2) + 1, (uint32_t)(data >> 32));
-}
-
-static void irq_unmask(uint8_t pin, uint8_t vector) {
-    // 0x00000000000000xx: Just the vector in the low byte
-    // Bit 16 (Mask) is 0 by default, meaning "Enabled"
-    ioapic_set_entry(pin, (uint64_t) vector);
 }
 
 static inline void lapic_write(uint32_t reg, uint32_t data) {

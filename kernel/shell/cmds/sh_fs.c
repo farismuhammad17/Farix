@@ -31,15 +31,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 static char path_buffer[256];
 
-char* full_path_to(const char* filename) {
-    if (filename[0] == '/')
+static char* full_path_to(const char* filename) {
+    if (filename[0] == '/') {
         return (char*)(filename + 1); // Remove leading slash
+    }
 
     char* dir = shell_directory;
     if (dir[0] == '/') dir++;
 
-    if (dir[0] == '\0')
+    if (dir[0] == '\0') {
         return (char*) filename;
+    }
 
     // dir + "/" + filename
     memset(path_buffer, 0, sizeof(path_buffer));
@@ -51,7 +53,7 @@ char* full_path_to(const char* filename) {
 }
 
 void cmd_cd(const char* args) {
-    if (!args || args[0] == '\0') return;
+    if (unlikely(!args || args[0] == '\0')) return;
 
     char work_path[MAX_DIRECTORY_PATH_LEN];
     char component[MAX_FILENAME_LEN];
@@ -87,14 +89,14 @@ void cmd_cd(const char* args) {
 
                     // Immediate validation
                     File* f = fs_get(work_path);
-                    if (!f || !f->is_directory) {
+                    if (unlikely(!f || !f->is_directory)) {
                         sh_print("cd: %s: Not a directory\n", component);
                         return; // Exit immediately on failure
                     }
                 }
                 comp_idx = 0;
             }
-            if (c == '\0') break;
+            if (unlikely(c == '\0')) break;
         } else {
             if (comp_idx < 63) {
                 component[comp_idx++] = c;
@@ -105,9 +107,10 @@ void cmd_cd(const char* args) {
     strncpy(shell_directory, work_path, MAX_DIRECTORY_PATH_LEN - 1);
 }
 
-// TODO IMP: Certain large files don't print fully
 void cmd_cat(const char* args) {
-    if (args == NULL || args[0] == '\0') {
+    #define MAX_BUFFER_SIZE 1024
+
+    if (unlikely(args == NULL || args[0] == '\0')) {
         sh_print("Usage: cat <filename>\n");
         return;
     }
@@ -115,29 +118,55 @@ void cmd_cat(const char* args) {
     char* filename = full_path_to(args);
     File* f = fs_get(filename);
 
-    if (!f) {
+    if (unlikely(!f)) {
         sh_print("cat: %s: No such file\n", args);
         return;
     }
 
-    if (f->size == 0) return;
-
-    char* buffer = (char*) malloc(f->size + 1);
-    if (!buffer) {
-        sh_print("cat: out of memory\n");
+    if (unlikely(f->size == 0)) {
+        sh_print("cat: Empty file\n");
         return;
     }
 
-    memset(buffer, 0, f->size + 1);
+    char* buffer = (char*) kmalloc(MAX_BUFFER_SIZE + 1);
+    if (unlikely(!buffer)) {
+        sh_print("cat: Out of memory\n");
+        return;
+    }
 
-    if (fs_read(filename, (uint8_t*) buffer, f->size, 0))
-        sh_print("%s\n", buffer);
+    uint32_t offset = 0;
 
+    while (offset < f->size) {
+        kmemset(buffer, 0, MAX_BUFFER_SIZE + 1);
+
+        // Calculate how much to read for this specific chunk
+        uint32_t remaining = f->size - offset;
+        uint32_t chunk_size = (remaining > MAX_BUFFER_SIZE) ? MAX_BUFFER_SIZE : remaining;
+
+        // Read from the current tracking offset
+        int bytes_read = fs_read(filename, (uint8_t*) buffer, chunk_size, offset);
+
+        if (likely(bytes_read > 0)) {
+            // Explicitly ensure the chunk is null-terminated before printing
+            buffer[bytes_read] = '\0';
+            sh_print("%s", buffer);
+
+            // Advance the file offset position
+            offset += bytes_read;
+        } else {
+            sh_print("\n\ncat: Error reading %s (%d)\n", filename, bytes_read);
+            break;
+        }
+    }
+
+    sh_print("\n");
     kfree(buffer);
+
+    #undef MAX_BUFFER_SIZE
 }
 
 void cmd_write(const char* args) {
-    if (args == NULL || args[0] == '\0') return;
+    if (unlikely(args == NULL || args[0] == '\0')) return;
 
     const char* content = NULL;
     char filename[MAX_FILENAME_LEN];
@@ -165,26 +194,27 @@ void cmd_write(const char* args) {
         }
     }
 
-    char* path = full_path_to(filename);
-
-    if (!fs_write(path, (uint8_t*) content, strlen(content), 0)) {
-        sh_print("Error: Could not write to file %s\n", filename);
+    if (unlikely(fs_write(full_path_to(filename), (uint8_t*) content, strlen(content), 0) == -1)) {
+        sh_print("write: Could not write to file %s\n", filename);
     }
 }
 
 void cmd_touch(const char* args) {
-    if (args != NULL && args[0] != '\0')
+    if (args != NULL && args[0] != '\0') {
         fs_create(full_path_to(args));
+    }
 }
 
 void cmd_mkdir(const char* args) {
-    if (args != NULL && args[0] != '\0')
+    if (args != NULL && args[0] != '\0') {
         fs_mkdir(full_path_to(args));
+    }
 }
 
 void cmd_rm(const char* args) {
-    if (args != NULL && args[0] != '\0')
+    if (args != NULL && args[0] != '\0') {
         fs_remove(full_path_to(args));
+    }
 }
 
 void cmd_ls(const char* args) {
@@ -194,7 +224,12 @@ void cmd_ls(const char* args) {
     FileNode* temp = NULL;
 
     while (head) {
-        sh_print("%s\n", head->file.name);
+
+        if (head->file.is_directory) {
+            sh_print("\033[36m%s\033[0m\n", head->file.name);
+        } else {
+            sh_print("%s\n", head->file.name);
+        }
 
         temp = head->next;
         kfree(head);
@@ -203,6 +238,7 @@ void cmd_ls(const char* args) {
 }
 
 void cmd_exec(const char* args) {
-    if (args[0] != '\0')
+    if (args[0] != '\0') {
         exec_elf(full_path_to(args));
+    }
 }

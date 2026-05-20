@@ -31,6 +31,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "process/task.h"
 
+#define TASK_LIST_MASK_FULL ((task_list_mask_t)((1ULL << TASKS_LIST_LEN) - 1))
+
 // From boot.s
 extern uint32_t stack_top;
 extern uint32_t stack_bottom;
@@ -201,12 +203,12 @@ void kill_task(uint32_t id) {
         if (target->stack_origin) kfree(target->stack_origin);
         kfree(target);
 
-        if (target == current_task) task_yield();
+        if (unlikely(target == current_task)) task_yield();
     }
 
     system_int_on();
 
-    if (target == current_task) task_yield();
+    if (unlikely(target == current_task)) task_yield();
 }
 
 // TODO: Scheduler doesn't deal with sleeping tasks

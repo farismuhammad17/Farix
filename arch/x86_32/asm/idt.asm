@@ -21,6 +21,7 @@ global timer_handler_stub
 global keyboard_handler_stub
 global mouse_handler_stub
 global syscall_handler_stub
+global ahci_interrupt_handler_stub
 global apic_spurious_handler_stub
 
 extern timer_handler
@@ -28,6 +29,7 @@ extern keyboard_handler
 extern mouse_handler
 extern syscall_handler
 extern exception_handler
+extern ahci_interrupt_handler
 extern apic_spurious_handler
 
 timer_handler_stub:
@@ -43,11 +45,9 @@ keyboard_handler_stub:
     iretd
 
 mouse_handler_stub:
-    cli
     pushad
     call mouse_handler
     popad
-    sti
     iretd
 
 syscall_handler_stub:
@@ -70,6 +70,12 @@ syscall_handler_stub:
     add esp, 8        ; Clean up int_no and err_code
 
     iretd             ; Return to Ring 3
+
+ahci_interrupt_handler_stub:
+    pushad
+    call ahci_interrupt_handler
+    popad
+    iretd
 
 apic_spurious_handler_stub:
     pushad

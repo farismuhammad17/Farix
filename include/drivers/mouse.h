@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define MOUSE_BUFFER_LEN 16
 
-typedef struct MouseEvent {
+typedef struct {
     int8_t x, y;
     int8_t scroll;
     bool left, right;

@@ -20,11 +20,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import re
 from pathlib import Path
 
-import makefile.globals
-
 # Regex for function definitions and references
 FUNC_DEF_RE = re.compile(r"^[a-zA-Z_][\w\s\*]+\s+([a-zA-Z_]\w*)\s*\([^;]*\)\s*\{", re.MULTILINE)
 FUNC_REF_RE = re.compile(r"\b([a-zA-Z_]\w*)\b")
+
+STRUCT_TYPEDEF_RE = re.compile(
+    r"typedef\s+struct\s+([a-zA-Z_]\w*)\s*\{(.*?)\}\s*([a-zA-Z_]\w*)\s*;",
+    re.DOTALL
+)
 
 root = Path.cwd()
 extns = ("c", "h", "s", "asm")
@@ -36,6 +39,19 @@ ignores = (
     "test",
     "acpi",
 )
+
+def check_redundant_struct_tags(content, file_path):
+    for match in STRUCT_TYPEDEF_RE.finditer(content):
+        top_name = match.group(1)   # The struct tag name
+        body = match.group(2)       # Inside the curly braces
+        alias = match.group(3)      # The nickname at the bottom
+
+        # Word boundary, so we don't accidentally match substrings.
+        self_ref_pattern = rf"\bstruct\s+{re.escape(top_name)}\b"
+
+        if not re.search(self_ref_pattern, body):
+            print(f"\x1b[91mSTRUCT\x1b[0m     {file_path}")
+            print(f"    \x1b[90mUse 'typedef struct {{ ... }} {alias};'\x1b[0m")
 
 def check_block(block, file_path):
     if len(block) > 1:
@@ -53,10 +69,10 @@ def lint():
     references = {}   # {func_name: set(file_paths)}
 
     for file in root.rglob("README-UNFINISHED.md"):
-        print(f"\x1b[93mREADME     \x1b[0m{file}")
+        print(f"\x1b[93mREADME\x1b[0m     {file}")
 
     if "#define __DEBUG__ 1" in (root / Path("include/kernel.h")).read_text(encoding="utf-8"):
-        print(f"\x1b[93mDEBUG MODE \x1b[0m__DEBUG__ defined to 1 (not 0)")
+        print(f"\x1b[93mDEBUG MODE\x1b[0m __DEBUG__ enabled")
 
     for ext in extns:
         for file in root.rglob(f"*.{ext}"):
@@ -75,7 +91,10 @@ def lint():
             content = "".join(lines)
 
             if "Copyright (C)" not in content:
-                print(f"\x1b[91mCOPYRIGHT \x1b[0m {file}")
+                print(f"\x1b[91mCOPYRIGHT\x1b[0m  {file}")
+
+            if ext in ("c", "h"):
+                check_redundant_struct_tags(content, file)
 
             current_block = []
 
@@ -95,6 +114,9 @@ def lint():
 
                 elif ("LOG_CALL" in clean_line or "LOG_NUM" in clean_line) and file.parts[-1] != "kernel.h":
                     print(f"\x1b[96mLOG_FUNC\x1b[0m   {file}")
+
+                elif ext == "c" and ("RARE_FUNC" in clean_line or "FREQ_FUNC" in clean_line):
+                    print(f"\x1b[96mRARE_FREQ\x1b[0m  {file}")
 
                 if clean_line.startswith("#include"):
                     current_block.append(clean_line)

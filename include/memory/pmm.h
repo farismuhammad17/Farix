@@ -30,6 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void RARE_FUNC init_pmm();
 
 void* pmm_alloc_page();
+void* pmm_alloc_pages(size_t length);
 void  pmm_free_page(void* addr);
 
 #endif

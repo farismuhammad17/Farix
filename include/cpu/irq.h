@@ -23,5 +23,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void RARE_FUNC init_irq_controller();
 
 void irq_send_eoi();
+void irq_unmask(uint8_t pin, uint8_t vector);
 
 #endif

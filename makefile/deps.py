@@ -19,12 +19,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 
-import makefile.globals
+import makefile.globals as m
 
 def get_deps():
     if not os.path.exists("newlib-cygwin"):
         print("Installing newlib...")
-        makefile.globals.run("git clone --depth 1 https://sourceware.org/git/newlib-cygwin.git",
+        m.run("git clone --depth 1 https://sourceware.org/git/newlib-cygwin.git",
             capture_output=False)
 
     print("\x1b[33mProcess completed.\x1b[0m")

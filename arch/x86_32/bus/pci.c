@@ -44,7 +44,7 @@ void init_pci() {
                 }
 
                 if (unlikely(pci_device_count >= 32)) {
-                    t_print("init_pci: pci_devices limit reached");
+                    err_print("init_pci: pci_devices limit reached");
                     return;
                 }
 
@@ -58,11 +58,12 @@ void init_pci() {
                 uint32_t class_data = pci_read(bus, dev, func, 0x08);
                 d->class_code = (class_data >> 24) & 0xFF;
                 d->subclass   = (class_data >> 16) & 0xFF;
+                d->progif     = (class_data >> 8)  & 0xFF;
             }
         }
     }
 
-    if (pci_device_count == 0) t_print("init_pci: No devices found on bus");
+    if (pci_device_count == 0) err_print("init_pci: No devices found on bus");
 }
 
 uint32_t pci_read(uint8_t bus, uint8_t dev, uint8_t func, uint8_t reg) {

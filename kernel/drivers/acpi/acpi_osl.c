@@ -69,16 +69,14 @@ ACPI_STATUS AcpiOsInitialize() {
     acpi_slab_head8  = create_slab8(ACPI_SLAB8_SIZE);
 
     if (unlikely(!acpi_slab_head64 || !acpi_slab_head32 || !acpi_slab_head16 || !acpi_slab_head8)) {
-        t_print("AcpiOsInitialize: Failed to initialize slab pools");
-        uart_print("AcpiOsInitialize: Failed to initialize slab pools\n");
+        err_print("AcpiOsInitialize: Failed to initialize slab pools");
         return AE_NO_MEMORY;
     }
 
     AcpiRSDP = AcpiOsGetRootPointer();
 
     if (unlikely(AcpiRSDP == 0)) {
-        t_print("AcpiOsInitialize: AcpiOsGetRootPointer: RSDP not found");
-        uart_print("AcpiOsInitialize: AcpiOsGetRootPointer: RSDP not found\n");
+        err_print("AcpiOsInitialize: AcpiOsGetRootPointer: RSDP not found");
         return AE_NOT_FOUND;
     }
 
@@ -303,8 +301,7 @@ void AcpiOsFree(void *Memory) {
             case SLAB16_MAGIC :  slab_free16(Memory); break;
             case SLAB8_MAGIC  :  slab_free8(Memory);  break;
             default:
-                t_print("AcpiOsFree: Invalid slab magic");
-                uart_print("AcpiOsFree: Invalid slab magic\n");
+                err_print("AcpiOsFree: Invalid slab magic");
                 break;
         }
     }
@@ -589,8 +586,7 @@ ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID *PciId, UINT32 Register, UIN
 // information. It returns an ACPI_STATUS code. This is primarily used for debugger breakpoints or reporting
 // fatal ACPI errors to the kernel.
 ACPI_STATUS AcpiOsSignal(UINT32 Function, void *Info) {
-    t_printf("ACPI: %d", Function);
-    uart_printf("ACPI: %d\n", Function);
+    err_printf("AcpiOsSignal: ACPI: %d", Function);
     return AE_OK;
 }
 

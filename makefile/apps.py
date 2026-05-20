@@ -18,23 +18,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 
-import makefile.globals
+import makefile.globals as m
 
 def compile_apps():
-    os.makedirs(makefile.globals.USER_BUILD_DIR, exist_ok=True)
+    os.makedirs(m.USER_BUILD_DIR, exist_ok=True)
 
-    makefile.globals.build_object(makefile.globals.USER_LIBC_ARCH, makefile.globals.USER_LIBC_ARCH_OBJ, f"{makefile.globals.CC} -c {{src}} -o {{obj}} {makefile.globals.USER_CFLAGS}")
-    makefile.globals.build_object(makefile.globals.USER_LIBC, makefile.globals.USER_LIBC_OBJ, f"{makefile.globals.CC} -c {{src}} -o {{obj}} {makefile.globals.USER_CFLAGS}")
-    makefile.globals.build_object(makefile.globals.USER_ASM, makefile.globals.USER_ASM_OBJ, f"nasm -f elf32 {{src}} -o {{obj}}")
+    # Use threads to speed up build time
+    tasks = []
+    tasks.append((m.USER_LIBC_ARCH, m.USER_LIBC_ARCH_OBJ, f"{m.CC} -c {{src}} -o {{obj}} {m.USER_CFLAGS}"))
+    tasks.append((m.USER_LIBC, m.USER_LIBC_OBJ, f"{m.CC} -c {{src}} -o {{obj}} {m.USER_CFLAGS}"))
+    tasks.append((m.USER_ASM, m.USER_ASM_OBJ, f"nasm -f elf32 {{src}} -o {{obj}}"))
 
     # Iterate through every folder in /apps
-    for app_name in os.listdir(makefile.globals.APPS_ROOT):
-        app_dir = os.path.join(makefile.globals.APPS_ROOT, app_name)
+    app_link_data = []
+    for app_name in os.listdir(m.APPS_ROOT):
+        app_dir = os.path.join(m.APPS_ROOT, app_name)
         if not os.path.isdir(app_dir):
             continue
-
-        print(f"\n\x1b[1;35mBuilding App: {app_name}\x1b[0m")
 
         app_objs = []
         ld_script = None
@@ -45,36 +47,46 @@ def compile_apps():
                 obj_path = os.path.join("build", f_path + ".o")
 
                 if f.endswith(".c"):
-                    makefile.globals.build_object(f_path, obj_path, f"{makefile.globals.CC} -c {{src}} -o {{obj}} {makefile.globals.USER_CFLAGS}")
+                    tasks.append((f_path, obj_path, f"{m.CC} -c {{src}} -o {{obj}} {m.USER_CFLAGS}"))
                     app_objs.append(obj_path)
                 elif f.endswith(".s") or f.endswith(".asm"):
-                    makefile.globals.build_object(f_path, obj_path, f"nasm -f elf32 {{src}} -o {{obj}}")
+                    tasks.append((f_path, obj_path, f"nasm -f elf32 {{src}} -o {{obj}}"))
                     app_objs.append(obj_path)
                 elif f == "linker.ld":
                     ld_script = f_path
 
-        ld_script = ld_script or os.path.join(makefile.globals.USER_LIBC_DIR, "linker.ld")
+        app_link_data.append((app_name, app_objs, ld_script))
+
+    # Execute the threads in parallel
+    with ThreadPoolExecutor(max_workers=m.THREADS) as executor:
+        for t in tasks:
+            executor.submit(m.build_object, *t)
+
+    for app_name, app_objs, ld_script in app_link_data:
+        print(f"\n\x1b[1;35mBuilding App: {app_name}\x1b[0m")
+
+        ld_script = ld_script or os.path.join(m.USER_LIBC_DIR, "linker.ld")
 
         # Link into build/_user/<folder_name>.elf
-        out_elf = os.path.join(makefile.globals.USER_BUILD_DIR, f"{app_name}.elf")
-        libs = f"-L{makefile.globals.LIBC_LIB} -lc -lm -lgcc"
+        out_elf = os.path.join(m.USER_BUILD_DIR, f"{app_name}.elf")
+        libs = f"-L{m.LIBC_LIB} -lc -lm -lgcc"
         objs_str = " ".join(app_objs)
 
         # Put USER_ASM_OBJ at the front to ensure _start is seen first
-        link_cmd = f"{makefile.globals.CC} -T {ld_script} -ffreestanding -nostdlib -o {out_elf} " \
-                   f"{makefile.globals.USER_ASM_OBJ} {objs_str} {makefile.globals.USER_LIBC_ARCH_OBJ} {makefile.globals.USER_LIBC_OBJ} {libs}"
+        link_cmd = f"{m.CC} -T {ld_script} -ffreestanding -nostdlib -o {out_elf} " \
+                   f"{m.USER_ASM_OBJ} {objs_str} {m.USER_LIBC_ARCH_OBJ} {m.USER_LIBC_OBJ} {libs}"
 
-        print(f"\x1b[3;35mLinking {out_elf}...\x1b[0m")
-        makefile.globals.run(link_cmd)
+        print(f"\x1b[3;33mLinking {out_elf}...\x1b[0m")
+        m.run(link_cmd)
 
 def deploy_apps():
-    if not os.path.exists(makefile.globals.DISK_PATH):
+    if not os.path.exists(m.DISK_PATH):
         print("\x1b[31mDisk image not found (run: m disk)\x1b[0m")
         return
 
-    if os.path.exists(makefile.globals.USER_BUILD_DIR):
-        for f in os.listdir(makefile.globals.USER_BUILD_DIR):
+    if os.path.exists(m.USER_BUILD_DIR):
+        for f in os.listdir(m.USER_BUILD_DIR):
             if f.endswith(".elf"):
-                elf_path = os.path.join(makefile.globals.USER_BUILD_DIR, f)
-                makefile.globals.run(f"mcopy -i {makefile.globals.DISK_PATH} -o {elf_path} ::/{f}")
+                elf_path = os.path.join(m.USER_BUILD_DIR, f)
+                m.run(f"mcopy -i {m.DISK_PATH} -o {elf_path} ::/{f}")
                 print(f"\x1b[32mDeployed {f}\x1b[0m")

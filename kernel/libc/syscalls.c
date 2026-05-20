@@ -62,12 +62,12 @@ void* _sbrk(int incr) {
         uint32_t start_page = (old_break + PAGE_SIZE - 1) & ~0xFFF;
         uint32_t end_page   = (new_break + PAGE_SIZE - 1) & ~0xFFF;
 
-        for (uint32_t v = start_page; v < end_page; v += 4096) {
+        for (uint32_t v = start_page; v < end_page; v += PAGE_SIZE) {
             void* phys = pmm_alloc_page();
             vmm_map_page(vmm_get_current_directory(), phys, (void*) v,
                             PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_CACHE);
 
-            kmemset(PHYSICAL_TO_VIRTUAL(phys), 0, 4096);
+            kmemset(PHYSICAL_TO_VIRTUAL(phys), 0, PAGE_SIZE);
         }
     }
 
@@ -80,7 +80,7 @@ void _exit(int status) {
     // kill_task wastes time finding the task we already have.
 
     kill_task(current_task->id);
-    while(1);
+    while(1) system_pause();
 }
 
 int _read(int file, char *ptr, int len) {

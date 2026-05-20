@@ -20,10 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import json
 
-import makefile.globals
+import makefile.globals as m
 
 def config_mjson():
-    file_path = makefile.globals.MAKE_CONF_JSON
+    file_path = m.MAKE_CONF_JSON
 
     while True:
         with open(file_path, 'r') as f:

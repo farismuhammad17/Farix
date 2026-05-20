@@ -46,7 +46,7 @@ static size_t shell_output_ptr = 0;
 
 static size_t shell_buffer_size = 0;
 
-char* trim(char* s) {
+static char* trim(char* s) {
     if (s == NULL) return NULL;
     while (*s == ' ') s++;
     if (*s == '\0') return s;
@@ -83,12 +83,12 @@ void shell_update() {
         char c = kbd_buffer[kbd_tail];
         kbd_tail = (kbd_tail + 1) % KBD_BUFFER_LEN;
 
-        if (c == '\n') {
+        if (unlikely(c == '\n')) {
             shell_buffer[shell_buffer_size] = '\0';
             echo_char('\n');
             shell_buffer_ready = true;
             break;
-        } else if (c == '\b') {
+        } else if (unlikely(c == '\b')) {
             if (shell_buffer_size > 0) {
                 shell_buffer_size--;
                 shell_buffer[shell_buffer_size] = '\0';
@@ -123,7 +123,7 @@ void shell_update() {
 }
 
 void shell_parse(const char* input) {
-    if (input == NULL || input[0] == '\0') return;
+    if (unlikely(input == NULL || input[0] == '\0')) return;
 
     char* segments[2];
     size_t num_segments = 0;
@@ -143,7 +143,7 @@ void shell_parse(const char* input) {
 
     for (size_t i = 0; i < num_segments; i++) {
         char* segment = trim(segments[i]);
-        if (segment[0] == '\0') continue;
+        if (unlikely(segment[0] == '\0')) continue;
 
         is_piping = (i < num_segments - 1);
         shell_output_ptr = 0; // Clear buffer for this segment's output
@@ -166,7 +166,7 @@ void shell_parse(const char* input) {
             }
         }
 
-        if (!found) {
+        if (unlikely(!found)) {
             printf("Command not found: %s\n", cmd_name);
             is_piping = false;
             return;

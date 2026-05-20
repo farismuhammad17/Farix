@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "hal.h"
@@ -33,6 +34,42 @@ static BDLDevice bdl_ata_device = {
     .read  = ata_read_sector,
     .write = ata_write_sector
 };
+
+static bool ata_wait_ready() {
+    // 400ns delay for status to stabilize
+    for(int i = 0; i < 4; i++) inb(REG_STATUS);
+
+    uint8_t status;
+    uint32_t timeout = MAX_TIMEOUT_DURATION;
+
+    while (((status = inb(REG_STATUS)) & SR_BSY) && --timeout > 0) {
+        if (unlikely(status == 0xFF)) {
+            t_print("ata_wait_ready: Bus floating/dead");
+            return true;
+        }
+    }
+
+    if (unlikely(timeout == 0)) {
+        t_print("ata_wait_ready: Timeout waiting for BSY to clear");
+        return true;
+    }
+
+    timeout = MAX_TIMEOUT_DURATION;
+    while (!((status = inb(REG_STATUS)) & SR_DRQ) && --timeout > 0) {
+        if (unlikely(status & SR_ERR)) {
+            err_printf("ata_wait_ready: status: %x, error reg: %x",
+                     status, inb(REG_ERROR));
+            return true;
+        }
+    }
+
+    if (unlikely(timeout == 0)) {
+        err_print("ata_wait_ready: Timeout waiting for DRQ");
+        return true;
+    }
+
+    return false;
+}
 
 void init_ata(pci_device_t* pci_ata_device) {
     // Enable I/O Space and Bus Mastering in PCI Command Register
@@ -82,7 +119,7 @@ void init_ata(pci_device_t* pci_ata_device) {
 
     uint8_t status = inb(REG_STATUS);
     if (unlikely(status == 0 || status == 0xFF)) {
-        t_print("init_ata (ATA): Floating bus, unresponsive hardware at port");
+        err_print("init_ata: Floating bus, unresponsive hardware at port");
         return;
     }
     for (int i = 0; i < 3; i++) inb(REG_STATUS); // 400ns "Command" delay (1 from earlier 'status')
@@ -104,7 +141,11 @@ void ata_read_sector(uint32_t lba, uint8_t* buffer) {
     outb(REG_LBA_HI, (uint8_t)(lba >> 16));
     outb(REG_COMMAND, CMD_READ);
 
-    ata_wait_ready();
+    bool wait_stat = ata_wait_ready(); // Wait for DRQ before sending data
+    if (unlikely(wait_stat)) {
+        err_printf("ata_read_sector: Read aborted at %x", lba);
+        return;
+    }
 
     uint16_t* ptr = (uint16_t*) buffer;
     for (int i = 0; i < 256; i++) ptr[i] = inw(REG_DATA);
@@ -120,9 +161,9 @@ void ata_write_sector(uint32_t lba, uint8_t* buffer) {
     outb(REG_LBA_HI, (uint8_t)(lba >> 16));
     outb(REG_COMMAND, CMD_WRITE);
 
-    int wait_stat = ata_wait_ready(); // Wait for DRQ before sending data
+    bool wait_stat = ata_wait_ready(); // Wait for DRQ before sending data
     if (unlikely(wait_stat)) {
-        t_printf("ata_write_sector (ATA): Write aborted at %x", lba);
+        err_printf("ata_write_sector: Write aborted at %x", lba);
         return;
     }
 
@@ -131,40 +172,4 @@ void ata_write_sector(uint32_t lba, uint8_t* buffer) {
 
     outb(REG_COMMAND, CMD_FLUSH);
     while (inb(REG_STATUS) & SR_BSY);
-}
-
-int ata_wait_ready() {
-    // 400ns delay for status to stabilize
-    for(int i = 0; i < 4; i++) inb(REG_STATUS);
-
-    uint8_t status;
-    uint32_t timeout = MAX_TIMEOUT_DURATION;
-
-    while (((status = inb(REG_STATUS)) & SR_BSY) && --timeout > 0) {
-        if (unlikely(status == 0xFF)) {
-            t_print("ata_wait_ready (ATA): Bus floating/dead");
-            return 1;
-        }
-    }
-
-    if (unlikely(timeout == 0)) {
-        t_print("ata_wait_ready (ATA): Timeout waiting for BSY to clear");
-        return 1;
-    }
-
-    timeout = MAX_TIMEOUT_DURATION;
-    while (!((status = inb(REG_STATUS)) & SR_DRQ) && --timeout > 0) {
-        if (unlikely(status & SR_ERR)) {
-            t_printf("ata_wait_ready (ATA): status: %x, error reg: %x",
-                     status, inb(REG_ERROR));
-            return 1;
-        }
-    }
-
-    if (unlikely(timeout == 0)) {
-        t_print("ata_wait_ready (ATA): Timeout waiting for DRQ");
-        return 1;
-    }
-
-    return 0;
 }

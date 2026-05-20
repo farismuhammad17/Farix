@@ -86,7 +86,7 @@ void cmd_tasks(UNUSED_ARG const char* args) {
 }
 
 void cmd_kill(const char* args) {
-    if (args[0] == '\0') {
+    if (unlikely(args[0] == '\0')) {
         sh_print("Usage: kill <pid>\n");
         return;
     }
@@ -96,7 +96,7 @@ void cmd_kill(const char* args) {
 }
 
 void cmd_peek(const char* args) {
-    if (args[0] == '\0') {
+    if (unlikely(args[0] == '\0')) {
         sh_print("Usage: peek <pid>\n");
         return;
     }
@@ -104,7 +104,7 @@ void cmd_peek(const char* args) {
     uint32_t target_pid = atoi(args);
     task* t = get_task(target_pid);
 
-    if (t == NULL) {
+    if (unlikely(t == NULL)) {
         sh_print("Task not found\n");
         return;
     }

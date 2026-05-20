@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
+#include "drivers/terminal.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
 #include "memory/pmm.h"
@@ -41,24 +42,24 @@ void elf_user_trampoline() {
 
     elf_user_trampoline_stub(entry_point, user_stack);
 
-    while(1); // Should never reach here
+    while(1) system_halt(); // Should never reach here
 }
 
 task* exec_elf(const char* path) {
     File* file_obj = fs_get(path);
     if (unlikely(!file_obj || file_obj->size == 0)) {
-        printf("exec_elf: File %s not found or empty\n", path);
+        err_printf("exec_elf: File %s not found or empty", path);
         return NULL;
     }
 
     uint8_t* file_buffer = (uint8_t*) kmalloc(file_obj->size);
     if (unlikely(!file_buffer)) {
-        printf("exec_elf: Failed to allocate file buffer\n");
+        err_print("exec_elf: Out of memory");
         return NULL;
     }
 
     if (unlikely(!fs_read(path, file_buffer, file_obj->size, 0))) {
-        printf("exec_elf: Failed to read file data\n");
+        err_print("exec_elf: Failed to read file data");
         kfree(file_buffer);
         return NULL;
     }
@@ -72,7 +73,7 @@ task* exec_elf(const char* path) {
         header->e_ident[2] != ELFMAG2 ||
         header->e_ident[3] != ELFMAG3))
     {
-        printf("exec_elf: Not a valid ELF executable\n");
+        err_print("exec_elf: Not a valid ELF executable");
         kfree(file_buffer);
         return NULL;
     }
@@ -81,7 +82,7 @@ task* exec_elf(const char* path) {
     uint32_t* user_pd_phys    = (uint32_t*) pmm_alloc_page();
 
     if (unlikely(!user_pd_phys)) {
-        printf("exec_elf: Failed to allocate page directory\n");
+        err_print("exec_elf: Failed to allocate page directory");
         kfree(file_buffer);
         return NULL;
     }
@@ -143,7 +144,7 @@ task* exec_elf(const char* path) {
 
     task* elf_task = create_task((void(*)()) header->e_entry, file_obj->name, 1);
 
-    elf_task->page_directory = user_pd_phys; // Switch from default kernel_directory
+    elf_task->page_directory = user_pd_phys;
     elf_task->heap_break     = highest_vaddr;
     elf_task->stack_origin   = (uint32_t*) USER_STACK_TOP;
 

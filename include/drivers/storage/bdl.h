@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-typedef struct BDLDevice {
+typedef struct {
     int (*read)(uint32_t lba, void* buf);
     int (*write)(uint32_t lba, void* buf);
 } BDLDevice;

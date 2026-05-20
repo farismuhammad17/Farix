@@ -23,24 +23,24 @@ import subprocess
 import time
 import re
 
-import makefile.globals
+import makefile.globals as m
 
 def clean_boot_usb():
-    shutil.rmtree(makefile.globals.BOOT_USB_PATH, ignore_errors=True)
+    shutil.rmtree(m.BOOT_USB_PATH, ignore_errors=True)
 
 def deploy_usb():
-    if makefile.globals.is_in_docker():
+    if m.is_in_docker():
         print("\x1b[31mCannot write to USB in docker. Run on native machine instead.\x1b[0m")
         print("\x1b[90mWe set up Docker to only help someone who just cloned the repository to",
             "compile the kernel, and get the farix.bin or farix.iso file. Unfortunately, docker",
             "is an emulation, and thus, it is not possible to access USB devices outside of it.\x1b[0m", sep='\n')
         return
 
-    if not os.path.exists(makefile.globals.BOOT_USB_PATH):
-        print(f"\x1b[31m(make.conf.json) Boot USB path '{makefile.globals.BOOT_USB_PATH}' not found.\x1b[0m")
+    if not os.path.exists(m.BOOT_USB_PATH):
+        print(f"\x1b[31m(make.conf.json) Boot USB path '{m.BOOT_USB_PATH}' not found.\x1b[0m")
         return
 
-    usb_files = os.listdir(makefile.globals.BOOT_USB_PATH)
+    usb_files = os.listdir(m.BOOT_USB_PATH)
     visible_files = [f for f in usb_files if not f.startswith('.') and f != "System Volume Information"]
 
     if visible_files:
@@ -53,14 +53,14 @@ def deploy_usb():
     # Ensure Binary Exists
     if not os.path.exists("farix.bin"): farix_bin()
 
-    dest_path = os.path.join(makefile.globals.BOOT_USB_PATH, "farix.bin")
+    dest_path = os.path.join(m.BOOT_USB_PATH, "farix.bin")
 
-    if makefile.globals.OS == "Darwin":  # macOS
+    if m.OS == "Darwin":  # macOS
         print("Formatting USB for MacOS")
 
         # We need the device identifier (e.g., /dev/disk4) not the mount point
         # This command finds the device associated with your mount path
-        df_out = subprocess.check_output(['df', makefile.globals.BOOT_USB_PATH]).decode()
+        df_out = subprocess.check_output(['df', m.BOOT_USB_PATH]).decode()
         device = df_out.splitlines()[1].split()[0] # e.g., /dev/disk4s1
         raw_device = re.sub(r's[0-9]+$', '', device)
 
@@ -71,7 +71,7 @@ def deploy_usb():
         timeout = 20  # Max seconds to wait
         start_time = time.time()
 
-        while not os.path.exists(makefile.globals.BOOT_USB_PATH):
+        while not os.path.exists(m.BOOT_USB_PATH):
             if time.time() - start_time > timeout:
                 print(f"\n\x1b[31mError: Timeout ({timeout}s) waiting for USB to remount.\x1b[0m")
                 return
@@ -81,21 +81,21 @@ def deploy_usb():
 
         eject_cmd = ['diskutil', 'eject', raw_device]
 
-    elif makefile.globals.OS == "Windows":
+    elif m.OS == "Windows":
         print("Formatting USB for Window")
 
         # Windows requires a diskpart script or a specific format call
         # Note: This usually requires the script to be run as Administrator
-        drive_letter = makefile.globals.BOOT_USB_PATH.split(':')[0]
+        drive_letter = m.BOOT_USB_PATH.split(':')[0]
         subprocess.run(['format', f'{drive_letter}:', '/FS:FAT32', '/V:FARIX', '/Q', '/Y'], check=True)
 
         eject_cmd = ['powershell', '-Command', f"(New-Object -ComObject Shell.Application).Namespace(17).ParseName('{drive_letter}:').InvokeVerb('Eject')"]
 
-    elif makefile.globals.OS == "Linux":
+    elif m.OS == "Linux":
         print("Formatting USB for Linux")
 
         # Find device from mount point
-        findmnt = subprocess.check_output(['findmnt', '-n', '-o', 'SOURCE', makefile.globals.BOOT_USB_PATH]).decode().strip()
+        findmnt = subprocess.check_output(['findmnt', '-n', '-o', 'SOURCE', m.BOOT_USB_PATH]).decode().strip()
 
         # Unmount first
         subprocess.run(['umount', findmnt], check=True)
@@ -106,7 +106,7 @@ def deploy_usb():
         eject_cmd = ['eject', findmnt]
 
     else:
-        print(f"\x1b[31mUnable to format: unknown OS: {makefile.globals.OS}\x1b[0m")
+        print(f"\x1b[31mUnable to format: unknown OS: {m.OS}\x1b[0m")
         return
 
     try:
@@ -124,11 +124,18 @@ def deploy_usb():
         if os.path.exists(dest_path):
             os.remove(dest_path)
 
-    grub_dir = os.path.join(makefile.globals.BOOT_USB_PATH, "boot", "grub")
+    grub_dir = os.path.join(m.BOOT_USB_PATH, "boot", "grub")
     os.makedirs(grub_dir, exist_ok=True)
 
     with open(os.path.join(grub_dir, "grub.cfg"), "w") as f:
-        f.write(makefile.globals.GRUB_CFG)
+        f.write(
+            "set timeout=0\n"
+            "set default=0\n\n"
+            "menuentry 'Farix OS' {\n"
+            "    multiboot /farix.bin\n"
+            "    boot\n"
+            "}\n"
+        )
 
     subprocess.run(eject_cmd, check=True)
 

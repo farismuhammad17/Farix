@@ -83,8 +83,7 @@ void cmd_cd(const char* args) {
     strncpy(shell_directory, work_path, MAX_DIRECTORY_PATH_LEN - 1);
 }
 
-// TODO: cat command might make the memory suffer with large files
-// TODO IMP: cat command creates folder for somereason
+// TODO: Make cat read N characters and keep going till end instead
 void cmd_cat(const char* args) {
     if (args == NULL || args[0] == '\0') {
         sh_print("Usage: cat <filename>\n");

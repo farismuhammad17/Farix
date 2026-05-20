@@ -74,6 +74,4 @@ void RARE_FUNC init_ata(pci_device_t* pci_ata_device);
 void ata_read_sector(uint32_t lba, uint8_t* buffer);
 void ata_write_sector(uint32_t lba, uint8_t* buffer);
 
-int  ata_wait_ready();
-
 #endif

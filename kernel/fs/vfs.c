@@ -24,71 +24,71 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "fs/vfs.h"
 
-static FileOperations* current_fs_ops = NULL;
+VFS* current_vfs = NULL;
 
-void vfs_mount(FileOperations* ops) {
-    current_fs_ops = ops;
+void vfs_mount(VFS* ops) {
+    current_vfs = ops;
 }
 
 int fs_read(const char* name, void* buffer, size_t size, uint32_t offset) {
-    if (unlikely(!current_fs_ops || !current_fs_ops->read)) {
-        t_print("fs_read: File operation not found");
+    if (unlikely(!current_vfs || !current_vfs->read)) {
+        err_print("fs_read: File operation not found");
         return 0;
     }
 
-    return current_fs_ops->read(name, buffer, size, offset);
+    return current_vfs->read(name, buffer, size, offset);
 }
 
 int fs_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
-    if (unlikely(!current_fs_ops || !current_fs_ops->write)) {
-        t_print("fs_write: File operation not found");
+    if (unlikely(!current_vfs || !current_vfs->write)) {
+        err_print("fs_write: File operation not found");
         return 0;
     }
 
-    return current_fs_ops->write(name, buffer, size, offset);
+    return current_vfs->write(name, buffer, size, offset);
 }
 
 int fs_create(const char* name) {
-    if (unlikely(!current_fs_ops || !current_fs_ops->create)) {
-        t_print("fs_create: File operation not found");
+    if (unlikely(!current_vfs || !current_vfs->create)) {
+        err_print("fs_create: File operation not found");
         return 0;
     }
 
-    return current_fs_ops->create(name);
+    return current_vfs->create(name);
 }
 
 int fs_mkdir(const char* name) {
-    if (unlikely(!current_fs_ops || !current_fs_ops->mkdir)) {
-        t_print("fs_mkdir: File operation not found");
+    if (unlikely(!current_vfs || !current_vfs->mkdir)) {
+        err_print("fs_mkdir: File operation not found");
         return 0;
     }
 
-    return current_fs_ops->mkdir(name);
+    return current_vfs->mkdir(name);
 }
 
 int fs_remove(const char* name) {
-    if (unlikely(!current_fs_ops || !current_fs_ops->remove)) {
-        t_print("fs_remove: File operation not found");
+    if (unlikely(!current_vfs || !current_vfs->remove)) {
+        err_print("fs_remove: File operation not found");
         return 0;
     }
 
-    return current_fs_ops->remove(name);
+    return current_vfs->remove(name);
 }
 
 File* fs_get(const char* name) {
-    if (unlikely(!current_fs_ops || !current_fs_ops->get)) {
-        t_print("fs_get: File operation not found");
+    if (unlikely(!current_vfs || !current_vfs->get)) {
+        err_print("fs_get: File operation not found");
         return NULL;
     }
 
-    return current_fs_ops->get(name);
+    return current_vfs->get(name);
 }
 
 FileNode* fs_getall(const char* path) {
-    if (unlikely(!current_fs_ops || !current_fs_ops->getall)) {
-        t_print("fs_getall: File operation not found");
+    if (unlikely(!current_vfs || !current_vfs->getall)) {
+        err_print("fs_getall: File operation not found");
         return NULL;
     }
 
-    return current_fs_ops->getall(path);
+    return current_vfs->getall(path);
 }

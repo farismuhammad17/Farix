@@ -78,12 +78,11 @@ USER_CFLAGS = None
 
 MAKE_CONF_JSON = None
 
-BOOT_USB_PATH   = None
-BOCHS_BIOS_PATH = None
+BOOT_USB_PATH = None
 
-GRUB_CFG = None
+THREADS = 4
 
-LOGGING = True
+LOGGING = False
 LOG_FILE = open("build.log", 'w', encoding="utf-8")
 
 def run(cmd, shell=True, check=True, capture_output=True):

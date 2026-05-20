@@ -19,10 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 
-import makefile.globals
+import makefile.globals as m
 
 def run_qemu(fullscreen=False):
-    if makefile.globals.is_in_docker():
+    if m.is_in_docker():
         print("\x1b[31mCannot emulate QEMU in docker. Run on native machine instead.\x1b[0m")
         print("\x1b[90mWe set up Docker to only help someone who just cloned the repository to",
             "compile the kernel, and get the farix.bin or farix.iso file. Unfortunately, docker",
@@ -31,5 +31,5 @@ def run_qemu(fullscreen=False):
 
     suffix = "-full-screen" if fullscreen else ""
 
-    cmd = f"{makefile.globals.QEMU_BIN} -kernel farix.bin {makefile.globals.QEMU_FLAGS} {suffix}"
+    cmd = f"{m.QEMU_BIN} -kernel farix.bin {m.QEMU_FLAGS} {suffix}"
     os.system(cmd)

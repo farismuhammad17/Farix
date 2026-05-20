@@ -102,7 +102,7 @@ void init_mouse() {
     inb(0x60); // Acknowledge
 }
 
-extern void mouse_handler() {
+void mouse_handler() {
     uint8_t status = inb(0x64);
     if (!(status & 0x01) || !(status & 0x20)) goto end;
 

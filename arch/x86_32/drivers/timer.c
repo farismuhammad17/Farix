@@ -86,6 +86,6 @@ void timer_stall(uint32_t microseconds) {
         last_value = current_value;
 
         // Keep the CPU in a low-power "spin" while waiting
-        __asm__ volatile("pause");
+        asm volatile("pause");
     }
 }

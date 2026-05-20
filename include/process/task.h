@@ -44,13 +44,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
     typedef uint16_t task_list_mask_t;
 #elif TASKS_LIST_LEN == 32
     typedef uint32_t task_list_mask_t;
-#else
+#elif TASKS_LIST_LEN == 64
     typedef uint64_t task_list_mask_t;
+#else
+    #error "task.h: macro TASKS_LIST_LEN must be 8, 16, 32, or 64"
 #endif
 
-#define TASK_LIST_MASK_FULL ((task_list_mask_t)((1ULL << TASKS_LIST_LEN) - 1))
-
-typedef struct task_registers_t {
+typedef struct {
     uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax;
     uint32_t eip;
 } task_registers_t;

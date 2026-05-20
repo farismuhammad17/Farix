@@ -23,8 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "cpu/pci.h"
 #include "drivers/terminal.h"
-
-#include "drivers/uart.h" // TODO REM
+#include "fs/vfs.h"
 
 #include "drivers/storage/ahci.h"
 #include "drivers/storage/ata.h"
@@ -34,29 +33,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 static BDLDevice* current_bdl_dev = NULL;
 
 void init_storage() {
-    bool found = false;
+    pci_device_t* ata_dev = NULL;
 
     for (int i = 0; i < pci_device_count; i++) {
         pci_device_t* dev = &pci_devices[i];
 
         if (dev->class_code == PCI_CLASS_CODE_STORAGE) {
-            if (dev->subclass == PCI_AHCI_SUBCLASS) {
+            // Check for AHCI first
+            if (dev->subclass == PCI_AHCI_SUBCLASS && dev->progif == 0x01) {
                 init_ahci(dev);
-                found = true;
-                break; // Found the modern one, stop here
+                return; // AHCI is active, we are done.
             }
 
-            else if (dev->subclass == PCI_ATA_SUBCLASS) {
-                init_ata(dev);
-                found = true;
-                // Don't break yet, keep looking for AHCI
+            // Keep track of an ATA device in case we don't find AHCI
+            if (dev->subclass == PCI_ATA_SUBCLASS) {
+                ata_dev = dev;
             }
         }
     }
 
-    if (!found) {
-        t_print("init_storage: Storage device not found");
-        return;
+    // Fallback: only if no AHCI was found
+    if (ata_dev) {
+        init_ata(ata_dev);
+    } else {
+        err_print("init_storage: No supported storage device found");
     }
 }
 
@@ -66,7 +66,7 @@ void bdl_mount(BDLDevice* dev) {
 
 void bdl_read(uint32_t lba, void* buf) {
     if (unlikely(!current_bdl_dev || !current_bdl_dev->read)) {
-        t_print("bdl_read: BDL operation not found");
+        err_print("bdl_read: BDL operation not found");
         return;
     }
 
@@ -75,8 +75,17 @@ void bdl_read(uint32_t lba, void* buf) {
 
 void bdl_write(uint32_t lba, void* buf) {
     if (unlikely(!current_bdl_dev || !current_bdl_dev->write)) {
-        t_print("bdl_write: BDL operation not found");
+        err_print("bdl_write: BDL operation not found");
         return;
+    }
+
+    if (unlikely(current_vfs && current_vfs->check_write_safety)) {
+        int write_safety_res = current_vfs->check_write_safety(lba);
+
+        if (unlikely(write_safety_res != 0)) {
+            err_printf("bdl_write: Error %d at LBA %d", write_safety_res, lba);
+            return;
+        }
     }
 
     return current_bdl_dev->write(lba, buf);

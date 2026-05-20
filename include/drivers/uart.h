@@ -32,8 +32,10 @@ void uart_putc(char c);
 
 static inline void uart_print(const char* data) {
     while (*data) {
-        if (*data == '\n')
+        if (*data == '\n') {
             uart_putc('\r');
+        }
+
         uart_putc(*data++);
     }
 }

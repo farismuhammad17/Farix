@@ -44,6 +44,7 @@ void timer_handler_stub();
 void keyboard_handler_stub();
 void mouse_handler_stub();
 void syscall_handler_stub();
+void ahci_interrupt_handler_stub();
 void apic_spurious_handler_stub();
 void isr0();  void isr1();  void isr2();  void isr3();
 void isr4();  void isr5();  void isr6();  void isr7();
@@ -78,6 +79,9 @@ void init_interrupts() {
     idt_set_gate(32, (uint32_t) timer_handler_stub,    0x08, IDT_GATE_KERNEL);
     idt_set_gate(33, (uint32_t) keyboard_handler_stub, 0x08, IDT_GATE_KERNEL);
     idt_set_gate(44, (uint32_t) mouse_handler_stub,    0x08, IDT_GATE_KERNEL);
+
+    // Storage
+    idt_set_gate(46, (uint32_t) ahci_interrupt_handler_stub, 0x08, IDT_GATE_KERNEL);
 
     // APIC spurious interrupts
     idt_set_gate(255, (uint32_t) apic_spurious_handler_stub, 0x08, IDT_GATE_KERNEL);

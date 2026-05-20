@@ -30,8 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 Slab16* create_slab16(uint16_t object_size) {
     void* phys = pmm_alloc_page();
     if (unlikely(!phys)) {
-        t_print("create_slab16: pmm_alloc_page failed");
-        uart_print("create_slab16: pmm_alloc_page failed\n");
+        err_print("create_slab16: pmm_alloc_page failed");
         return NULL;
     }
 
@@ -74,8 +73,7 @@ void delete_slab16(Slab16* slab) {
 
 void* slab_alloc16(Slab16* head) {
     if (unlikely(!head || head->magic != SLAB16_MAGIC)) {
-        t_print("slab_alloc16: Invalid head");
-        uart_print("slab_alloc16: Invalid head\n");
+        err_print("slab_alloc16: Invalid head");
         return NULL;
     }
 
@@ -93,17 +91,20 @@ void* slab_alloc16(Slab16* head) {
     }
 
     int slot = __builtin_ctz(~curr->mask);
-    curr->mask |= (1U << slot);
-    curr->free_slots--;
 
     uintptr_t addr = (uintptr_t) curr->data + (slot << curr->obj_shift);
 
-    // Verify pointer is in the same page
-    if (unlikely((addr & 0xFFFFF000) != ((uintptr_t) curr & 0xFFFFF000))) {
-        t_printf("slab_alloc16: Page boundary overflow");
-        uart_printf("slab_alloc16: Page boundary overflow");
+    uintptr_t slab_limit = (uintptr_t) curr + PAGE_SIZE;
+    uintptr_t object_end = addr + (1 << curr->obj_shift);
+
+    if (unlikely(object_end > slab_limit)) {
+        err_printf("slab_alloc16: Slab at %p, Object at %p extends to %p (Limit: %p)",
+                    curr, addr, object_end, slab_limit);
         return NULL;
     }
+
+    curr->mask |= (1ULL << slot);
+    curr->free_slots--;
 
     return (void*) addr;
 }
@@ -114,7 +115,7 @@ void slab_free16(void* ptr) {
     Slab16* slab = (Slab16*)((uintptr_t) ptr & 0xFFFFF000);
 
     if (unlikely(slab->magic != SLAB16_MAGIC)) {
-        uart_printf("slab_free16: Slab pointer %x has invalid magic", ptr);
+        err_printf("slab_free16: Slab pointer %x has invalid magic", ptr);
         return;
     }
 

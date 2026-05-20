@@ -36,18 +36,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "farix.h"
 
-// For syscall_handler > SYS_INT_EXEC
-#define SYS_INT_EXEC_CASE(n) case n: asm volatile("int %0" :: "i"(n)); break;
-#define SYS_INT_EXEC_REP2(n)   SYS_INT_EXEC_CASE(n) SYS_INT_EXEC_CASE(n+1)
-#define SYS_INT_EXEC_REP4(n)   SYS_INT_EXEC_REP2(n) SYS_INT_EXEC_REP2(n+2)
-#define SYS_INT_EXEC_REP8(n)   SYS_INT_EXEC_REP4(n) SYS_INT_EXEC_REP4(n+4)
-#define SYS_INT_EXEC_REP16(n)  SYS_INT_EXEC_REP8(n) SYS_INT_EXEC_REP8(n+8)
-#define SYS_INT_EXEC_REP32(n)  SYS_INT_EXEC_REP16(n) SYS_INT_EXEC_REP16(n+16)
-#define SYS_INT_EXEC_REP64(n)  SYS_INT_EXEC_REP32(n) SYS_INT_EXEC_REP32(n+32)
-#define SYS_INT_EXEC_REP128(n) SYS_INT_EXEC_REP64(n) SYS_INT_EXEC_REP64(n+64)
-#define SYS_INT_EXEC_REP256(n) SYS_INT_EXEC_REP128(n) SYS_INT_EXEC_REP128(n+128)
-
-typedef struct syscalls_registers_x86_32_t {
+typedef struct {
     uint32_t ds;                                           // Data segment (pushed by us)
     uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax; // Pushed by pusha
     uint32_t int_no, err_code;                             // Pushed in stub
@@ -107,7 +96,7 @@ static uint32_t hex_to_int(char* s) {
     return res;
 }
 
-static void err_printf(const char* format, ...) {
+static void panic_err_printf(const char* format, ...) {
     va_list args;
     va_start(args, format);
 
@@ -124,47 +113,47 @@ static void err_printf(const char* format, ...) {
 
 // Dump general purpose registers for deeper debugging
 static inline void dump_register_info(syscalls_registers_x86_32_t* regs) {
-    err_printf("--- Register values ---\n");
-    err_printf("EAX: %lx EBX: %lx ECX: %lx EDX: %lx\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
-    err_printf("EDI: %lx ESI: %lx EBP: %lx ESP: %lx\n", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
+    panic_err_printf("--- Register values ---\n");
+    panic_err_printf("EAX: %lx EBX: %lx ECX: %lx EDX: %lx\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
+    panic_err_printf("EDI: %lx ESI: %lx EBP: %lx ESP: %lx\n", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
 }
 
 // Dumps multitasking information in case of race condition errors
 static inline void dump_multitasking_info() {
     if (unlikely(current_task == NULL)) return;
 
-    err_printf("--- Multitasking ---\n");
-    err_printf("Name:  %s (ID:%lu)\n", current_task->name, current_task->id);
-    err_printf("Stack: 0x%08lx -> 0x%08lx\n", (uint32_t) current_task->stack_origin, current_task->stack_pointer);
-    err_printf("Page:  %p (PRIV:%lu)\n", (void*) current_task->page_directory, (uint32_t) current_task->privilege);
+    panic_err_printf("--- Multitasking ---\n");
+    panic_err_printf("Name:  %s (ID:%lu)\n", current_task->name, current_task->id);
+    panic_err_printf("Stack: 0x%08lx -> 0x%08lx\n", (uint32_t) current_task->stack_origin, current_task->stack_pointer);
+    panic_err_printf("Page:  %p (PRIVILEGE:%lu)\n", (void*) current_task->page_directory, (uint32_t) current_task->privilege);
 }
 
 // Dumps call log
 static inline void dump_call_log(int funcs_per_line) {
     if (likely(!__DEBUG__)) return;
 
-    err_printf("--- Call log ---\n");
+    panic_err_printf("--- Call log ---\n");
     for (size_t i = 0; i < MAX_LOG_LEN; i++) {
-        err_printf("%d:%s ", i, call_log[i]);
+        panic_err_printf("%d:%s ", i, call_log[i]);
         if ((i + 1) % funcs_per_line == 0) {
-            err_printf("\n");
+            panic_err_printf("\n");
         }
     }
-    err_printf("(%s at %d)\n", last_call_finished ? "Finished" : "Unfinished", log_index);
+    panic_err_printf("(%s at %d)\n", last_call_finished ? "Finished" : "Unfinished", log_index);
 }
 
 static void panic_cmd_dump(uint32_t addr) {
     uint8_t* ptr = (uint8_t*) addr;
     for (int i = 0; i < 64; i++) {
-        if (i % 16 == 0) err_printf("\n%08lx: ", (uint32_t)(ptr + i));
-        err_printf("%02x ", ptr[i]);
+        if (i % 16 == 0) panic_err_printf("\n%08lx: ", (uint32_t)(ptr + i));
+        panic_err_printf("%02x ", ptr[i]);
     }
-    err_printf("\r\n");
+    panic_err_printf("\r\n");
 }
 
 static void panic_cmd_peek(uint32_t addr) {
     uint32_t value = *(volatile uint32_t*) addr;
-    err_printf("\n0x%08lx = 0x%08lx", addr, value);
+    panic_err_printf("\n0x%08lx = 0x%08lx", addr, value);
 }
 
 static void execute_panic_cmd(char cmd[]) {
@@ -190,7 +179,7 @@ static void execute_panic_cmd(char cmd[]) {
         cmd[4] == 'o' &&
         cmd[5] == 't'
     ) {
-        err_printf("Rebooting...\r\n");
+        panic_err_printf("Rebooting...\r\n");
         outb(0x64, 0xFE); // Pulse CPU reset line
     } else if (
         cmd[0] == 'h' &&
@@ -198,11 +187,11 @@ static void execute_panic_cmd(char cmd[]) {
         cmd[2] == 'l' &&
         cmd[3] == 'p'
     ) {
-        err_printf("\ndump <hex>\npeek <addr>\nreboot");
-    } else err_printf("\nUnknown command: %s (use help)", cmd);
+        panic_err_printf("\ndump <hex>\npeek <addr>\nreboot");
+    } else panic_err_printf("\nUnknown command: %s (use help)", cmd);
 }
 
-// TODO IMP: Move panic shell out into dedicated file
+// TODO: Move panic shell out into dedicated file
 static void panic_shell() {
     // Flush any leftover keys from the crash event
     while (inb(0x64) & 0x01) inb(0x60);
@@ -239,21 +228,21 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
     terminal_clear();
 
     if (regs->int_no < 32) {
-        err_printf("Exception: %ld (%s)\n", regs->int_no, exception_messages[regs->int_no]);
+        panic_err_printf("Exception: %ld (%s)\n", regs->int_no, exception_messages[regs->int_no]);
     } else {
-        err_printf("Exception: %ld\n", regs->int_no);
+        panic_err_printf("Exception: %ld\n", regs->int_no);
     }
 
     if (unlikely(__DEBUG__)) {
-        err_printf("Logged number: %d | ", logged_num);
+        panic_err_printf("Logged number: %d | ", logged_num);
     }
 
-    err_printf("Error Code: %lx\n", regs->err_code);
-    err_printf("EIP: %lx  CS: %lx  EFLAGS: %lx\n", regs->eip, regs->cs, regs->eflags);
+    panic_err_printf("Error Code: %lx\n", regs->err_code);
+    panic_err_printf("EIP: %lx  CS: %lx  EFLAGS: %lx\n", regs->eip, regs->cs, regs->eflags);
 
     switch (regs->int_no) {
         case 13: { // GPF
-            err_printf("Selector: %lx (%s)\n", regs->err_code & 0xFFF8,
+            panic_err_printf("Selector: %lx (%s)\n", regs->err_code & 0xFFF8,
                     (regs->err_code & 0x04) ? "LDT" : "GDT");
             break;
         }
@@ -262,8 +251,8 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
             uint32_t faulting_address;
             asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
 
-            err_printf("Faulting Address (CR2): %lx\n", faulting_address);
-            err_printf("Reason: %s, %s, %s\n",
+            panic_err_printf("Faulting Address (CR2): %lx\n", faulting_address);
+            panic_err_printf("Reason: %s, %s, %s\n",
                 (regs->err_code & PAGE_PRESENT) ? "Page unaccessible" : "Non-present page",
                 (regs->err_code & PAGE_RW)      ? "Write fault" : "Read fault",
                 (regs->err_code & PAGE_USER)    ? "User-mode" : "Kernel-mode");
@@ -275,8 +264,6 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
     dump_call_log(3);
     dump_register_info(regs);
     dump_multitasking_info();
-
-    asm volatile("hlt");
 
     panic_shell();
 }
@@ -358,6 +345,9 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             break;
         }
 
+        // TODO: Can be improved with fs_getall(path, count, offset)
+        // Getting everything, including what we don't need, then freeing
+        // them one-by-one is quite a waste.
         case SYS_DIRSCAN: {
             FileData* buf = (FileData*) arg2;
             size_t count  = (size_t) arg3;
@@ -365,7 +355,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             FileNode* head = fs_getall((const char*) arg1);
             FileNode* temp = NULL;
 
-            if (!head) {
+            if (unlikely(!head)) {
                 regs->eax = 0;
                 break;
             }
@@ -382,7 +372,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
 
                 total_count++;
 
-                if (!head) break;
+                if (unlikely(!head)) break;
             }
 
             // Cleanup unused nodes
@@ -397,7 +387,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
         }
 
         case SYS_UART_PUT: {
-            if (current_task->privilege != PRIV_SUPER) {
+            if (unlikely(current_task->privilege != PRIV_SUPER)) {
                 regs->eax = SYS_ERROR;
                 break;
             }
@@ -408,7 +398,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
         }
 
         case SYS_GET_HEAP: {
-            if (current_task->privilege != PRIV_SUPER) {
+            if (unlikely(current_task->privilege != PRIV_SUPER)) {
                 regs->eax = SYS_ERROR;
                 break;
             }
@@ -434,7 +424,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
         }
 
         case SYS_GET_HEAP_SEG_SIZE: {
-            if (current_task->privilege != PRIV_SUPER) {
+            if (unlikely(current_task->privilege != PRIV_SUPER)) {
                 regs->eax = SYS_ERROR;
                 break;
             }
@@ -444,7 +434,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
         }
 
         case SYS_GET_HEAP_START: {
-            if (current_task->privilege != PRIV_SUPER) {
+            if (unlikely(current_task->privilege != PRIV_SUPER)) {
                 regs->eax = SYS_ERROR;
                 break;
             }
@@ -454,7 +444,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
         }
 
         case SYS_GET_HEAP_END: {
-            if (current_task->privilege != PRIV_SUPER) {
+            if (unlikely(current_task->privilege != PRIV_SUPER)) {
                 regs->eax = SYS_ERROR;
                 break;
             }
@@ -464,7 +454,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
         }
 
         case SYS_HEAP_AUDIT: {
-            if (current_task->privilege != PRIV_SUPER) {
+            if (unlikely(current_task->privilege != PRIV_SUPER)) {
                 regs->eax = SYS_ERROR;
                 break;
             }
@@ -474,18 +464,21 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             int res_code = 0; // Default: OK
 
             while (current != NULL) {
-                if (current->magic != HEAP_MAGIC) { // Bad Magic
-                    res_code = 1; break;
+                if (unlikely(current->magic != HEAP_MAGIC)) { // Bad Magic
+                    res_code = 1;
+                    break;
                 }
 
-                if (((uint32_t) current & 0x3) != 0) { // Unaligned segment pointer
-                    res_code = 2; break;
+                if (unlikely(((uint32_t) current & 0x3) != 0)) { // Unaligned segment pointer
+                    res_code = 2;
+                    break;
                 }
 
-                if (current->next != NULL) {
+                if (unlikely(current->next != NULL)) {
                     if (current->next <= current) { // Circular or backwards link
                         res_code = 3; break;
                     }
+
                     if (current->next->prev != current) { // Broken backlink
                         res_code = 4; break;
                     }
@@ -495,7 +488,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             }
 
             // If error, write fault address
-            if (res_code != 0 && fault_addr_out != NULL) {
+            if (unlikely(res_code != 0 && fault_addr_out != NULL)) {
                 *fault_addr_out = (uint32_t) current;
             }
 
@@ -504,7 +497,17 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
         }
 
         case SYS_INT_EXEC: {
-            if (current_task->privilege != PRIV_SUPER) {
+            #define SYS_INT_EXEC_CASE(n) case n: asm volatile("int %0" :: "i"(n)); break;
+            #define SYS_INT_EXEC_REP2(n)   SYS_INT_EXEC_CASE(n) SYS_INT_EXEC_CASE(n+1)
+            #define SYS_INT_EXEC_REP4(n)   SYS_INT_EXEC_REP2(n) SYS_INT_EXEC_REP2(n+2)
+            #define SYS_INT_EXEC_REP8(n)   SYS_INT_EXEC_REP4(n) SYS_INT_EXEC_REP4(n+4)
+            #define SYS_INT_EXEC_REP16(n)  SYS_INT_EXEC_REP8(n) SYS_INT_EXEC_REP8(n+8)
+            #define SYS_INT_EXEC_REP32(n)  SYS_INT_EXEC_REP16(n) SYS_INT_EXEC_REP16(n+16)
+            #define SYS_INT_EXEC_REP64(n)  SYS_INT_EXEC_REP32(n) SYS_INT_EXEC_REP32(n+32)
+            #define SYS_INT_EXEC_REP128(n) SYS_INT_EXEC_REP64(n) SYS_INT_EXEC_REP64(n+64)
+            #define SYS_INT_EXEC_REP256(n) SYS_INT_EXEC_REP128(n) SYS_INT_EXEC_REP128(n+128)
+
+            if (unlikely(current_task->privilege != PRIV_SUPER)) {
                 regs->eax = SYS_ERROR;
                 break;
             }
@@ -516,10 +519,20 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
                     break;
             }
             break;
+
+            #undef SYS_INT_EXEC_CASE
+            #undef SYS_INT_EXEC_REP2
+            #undef SYS_INT_EXEC_REP4
+            #undef SYS_INT_EXEC_REP8
+            #undef SYS_INT_EXEC_REP16
+            #undef SYS_INT_EXEC_REP32
+            #undef SYS_INT_EXEC_REP64
+            #undef SYS_INT_EXEC_REP128
+            #undef SYS_INT_EXEC_REP256
         }
 
         case SYS_INT_ON: {
-            if (current_task->privilege != PRIV_SUPER) {
+            if (unlikely(current_task->privilege != PRIV_SUPER)) {
                 regs->eax = SYS_ERROR;
                 break;
             }
@@ -530,7 +543,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
         }
 
         case SYS_INT_OFF: {
-            if (current_task->privilege != PRIV_SUPER) {
+            if (unlikely(current_task->privilege != PRIV_SUPER)) {
                 regs->eax = SYS_ERROR;
                 break;
             }
@@ -541,7 +554,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
         }
 
         case SYS_GET_TASK_INFO: {
-            if (current_task->privilege != PRIV_SUPER) {
+            if (unlikely(current_task->privilege != PRIV_SUPER)) {
                 regs->eax = SYS_ERROR;
                 break;
             }
@@ -551,7 +564,10 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
 
             task* t = get_task(pid);
 
-            if (!t) { regs->eax = SYS_ERROR; break; }
+            if (unlikely(!t)) {
+                regs->eax = SYS_ERROR;
+                break;
+            }
 
             out->id            = t->id;
             out->state         = t->state;
@@ -579,7 +595,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
         }
 
         case SYS_GET_TASK_LIST: {
-            if (current_task->privilege != PRIV_SUPER) {
+            if (unlikely(current_task->privilege != PRIV_SUPER)) {
                 regs->eax = SYS_ERROR;
                 break;
             }
@@ -587,12 +603,12 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             task_list* tasklist = first_task_list;
             for (size_t i = 0; i < (size_t) arg1; i++) {
                 tasklist = tasklist->next;
-                if (tasklist == NULL) {
+                if (unlikely(tasklist == NULL)) {
                     regs->eax = SYS_ERROR;
                     break;
                 }
             }
-            if (tasklist == NULL) break;
+            if (unlikely(tasklist == NULL)) break;
 
             TaskListData* out = (TaskListData*) arg2;
 
@@ -609,7 +625,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
         }
 
         case SYS_TASK_KILL: {
-            if (current_task->privilege != PRIV_SUPER) {
+            if (unlikely(current_task->privilege != PRIV_SUPER)) {
                 regs->eax = SYS_ERROR;
                 break;
             }
@@ -621,7 +637,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
         }
 
         default: {
-            printf("Unknown syscall (%s): %ld\n", current_task->name, regs->eax);
+            err_printf("Unknown syscall (%s): %ld\n", current_task->name, regs->eax);
             regs->eax = SYS_ERROR;
             break;
         }

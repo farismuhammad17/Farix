@@ -29,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "drivers/keyboard.h"
 #include "drivers/mouse.h"
+#include "drivers/uart.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
 #include "process/task.h"
@@ -428,14 +429,23 @@ void t_print(const char* data) {
     update_cursor(cursor_x, cursor_y);
 }
 
-// Terminal print (formatted):
-// Like t_print, this writes directly into the
-// VGA buffers, but allows formatting. The formatting
-// is done manually to ensure this will work even if
-// the entire kernel has died and only the VGA stands.
-// It is slow, and is better used only in errors.
-void t_printf(const char* format, ...) {
-    uint16_t* t_print_vga_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(VGA_MEMORY);
+void err_print(const char* data) {
+    uart_print(data);
+    uart_putc('\n');
+
+    uint16_t* err_print_vga_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(VGA_MEMORY);
+    for (int i = 0; data[i] != '\0'; i++) {
+        err_print_vga_buffer[(cursor_y * WIDTH) + i] = (uint16_t) data[i] | (uint16_t) 0x0C << 8;
+    }
+
+    cursor_y++;
+    update_cursor(cursor_x, cursor_y);
+}
+
+void err_printf(const char* format, ...) {
+    #define ERROR_PRINT_COLOR 0x0C
+
+    uint16_t* err_print_vga_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(VGA_MEMORY);
 
     va_list args;
     va_start(args, format);
@@ -447,7 +457,9 @@ void t_printf(const char* format, ...) {
             if (format[i] == 's') {
                 char* s = va_arg(args, char*);
                 while (*s) {
-                    t_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) *s++ | (uint16_t) 0x0F << 8;
+                    char c = *s++;
+                    err_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) c | (uint16_t) ERROR_PRINT_COLOR << 8;
+                    uart_putc(c);
                 }
             }
             else if (format[i] == 'd' || format[i] == 'x') {
@@ -466,18 +478,24 @@ void t_printf(const char* format, ...) {
                     }
                 }
                 while (p > 0) {
-                    t_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) buffer[--p] | (uint16_t) 0x0F << 8;
+                    char c = buffer[--p];
+                    err_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) c | (uint16_t) ERROR_PRINT_COLOR << 8;
+                    uart_putc(c);
                 }
             }
         } else {
-            t_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) format[i] | (uint16_t) 0x0F << 8;
+            err_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) format[i] | (uint16_t) ERROR_PRINT_COLOR << 8;
+            uart_putc(format[i]);
         }
     }
 
     va_end(args);
+    uart_putc('\n');
 
     cursor_y++;
     update_cursor(cursor_x, cursor_y);
+
+    #undef ERROR_PRINT_COLOR
 }
 
 bool handle_special_chars(uint16_t c) {

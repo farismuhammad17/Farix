@@ -25,6 +25,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "memory/pmm.h"
 
+#define FULL_MASK  0xFFFFFFFF
+#define IS_FULL(i) (pmm_bitmap[i] == FULL_MASK)
+
 // Defined in scripts/linker.ld
 extern char _kernel_start;
 extern char _kernel_end;
@@ -34,31 +37,31 @@ extern multiboot_info* mbi;
 static uint32_t pmm_bitmap[BITMAP_SIZE];
 
 // Mark a page as USED (1)
-static void pmm_set_bit(uint32_t page_number) {
+static inline void pmm_set_bit(uint32_t page_number) {
     uint32_t index = page_number >> 5;
     uint32_t bit   = page_number & 31;
     pmm_bitmap[index] |= (1 << bit);
 }
 
 // Mark a page as FREE (0)
-static void pmm_clear_bit(uint32_t page_number) {
+static inline void pmm_clear_bit(uint32_t page_number) {
     uint32_t index = page_number >> 5;
     uint32_t bit   = page_number & 31;
     pmm_bitmap[index] &= ~(1 << bit);
 }
 
 // Check if a page is in use
-static bool pmm_test_bit(uint32_t page_number) {
+static inline bool pmm_test_bit(uint32_t page_number) {
     uint32_t index = page_number >> 5;
     uint32_t bit   = page_number & 31;
     return (pmm_bitmap[index] & (1 << bit));
 }
 
 void init_pmm() {
-    if (!(mbi->flags & (1 << 6))) return;
+    if (unlikely(!(mbi->flags & (1 << 6)))) return;
 
     // Start by marking everything as used (1)
-    for (int i = 0; i < BITMAP_SIZE; i++) pmm_bitmap[i] = 0xFFFFFFFF;
+    for (int i = 0; i < BITMAP_SIZE; i++) pmm_bitmap[i] = FULL_MASK;
 
     // Clear bits for available memory according to Multiboot
     multiboot_mmap_entry* mmap = (multiboot_mmap_entry*) mbi->mmap_addr;
@@ -93,22 +96,63 @@ void init_pmm() {
 
 void* pmm_alloc_page() {
     for (uint32_t i = 0; i < BITMAP_SIZE; i++) { // First-Fit algorithm
-        if (unlikely(pmm_bitmap[i] != 0xFFFFFFFF)) {
-            for (uint32_t j = 0; j < 32; j++) {
-                uint32_t bit = (1 << j);
+        if (unlikely(!IS_FULL(i))) {
+            // Find first zero bit by inverting and counting trailing zeros
+            uint32_t page_number = (i << 5) | __builtin_ctz(~pmm_bitmap[i]);
+            pmm_set_bit(page_number);
 
-                if (!(pmm_bitmap[i] & bit)) {
-                    uint32_t page_number = (i << 5) | j;
-                    pmm_set_bit(page_number);
-
-                    // Address = Page Number * 4096 (4KB)
-                    return (void*)(page_number << LOG2_PAGE_SIZE);
-                }
-            }
+            return (void*)((uintptr_t) page_number << LOG2_PAGE_SIZE);
         }
     }
 
     // If we're out of memory
+    return NULL;
+}
+
+void* pmm_alloc_pages(size_t length) {
+    if (unlikely(length == 0)) return NULL;
+    if (unlikely(length == 1)) return pmm_alloc_page();
+
+    for (uint32_t i = 0; i <= (BITMAP_SIZE * 32) - length;) {
+        // Skip quickly if the current bit is set
+        if (pmm_test_bit(i)) {
+            // If the whole 32-bit chunk is full, skip it
+            if (IS_FULL(i >> 5)) {
+                i = (i & ~31) + 32;
+            } else {
+                i++;
+            }
+
+            continue;
+        }
+
+        // Check if the next 'length' bits are free
+        uint32_t pages_found = 0;
+        for (pages_found = 0; pages_found < length; pages_found++) {
+            if (pmm_test_bit(i + pages_found)) break;
+        }
+
+        if (pages_found == length) {
+            uint32_t idx = i >> 5;
+            uint32_t bit_offset = i & 31;
+
+            // Check if the whole range fits inside the current 32-bit word
+            if (bit_offset + length <= 32) {
+                pmm_bitmap[idx] |= ((1ULL << length) - 1) << bit_offset;
+            } else {
+                // Spans multiple words
+                for (uint32_t j = i; j < i + length; j++) {
+                    pmm_set_bit(j);
+                }
+            }
+
+            return (void*)((uintptr_t) i << LOG2_PAGE_SIZE);
+        }
+
+        // Jump to the bit after the one that failed
+        i += pages_found + 1;
+    }
+
     return NULL;
 }
 

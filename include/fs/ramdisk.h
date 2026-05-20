@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "fs/vfs.h"
 
-extern FileOperations ramdisk_ops;
+extern VFS ramdisk_vfs;
 
 void RARE_FUNC init_ramdisk();
 

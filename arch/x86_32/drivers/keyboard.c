@@ -100,14 +100,14 @@ void init_keyboard() {
     // If it's 0xFE, the keyboard is asking to Resend
     while (!(inb(0x64) & 0x01));
     if (unlikely(inb(0x60) != 0xFA)) {
-        t_print("init_keyboard: Reset failed or got NACK");
+        err_print("init_keyboard: Reset failed or got NACK");
         return;
     }
 
     // Wait for Self-Test (0xAA)
     while (!(inb(0x64) & 0x01));
     if (unlikely(inb(0x60) != 0xAA)) {
-        t_print("init_keyboard: Keyboard hardware failure");
+        err_print("init_keyboard: Keyboard hardware failure");
         return;
     }
 

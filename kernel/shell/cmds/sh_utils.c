@@ -47,13 +47,9 @@ void cmd_echo(const char* args) {
 }
 
 void cmd_secho(const char* args) {
-    if (!args) return;
+    if (unlikely(!args)) return;
 
-    while (*args) {
-        if (*args == '\n')
-            uart_putc('\r');
-        uart_putc(*args++);
-    }
+    uart_print(args);
 
     // Always terminate with a fresh line on the serial side
     uart_putc('\r');
@@ -116,24 +112,24 @@ void cmd_heapstat(UNUSED_ARG const char* args) {
 
     while (current != NULL) {
         // Magic Check
-        if (current->magic != HEAP_MAGIC) {
+        if (unlikely(current->magic != HEAP_MAGIC)) {
             sh_print("HEAP CORRUPTION: Bad Magic at %p (Val: %lx)\n", current, current->magic);
             return;
         }
 
         // Alignment Check
-        if (((uint32_t) current & 0x3) != 0) {
+        if (unlikely(((uint32_t) current & 0x3) != 0)) {
             sh_print("HEAP CORRUPTION: Unaligned segment pointer %p\n", current);
             return;
         }
 
         // Pointer Check
         if (current->next != NULL) {
-            if (current->next <= current) {
+            if (unlikely(current->next <= current)) {
                 sh_print("HEAP CORRUPTION: Circular or backwards link at %p -> %p\n", current, current->next);
                 return;
             }
-            if (current->next->prev != current) {
+            if (unlikely(current->next->prev != current)) {
                 sh_print("HEAP CORRUPTION: Broken backlink! %p->next is %p, but that block's prev is %p\n",
                         current, current->next, current->next->prev);
                 return;
@@ -164,11 +160,10 @@ void cmd_int(const char *args) {
 }
 
 void cmd_grep(const char* args) {
-    if (last_cmd_output[0] == '\0') {
+    if (unlikely(last_cmd_output[0] == '\0')) {
         sh_print("grep: No input to search.\n");
         return;
-    }
-    else if (args == NULL || args[0] == '\0') {
+    } else if (unlikely(args == NULL || args[0] == '\0')) {
         sh_print("grep: Usage: <command> | grep <pattern>\n");
         return;
     }

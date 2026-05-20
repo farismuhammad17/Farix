@@ -17,9 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdint.h>
-#include <stdio.h>
-
 #include "hal.h"
 
 #include "cpu/ints.h"
@@ -37,14 +34,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "fs/vfs.h"
 #include "memory/heap.h"
 #include "process/task.h"
+#include "shell/shell.h"
 
 #include "kernel.h"
+
+#define BOOT_INTO_KSHELL 1
 
 int logged_num = 0;
 
 const char* call_log[MAX_LOG_LEN] = {0};
 int log_index = 0;
 int last_call_finished = 0;
+
+static inline void shell_thread() {
+    init_shell();
+    while (1) {
+        shell_update();
+        system_halt();
+    }
+}
 
 // Called before the architecture initialisations. Everything here
 // must be so raw; it should not depend on literally anything else.
@@ -82,18 +90,23 @@ void kmain() {
 
     init_storage();
 
-    // Enable interrupts
     system_int_on();
 
     init_ramdisk();
     init_fat32();
 
-    vfs_mount(&fat32_ops); // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
+    vfs_mount(&fat32_vfs); // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
 
     create_task(handle_mouse, "Terminal mouse handler", 0);
 
-    task* shelf_task = exec_elf("shelf.elf");
-    shelf_task->privilege = PRIV_SUPER;
+    File* shelf_file = fs_get("shelf.elf");
+    if (shelf_file && !BOOT_INTO_KSHELL) {
+        task* shelf_task = exec_elf("shelf.elf");
+        shelf_task->privilege = PRIV_SUPER;
+    } else {
+        create_task(shell_thread, "Shell", 0);
+    }
+    kfree(shelf_file);
 
     // The OS must NEVER die.
     // Interrupts take back control from this loop whenever

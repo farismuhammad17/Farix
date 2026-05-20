@@ -34,6 +34,7 @@ typedef struct {
     uint8_t  function;
     uint8_t  class_code;
     uint8_t  subclass;
+    uint8_t  progif;
 } pci_device_t;
 
 extern pci_device_t pci_devices[32];

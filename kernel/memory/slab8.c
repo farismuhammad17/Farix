@@ -30,8 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 Slab8* create_slab8(uint16_t object_size) {
     void* phys = pmm_alloc_page();
     if (unlikely(!phys)) {
-        t_print("create_slab8: pmm_alloc_page failed\n");
-        uart_print("create_slab8: pmm_alloc_page failed\n");
+        err_print("create_slab8: pmm_alloc_page failed\n");
         return NULL;
     }
 
@@ -74,8 +73,7 @@ void delete_slab8(Slab8* slab) {
 
 void* slab_alloc8(Slab8* head) {
     if (unlikely(!head || head->magic != SLAB8_MAGIC)) {
-        t_print("slab_alloc8: Invalid head");
-        uart_print("slab_alloc8: Invalid head\n");
+        err_print("slab_alloc8: Invalid head");
         return NULL;
     }
 
@@ -93,17 +91,20 @@ void* slab_alloc8(Slab8* head) {
     }
 
     int slot = __builtin_ctz(~(uint32_t) curr->mask & 0xFF);
-    curr->mask |= (1U << slot);
-    curr->free_slots--;
 
     uintptr_t addr = (uintptr_t) curr->data + (slot << curr->obj_shift);
 
-    // Verify pointer is in the same page
-    if (unlikely((addr & 0xFFFFF000) != ((uintptr_t) curr & 0xFFFFF000))) {
-        t_printf("slab_alloc8: Page boundary overflow");
-        uart_printf("slab_alloc8: Page boundary overflow");
+    uintptr_t slab_limit = (uintptr_t) curr + PAGE_SIZE;
+    uintptr_t object_end = addr + (1 << curr->obj_shift);
+
+    if (unlikely(object_end > slab_limit)) {
+        err_printf("slab_alloc8: Slab at %p, Object at %p extends to %p (Limit: %p)",
+                    curr, addr, object_end, slab_limit);
         return NULL;
     }
+
+    curr->mask |= (1ULL << slot);
+    curr->free_slots--;
 
     return (void*) addr;
 }
@@ -114,7 +115,7 @@ void slab_free8(void* ptr) {
     Slab8* slab = (Slab8*)((uintptr_t) ptr & 0xFFFFF000);
 
     if (unlikely(slab->magic != SLAB8_MAGIC)) {
-        uart_printf("slab_free8: Slab pointer %x has invalid magic", ptr);
+        err_printf("slab_free8: Slab pointer %x has invalid magic", ptr);
         return;
     }
 

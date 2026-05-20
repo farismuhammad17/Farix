@@ -44,7 +44,7 @@ extern bool  is_piping;
 
 typedef void (*command_func_t)(const char* args);
 
-typedef struct ShellCommand {
+typedef struct {
     const char* name;
     command_func_t function;
     const char* help_text;

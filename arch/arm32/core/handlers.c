@@ -30,7 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define BCM2837_IRQ_BASIC_PENDING (0x3F000000 + 0xB200)
 
-typedef struct syscalls_registers_arm32_t {
+typedef struct {
     uint32_t r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12;
     uint32_t lr;
 } syscalls_registers_arm32_t;

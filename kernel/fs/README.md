@@ -68,7 +68,7 @@ Returns the hash-map is the specific required way. Unfortunately, these were for
 
 # File Allocation Table 32
 
-This was the most annoying thing, but is very reliable, and is set-in-stone. As far as I can tell, this has stood the test of tests, and works perfectly (hopefully).
+*Reference: [Microsoft Extensible Firmware Initiative; FAT32 File System Specification](https://www.cs.fsu.edu/~cop4610t/assignments/project3/spec/fatspec.pdf*
 
 FAT32 is a persistent file system that relies on a "File Allocation Table" to keep track of how files are scattered across the disk. Instead of files being one big contiguous block, they are broken into **clusters**. These static functions handle the low-level math and disk I/O needed to traverse these clusters and manage file metadata. Since the disk is addressed in sectors (LBA) but FAT32 thinks in clusters, we need translation layers to find where data actually lives.
 
@@ -136,7 +136,7 @@ Writes a new folder entry to the disk. It allocates a fresh cluster for the new 
 void init_fat32();
 ```
 
-Reads the very first sector of the disk to find the **BPB (BIOS Parameter Block)**. It verifies the boot signature (`0x55AA`) and copies the header into a global `disk_info` structure, which defines the cluster sizes and FAT locations needed for all subsequent IO.
+As per the section titled "Boot Sector and BPB", the 0th sector is called the "boot sector". The BS is the boot sector, the 512 bytes itself, and the BPD is the data structure within it.
 
 ```c
 int fat32_read(const char* name, void* buffer, size_t size);

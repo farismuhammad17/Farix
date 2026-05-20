@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct File {
+typedef struct {
     const char* name;
     uint8_t*    data; // Pointer to the actual content in RAM
     size_t      size;
@@ -35,7 +35,7 @@ typedef struct FileNode {
     struct FileNode* next;
 } FileNode;
 
-typedef struct FileOperations {
+typedef struct {
     int       (*read)   (const char* name, void* buffer, size_t size, uint32_t offset);
     int       (*write)  (const char* name, const void* buffer, size_t size, uint32_t offset);
     int       (*create) (const char* name);
@@ -43,9 +43,13 @@ typedef struct FileOperations {
     int       (*remove) (const char* name);
     File*     (*get)    (const char* name);
     FileNode* (*getall) (const char* path);
-} FileOperations;
 
-void RARE_FUNC vfs_mount (FileOperations* ops);
+    int (*check_write_safety)(uint32_t lba);
+} VFS;
+
+extern VFS* current_vfs;
+
+void RARE_FUNC vfs_mount (VFS* ops);
 
 int       fs_read   (const char* name, void* buffer, size_t size, uint32_t offset);
 int       fs_write  (const char* name, const void* buffer, size_t size, uint32_t offset);

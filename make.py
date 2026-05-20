@@ -23,12 +23,14 @@ import os
 import subprocess
 import sys
 import shutil
+import argparse
 import time
 import re
 import json
 
 from makefile        import globals
 from makefile.apps   import *
+from makefile.bochs  import *
 from makefile.bin    import *
 from makefile.config import *
 from makefile.defs   import *
@@ -36,6 +38,7 @@ from makefile.img    import *
 from makefile.qemu   import *
 from makefile.usb    import *
 from makefile.deps   import *
+from makefile.iso    import *
 from makefile.libc   import *
 from makefile.lint   import *
 from makefile.utils  import *
@@ -49,19 +52,56 @@ if not os.path.exists(globals.MAKE_CONF_JSON):
     with open(globals.MAKE_CONF_JSON, 'w') as mjson:
         json.dump({
             "BOOT_USB_PATH": None,
-            "DEFAULT_ARCH": DEFAULT_ARCH
+            "DEFAULT_ARCH": DEFAULT_ARCH,
+            "THREADS": 4
         }, mjson, indent=4)
 
 with open(globals.MAKE_CONF_JSON) as mjson:
-    data = json.load(mjson)
+    conf_data = json.load(mjson)
 
-    globals.BOOT_USB_PATH = data.get("BOOT_USB_PATH", None)
-    globals.arch = data.get("DEFAULT_ARCH", DEFAULT_ARCH)
+    globals.BOOT_USB_PATH = conf_data.get("BOOT_USB_PATH", None)
 
-if "arm32" in sys.argv:
-    globals.arch = "arm32"
-elif "x86_32" in sys.argv:
-    globals.arch = "x86_32"
+arg_parser = argparse.ArgumentParser(description="Farix Kernel Build System (use help for commands)")
+
+arg_parser.add_argument(
+    "-a", "-arch",
+    dest="arch",
+    choices=["x86_32", "arm32"],
+    default=conf_data.get("DEFAULT_ARCH", DEFAULT_ARCH),
+    help="Target architecture"
+)
+
+arg_parser.add_argument(
+    "-t", "-threads",
+    dest="threads",
+    type=int,
+    default=conf_data.get("THREADS", 4),
+    help="Number of threads to use for compilation"
+)
+
+arg_parser.add_argument(
+    "-storage",
+    dest="storage_dev",
+    choices=["ahci", "ata"],
+    default="ahci",
+    type=str.lower,
+    help="Storage device used by kernel"
+)
+
+arg_parser.add_argument(
+    "--log", "--l",
+    dest="log",
+    action="store_true",
+    help="Enable build logging"
+)
+
+args, _ = arg_parser.parse_known_args()
+
+globals.arch    = args.arch
+globals.LOGGING = args.log
+globals.THREADS = args.threads
+
+STORAGE_DEV = args.storage_dev
 
 globals.IGNORES = (
     # These ACPI stuff come with ACPICA, having these make it easier to
@@ -79,12 +119,7 @@ globals.IGNORES = (
     # so we don't actually compile it with the rest of the
     # kernel, even though it is part of the whole thing.
     f"arch/{globals.arch}/libc/",
-    "kernel/libc/user.c",
-
-    # Since the introduction of the shelf app, the kernel shell
-    # is quite pointless, but, I have plans for it, so I'll leave
-    # it in the project folders, but I'll change it later.
-    "kernel/shell",
+    "kernel/libc/user.c"
 )
 
 # --- INITIALIZATION ---
@@ -95,6 +130,7 @@ globals.DISK_PATH = "build/disk.img"
 
 if globals.arch == "x86_32":
     globals.QEMU_BIN = "qemu-system-i386"
+
     globals.QEMU_FLAGS = (
         "-machine pc,accel=tcg "
         "-cpu pentium "
@@ -102,20 +138,24 @@ if globals.arch == "x86_32":
         "-boot menu=on,strict=on "
         "-global i8042.extended-state=off "
 
-        # IDE-mode (ATA)
-        f"-drive file={globals.DISK_PATH},if=none,id=hd0,format=raw,media=disk "
-        "-device piix4-ide,id=pci-ide0 "
-        "-device ide-hd,bus=pci-ide0.0,drive=hd0 "
-
-        # AHCI-mode (HBA)
-        # f"-drive file={globals.DISK_PATH},if=none,id=disk0,format=raw,media=disk "
-        # "-device ahci,id=ahci0 "
-        # "-device ide-hd,drive=disk0,bus=ahci0.0 "
-
         "-device virtio-mouse-pci "
         "-vga std "
         "-serial stdio "
     )
+
+    if STORAGE_DEV == "ahci":
+        globals.QEMU_FLAGS += (
+            f"-drive file={globals.DISK_PATH},if=none,id=disk0,format=raw,media=disk "
+            "-device ahci,id=ahci0 "
+            "-device ide-hd,drive=disk0,bus=ahci0.0 "
+        )
+
+    elif STORAGE_DEV == "ata":
+        globals.QEMU_FLAGS += (
+            f"-drive file={globals.DISK_PATH},if=none,id=hd0,format=raw,media=disk "
+            "-device piix4-ide,id=pci-ide0 "
+            "-device ide-hd,bus=pci-ide0.0,drive=hd0 "
+        )
 
     compilers = ("i686-linux-gnu-gcc", "i686-elf-gcc", "i386-elf-gcc")
     for comp in compilers:
@@ -125,11 +165,13 @@ if globals.arch == "x86_32":
     else:
         print("Error: x86 cross-compiler not found")
         sys.exit(1)
+
 elif globals.arch == "arm32":
     globals.PREFIX = "arm-none-eabi-"
     globals.QEMU_BIN = "qemu-system-arm"
     globals.QEMU_FLAGS = f"-drive format=raw,file={globals.DISK_PATH},index=0,media=disk -serial stdio -M raspi2b"
     globals.ASM_ASSEMBLER = "arm-none-eabi-as"
+
 else:
     print(f"\x1b[31mInvalid architecture: {globals.arch}\x1b[0m (Fallback: {DEFAULT_ARCH})")
     globals.arch = DEFAULT_ARCH
@@ -186,17 +228,6 @@ globals.USER_ASM_OBJ  = f"{globals.USER_BUILD_DIR}/user_asm.o"
 globals.APPS_ROOT = "apps"
 globals.USER_CFLAGS = f"-ffreestanding -O2 -Iinclude -I{globals.LIBC_INC} -include include/kernel.h"
 
-globals.GRUB_CFG = (
-    "set timeout=0\n"
-    "set default=0\n\n"
-    "menuentry 'Farix OS' {\n"
-    "    multiboot /farix.bin\n"
-    "    boot\n"
-    "}\n"
-)
-
-globals.LOGGING = '--log' in sys.argv
-
 # --- MAIN ---
 
 if __name__ == "__main__":
@@ -214,6 +245,8 @@ if __name__ == "__main__":
         if not os.path.exists(globals.DISK_PATH): disk_img()
         compile_apps()
         deploy_apps()
+    elif target == "iso":
+        create_iso()
     elif target == "clean": clean(sys.argv[1:])
     elif target == "libc": libc()
     elif target == "get_deps": get_deps()
@@ -232,6 +265,10 @@ if __name__ == "__main__":
         if not os.path.exists("farix.bin"): farix_bin()
         if not os.path.exists(globals.DISK_PATH): disk_img()
         run_qemu(fullscreen=False)
+    elif target == "bochs":
+        if not os.path.exists("farix.bin"): farix_bin()
+        if not os.path.exists("farix.iso"): create_iso()
+        run_bochs()
     elif target == "apps":
         compile_apps()
         deploy_apps()

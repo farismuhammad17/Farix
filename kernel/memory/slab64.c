@@ -30,8 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 Slab64* create_slab64(uint16_t object_size) {
     void* phys = pmm_alloc_page();
     if (unlikely(!phys)) {
-        t_print("create_slab64: pmm_alloc_page failed");
-        uart_print("create_slab64: pmm_alloc_page failed\n");
+        err_print("create_slab64: pmm_alloc_page failed");
         return NULL;
     }
 
@@ -75,8 +74,7 @@ void delete_slab64(Slab64* slab) {
 
 void* slab_alloc64(Slab64* head) {
     if (unlikely(!head || head->magic != SLAB64_MAGIC)) {
-        t_print("slab_alloc64: Invalid head");
-        uart_print("slab_alloc64: Invalid head\n");
+        err_print("slab_alloc64: Invalid head");
         return NULL;
     }
 
@@ -101,8 +99,7 @@ void* slab_alloc64(Slab64* head) {
     uintptr_t object_end = addr + (1 << curr->obj_shift);
 
     if (unlikely(object_end > slab_limit)) {
-        t_printf("slab_alloc64: Allocation out of bounds");
-        uart_printf("slab_alloc64: Slab at %p, Object at %p extends to %p (Limit: %p)\n",
+        err_printf("slab_alloc64: Slab at %p, Object at %p extends to %p (Limit: %p)",
                     curr, addr, object_end, slab_limit);
         return NULL;
     }
@@ -119,7 +116,7 @@ void slab_free64(void* ptr) {
     Slab64* slab = (Slab64*)((uintptr_t) ptr & 0xFFFFF000);
 
     if (unlikely(slab->magic != SLAB64_MAGIC)) {
-        uart_printf("slab_free64: Slab pointer %x has invalid magic", ptr);
+        err_printf("slab_free64: Slab pointer %x has invalid magic", ptr);
         return;
     }
 

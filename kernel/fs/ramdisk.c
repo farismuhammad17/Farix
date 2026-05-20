@@ -45,14 +45,16 @@ static unsigned long hash(const char* name) {
 
 static File* files_table[RAMDISK_HASH_SIZE];
 
-FileOperations ramdisk_ops = {
+VFS ramdisk_vfs = {
     .read   = ramdisk_read,
     .write  = ramdisk_write,
     .create = ramdisk_create,
     .mkdir  = ramdisk_mkdir,
     .remove = ramdisk_remove,
     .get    = ramdisk_get,
-    .getall = ramdisk_getall
+    .getall = ramdisk_getall,
+
+    .check_write_safety = NULL
 };
 
 void init_ramdisk() {
