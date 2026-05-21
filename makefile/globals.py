@@ -83,7 +83,7 @@ BOOT_USB_PATH = None
 THREADS = 4
 
 LOGGING = False
-LOG_FILE = open("build.log", 'w', encoding="utf-8")
+LOG_FILE = None
 
 def run(cmd, shell=True, check=True, capture_output=True):
     try:
@@ -98,6 +98,11 @@ def run(cmd, shell=True, check=True, capture_output=True):
         )
 
         if LOGGING:
+            global LOG_FILE
+
+            if LOG_FILE is None:
+                LOG_FILE = open("build.log", 'w', encoding="utf-8")
+
             LOG_FILE.write(f"{cmd}\n\n")
 
             if result.stdout:

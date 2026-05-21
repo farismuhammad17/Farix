@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "shell/commands.h"
 
 ShellCommand command_table[] = {
+    // utils
     {"help", cmd_help, "Display help information"},
     {"clear", cmd_clear, "Clear the terminal screen"},
     {"echo", cmd_echo, "Echoes to the terminal"},
@@ -30,6 +31,8 @@ ShellCommand command_table[] = {
     {"heapstat", cmd_heapstat, "Verify heap health"},
     {"int", cmd_int, "Jump to given interrupt"},
     {"grep", cmd_grep, "Searches text for matching patterns"},
+
+    // fs
     {"cd", cmd_cd, "Change directory"},
     {"cat", cmd_cat, "Read file"},
     {"write", cmd_write, "Write to a file"},
@@ -38,10 +41,16 @@ ShellCommand command_table[] = {
     {"rm", cmd_rm, "Delete file"},
     {"ls", cmd_ls, "List directory contents"},
     {"exec", cmd_exec, "Execute ELF file"},
+
+    // tasks
     {"tasks", cmd_tasks, "List of running tasks"},
     {"kill", cmd_kill, "Kill a task given the process ID"},
     {"peek", cmd_peek, "Inspect a task"},
     {"tlist", cmd_tlist, "Bit map of every task list"},
+
+    // syshw
+    {"shutdown", cmd_shutdown, "Shutdown machine"},
+    {"reboot", cmd_reboot, "Reboot machine"},
 
     {NULL, NULL, NULL} // to mark the end
 };

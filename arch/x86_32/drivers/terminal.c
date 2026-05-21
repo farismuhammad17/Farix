@@ -282,7 +282,7 @@ void save_cmd_to_history(const char* command) {
 }
 
 void cmd_history_up() {
-    if (cmd_history_head == NULL) return;
+    if (unlikely(cmd_history_head == NULL)) return;
 
     if (cmd_current_line == NULL) {
         cmd_current_line = cmd_history_tail;
@@ -295,7 +295,7 @@ void cmd_history_up() {
 }
 
 void cmd_history_down() {
-    if (cmd_current_line == NULL) return;
+    if (unlikely(cmd_current_line == NULL)) return;
 
     cmd_current_line = cmd_current_line->next;
 

@@ -616,7 +616,7 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
                 if (tasklist->tasks[i] != NULL) {
                     out->pids[i] = tasklist->tasks[i]->id;
                 } else {
-                    out->pids[i] = NULL;
+                    out->pids[i] = 0;
                 }
             }
             out->mask = tasklist->mask;

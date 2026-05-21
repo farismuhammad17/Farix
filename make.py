@@ -132,7 +132,7 @@ if globals.arch == "x86_32":
     globals.QEMU_BIN = "qemu-system-i386"
 
     globals.QEMU_FLAGS = (
-        "-machine pc,accel=tcg "
+        "-machine q35,accel=tcg "
         "-cpu pentium "
         "-m 256 "
         "-boot menu=on,strict=on "

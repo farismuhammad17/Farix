@@ -25,9 +25,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "fs/vfs.h"
 #include "memory/heap.h"
 #include "process/task.h"
-#include "shell/shell.h"
 
 #include "shell/commands.h"
+#include "shell/shell.h"
 
 static char path_buffer[256];
 
@@ -194,7 +194,7 @@ void cmd_write(const char* args) {
         }
     }
 
-    if (unlikely(fs_write(full_path_to(filename), (uint8_t*) content, strlen(content), 0) == -1)) {
+    if (unlikely(!fs_write(full_path_to(filename), (uint8_t*) content, strlen(content), 0))) {
         sh_print("write: Could not write to file %s\n", filename);
     }
 }

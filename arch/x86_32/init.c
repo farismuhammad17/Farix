@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "include/tss.h"
 
 #include "cpu/pci.h"
+#include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "memory/heap.h"
 #include "memory/pmm.h"

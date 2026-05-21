@@ -17,21 +17,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef BDL_H
-#define BDL_H
+#ifndef SYS_THERMAL_H
+#define SYS_THERMAL_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
-typedef struct {
-    void (*read)(uint32_t lba, uint8_t* buf);
-    void (*write)(uint32_t lba, uint8_t* buf);
-} BDLDevice;
+#include "drivers/acpi/acpi.h"
 
-void RARE_FUNC init_storage();
+ACPI_STATUS system_set_fan_state(bool turn_on);
+ACPI_STATUS system_set_fan_speed(uint32_t strength);
 
-void RARE_FUNC bdl_mount(BDLDevice* dev);
-
-void bdl_read(uint32_t lba, void* buf);
-void bdl_write(uint32_t lba, void* buf);
+ACPI_STATUS system_get_cpu_temperature(uint32_t *temp_kelvin_tenths);
+ACPI_STATUS system_get_thermal_critical_limit(uint32_t *limit_kelvin_tenths);
+ACPI_STATUS system_get_thermal_passive_limit(uint32_t *limit_kelvin_tenths);
+ACPI_STATUS system_get_thermal_sampling_period(uint32_t *seconds_tenths);
+ACPI_STATUS system_get_thermal_active_limit(uint32_t *limit_kelvin_tenths);
 
 #endif

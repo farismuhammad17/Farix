@@ -35,6 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/heap.h"
 #include "process/task.h"
 #include "shell/shell.h"
+#include "syshw/battery.h"
 
 #include "kernel.h"
 
@@ -96,6 +97,8 @@ void kmain() {
     init_fat32();
 
     vfs_mount(&fat32_vfs); // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
+
+    init_battery();
 
     create_task(handle_mouse, "Terminal mouse handler", 0);
 

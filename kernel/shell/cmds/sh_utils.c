@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "hal.h"
@@ -25,9 +26,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "memory/heap.h"
-#include "shell/shell.h"
 
 #include "shell/commands.h"
+#include "shell/shell.h"
 
 void cmd_help(UNUSED_ARG const char* args) {
     for (size_t i = 0; command_table[i].name != NULL; i++) {

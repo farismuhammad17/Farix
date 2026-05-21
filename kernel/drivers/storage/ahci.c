@@ -225,7 +225,7 @@ typedef struct {
 
 static volatile hba_mem_t* g_hba = NULL;
 static hba_port_t* active_drives[32] = {NULL};
-static int drives_found = 0;
+static size_t drives_found = 0;
 
 static uint8_t ahci_bounce[512] __attribute__((aligned(512)));
 
@@ -367,8 +367,6 @@ void init_ahci(pci_device_t* dev) {
     irq_unmask(irq_line, 46);
 
     uint32_t ncs = HBA_CAP_NCS(g_hba->cap);
-    int slot_count = ncs + 1;
-
     uint32_t pi = g_hba->pi;
 
     for (int i = 0; i < 32; i++) {

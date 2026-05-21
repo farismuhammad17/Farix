@@ -17,21 +17,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef BDL_H
-#define BDL_H
+#include "syshw/power.h"
 
-#include <stdint.h>
+#include "shell/commands.h"
+#include "shell/shell.h"
 
-typedef struct {
-    void (*read)(uint32_t lba, uint8_t* buf);
-    void (*write)(uint32_t lba, uint8_t* buf);
-} BDLDevice;
+void cmd_shutdown(UNUSED_ARG const char* args) {
+    sh_print("Shutting down...");
+    system_set_power_s5();
+}
 
-void RARE_FUNC init_storage();
-
-void RARE_FUNC bdl_mount(BDLDevice* dev);
-
-void bdl_read(uint32_t lba, void* buf);
-void bdl_write(uint32_t lba, void* buf);
-
-#endif
+void cmd_reboot(UNUSED_ARG const char* args) {
+    sh_print("Rebooting...");
+    system_reboot();
+}

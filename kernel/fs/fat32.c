@@ -32,7 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define FIXED_MEDIA_TYPE_VALUE     0xF8
 #define REMOVABLE_MEDIA_TYPE_VALUE 0xF0
 
-#define FAT32_ERROR_CODE -1
+#define FAT32_ERROR_CODE 0
 
 // Reference: https://wiki.osdev.org/FAT#Extended_Boot_Record
 #define BOOT_SECTOR_SIG 0xAA55
@@ -489,7 +489,7 @@ void init_fat32() {
 }
 
 int fat32_read(const char* name, void* buffer, size_t size, uint32_t offset) {
-    const char* path;
+    char* path;
     size_t path_len;
     const char* filename;
 
@@ -589,7 +589,7 @@ int fat32_read(const char* name, void* buffer, size_t size, uint32_t offset) {
 }
 
 int fat32_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
-    const char* path;
+    char* path;
     size_t path_len;
     const char* filename;
 
@@ -698,7 +698,7 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint32_t offs
 }
 
 int fat32_create(const char* path) {
-    const char* dir_path;
+    char* dir_path;
     size_t path_len;
     const char* filename;
 
@@ -788,7 +788,7 @@ int fat32_create(const char* path) {
 }
 
 int fat32_mkdir(const char* path) {
-    const char* parent_path;
+    char* parent_path;
     size_t path_len;
     const char* folder_name;
 
@@ -919,7 +919,7 @@ File* fat32_get(const char* name) {
     uint32_t cluster = find_cluster_for_path(name);
     if (unlikely(cluster == 0 && strcmp(name, "/") != 0)) return NULL;
 
-    const char* path;
+    char* path;
     size_t path_len;
     const char* filename;
 
@@ -1021,7 +1021,7 @@ FileNode* fat32_getall(const char* path) {
 
         if (unlikely(parent_cluster == FAT32_ERROR_CODE)) {
             err_print("fat32_getall: Parent cluster not found");
-            return FAT32_ERROR_CODE;
+            return NULL;
         }
     }
 

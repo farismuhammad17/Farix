@@ -2,6 +2,34 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## Power, Thermal, and Battery - *20th May, 2026*
+
+- Power
+  - Added:-
+    - `system_set_power_s5`: Set to power state 5
+    - `system_reboot`: Reboot (restart) system
+- CPU Fan
+  - Added:-
+    - `system_set_fan_state`: Turn on and off the fan
+    - `system_set_fan_speed`: Set fan speed percentage
+- Thermals
+  - Added:-
+    - `system_get_cpu_temperature`: Current CPU temperature
+    - `system_get_thermal_critical_limit`: Maximum temperature before forced hardware shutdown
+    - `system_get_thermal_passive_limit`: Temperature the kernel must cool at without fans
+    - `system_get_thermal_sampling_period`: How often the kernel should check the temperature
+    - `system_get_thermal_active_limit`: The temperature where the primary cooling fan *must* turn on.
+- Battery
+  - Added:-
+    - `init_battery`: Sets `battery_design_capacity` (intended capacity) and `battery_last_full_capacity` (actual capacity)
+    - `system_get_battery_status`: Gets state, present_rate, remaining capacity, and voltage.
+- FAT32
+  - Changed `FAT32_ERROR_CODE` from `-1` to `0`
+- Shell
+  - Added `shutdown`, `reboot`
+- MFuncs
+  - QEMU boots into `q35` machine instead of `pc`
+
 ## Functioning AHCI - *19th May, 2026*
 
 - PMM

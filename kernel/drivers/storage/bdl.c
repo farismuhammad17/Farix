@@ -70,7 +70,7 @@ void bdl_read(uint32_t lba, void* buf) {
         return;
     }
 
-    return current_bdl_dev->read(lba, buf);
+    return current_bdl_dev->read(lba, (uint8_t*) buf);
 }
 
 void bdl_write(uint32_t lba, void* buf) {
@@ -88,5 +88,5 @@ void bdl_write(uint32_t lba, void* buf) {
         }
     }
 
-    return current_bdl_dev->write(lba, buf);
+    return current_bdl_dev->write(lba, (uint8_t*) buf);
 }

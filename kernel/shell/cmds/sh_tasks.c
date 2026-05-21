@@ -22,9 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "hal.h"
 
 #include "process/task.h"
-#include "shell/shell.h"
 
 #include "shell/commands.h"
+#include "shell/shell.h"
 
 void cmd_tasks(UNUSED_ARG const char* args) {
     system_int_off();
