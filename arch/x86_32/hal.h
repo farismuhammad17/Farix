@@ -22,52 +22,63 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+/* Assembly outb */
 static inline void outb(uint32_t port, uint8_t  val) {
     asm volatile("outb %0, %1" : : "a"(val), "Nd"(port) );
 }
 
+/* Assembly outw */
 static inline void outw(uint32_t port, uint16_t val) {
     asm volatile("outw %0, %1" : : "a"(val), "Nd"(port) );
 }
 
+/* Assembly outl */
 static inline void outl(uint16_t port, uint32_t val) {
     asm volatile("outl %0, %1" : : "a"(val), "Nd"(port));
 }
 
+/* Assembly inb */
 static inline uint8_t inb(uint32_t port) {
     uint8_t ret;
     asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port) );
     return ret;
 }
 
+/* Assembly inw */
 static inline uint16_t inw(uint32_t port) {
     uint16_t ret;
     asm volatile("inw %1, %0" : "=a"(ret) : "Nd"(port) );
     return ret;
 }
 
+/* Assembly inl */
 static inline uint32_t inl(uint16_t port) {
     uint32_t ret;
     asm volatile("inl %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
 
+/* Assembly halt instruction */
 static inline void system_halt() {
     asm volatile("hlt");
 }
 
-static inline void system_int_on() {
-    asm volatile("sti");
-}
-
-static inline void system_int_off() {
-    asm volatile("cli");
-}
-
+/* Assembly pause instruction */
 static inline void system_pause() {
     asm volatile("pause" ::: "memory");
 }
 
+/* Assembly sti to turn on system interrupts */
+static inline void system_int_on() {
+    asm volatile("sti");
+}
+
+/* Assembly cli to turn off system interrupts */
+static inline void system_int_off() {
+    asm volatile("cli");
+}
+
+/* Assembly instruction to get random value */
 static inline uint32_t asm_get_random(uint8_t *success) {
     uint32_t random_val;
 
@@ -80,14 +91,20 @@ static inline uint32_t asm_get_random(uint8_t *success) {
     return random_val;
 }
 
+/* Assembly CPU memory barrier instruction */
 static inline void cpu_mem_barrier() {
     asm volatile("" : : : "memory");
 }
 
+/* Assembly function to yield current task */
 static inline void task_yield() {
     asm volatile("int $0x20");
 }
 
+/*
+Assembly function to save the current CPU flags state and clear the interrupt
+flag to disable hardware interrupts.
+*/
 static inline uint32_t save_disable_interrupts() {
     uint32_t flags;
     asm volatile(
@@ -100,6 +117,10 @@ static inline uint32_t save_disable_interrupts() {
     return flags;
 }
 
+/*
+Restore the CPU flags state from a previously saved value, resetting the
+interrupt status.
+*/
 static inline void restore_interrupts(uint32_t flags) {
     asm volatile(
         "pushl %0\n\t"

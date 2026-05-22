@@ -26,10 +26,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 VFS* current_vfs = NULL;
 
+/* Change the current VFS */
 void vfs_mount(VFS* ops) {
     current_vfs = ops;
 }
 
+/* Read file at absolute name into buffer from offset to offset+size */
 int fs_read(const char* name, void* buffer, size_t size, uint32_t offset) {
     if (unlikely(!current_vfs || !current_vfs->read)) {
         err_print("fs_read: File operation not found");
@@ -39,6 +41,7 @@ int fs_read(const char* name, void* buffer, size_t size, uint32_t offset) {
     return current_vfs->read(name, buffer, size, offset);
 }
 
+/* Write to file at absolute name from buffer from offset to offset+size */
 int fs_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
     if (unlikely(!current_vfs || !current_vfs->write)) {
         err_print("fs_write: File operation not found");
@@ -48,6 +51,7 @@ int fs_write(const char* name, const void* buffer, size_t size, uint32_t offset)
     return current_vfs->write(name, buffer, size, offset);
 }
 
+/* Create new file at absolute name */
 int fs_create(const char* name) {
     if (unlikely(!current_vfs || !current_vfs->create)) {
         err_print("fs_create: File operation not found");
@@ -57,6 +61,7 @@ int fs_create(const char* name) {
     return current_vfs->create(name);
 }
 
+/* Create new directory at absolute name */
 int fs_mkdir(const char* name) {
     if (unlikely(!current_vfs || !current_vfs->mkdir)) {
         err_print("fs_mkdir: File operation not found");
@@ -66,6 +71,7 @@ int fs_mkdir(const char* name) {
     return current_vfs->mkdir(name);
 }
 
+/* Delete file/folder at absolute name */
 int fs_remove(const char* name) {
     if (unlikely(!current_vfs || !current_vfs->remove)) {
         err_print("fs_remove: File operation not found");
@@ -75,6 +81,7 @@ int fs_remove(const char* name) {
     return current_vfs->remove(name);
 }
 
+/* Get file object at absolute name */
 File* fs_get(const char* name) {
     if (unlikely(!current_vfs || !current_vfs->get)) {
         err_print("fs_get: File operation not found");
@@ -84,6 +91,7 @@ File* fs_get(const char* name) {
     return current_vfs->get(name);
 }
 
+/* Get linked list of contents of path */
 FileNode* fs_getall(const char* path) {
     if (unlikely(!current_vfs || !current_vfs->getall)) {
         err_print("fs_getall: File operation not found");

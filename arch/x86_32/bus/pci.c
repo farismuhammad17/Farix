@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pci_device_t pci_devices[32];
 int pci_device_count;
 
+/* Initialise the PCI by iterating through and storing all found devices into `pci_devices`. */
 void init_pci() {
     pci_device_count = 0;
 
@@ -66,12 +67,14 @@ void init_pci() {
     if (pci_device_count == 0) err_print("init_pci: No devices found on bus");
 }
 
+/* Read using PCI the given bus, device, function, and register */
 uint32_t pci_read(uint8_t bus, uint8_t dev, uint8_t func, uint8_t reg) {
     uint32_t addr = (1U << 31) | (bus << 16) | (dev << 11) | (func << 8) | (reg & 0xFC);
     outl(0xCF8, addr);
     return inl(0xCFC);
 }
 
+/* Write using PCI the given bus, device, function, register, and value to write */
 void pci_write(uint8_t bus, uint8_t dev, uint8_t func, uint8_t reg, uint32_t val) {
     uint32_t addr = (1U << 31) | (bus << 16) | (dev << 11) | (func << 8) | (reg & 0xFC);
     outl(0xCF8, addr);

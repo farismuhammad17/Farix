@@ -78,6 +78,7 @@ static const char* exception_messages[] = {
     "Reserved"
 };
 
+/* Panic shell helper to convert hexadecimal to integer */
 static uint32_t hex_to_int(char* s) {
     uint32_t res = 0;
     // Skip "0x" if the user typed it
@@ -96,6 +97,7 @@ static uint32_t hex_to_int(char* s) {
     return res;
 }
 
+/* Panic shell printf function */
 static void panic_err_printf(const char* format, ...) {
     va_list args;
     va_start(args, format);
@@ -111,14 +113,14 @@ static void panic_err_printf(const char* format, ...) {
     va_end(args);
 }
 
-// Dump general purpose registers for deeper debugging
+/* Dump general purpose registers for deeper debugging upon crash */
 static inline void dump_register_info(syscalls_registers_x86_32_t* regs) {
     panic_err_printf("--- Register values ---\n");
     panic_err_printf("EAX: %lx EBX: %lx ECX: %lx EDX: %lx\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
     panic_err_printf("EDI: %lx ESI: %lx EBP: %lx ESP: %lx\n", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
 }
 
-// Dumps multitasking information in case of race condition errors
+/* Dumps multitasking information in case of race condition errors upon crash */
 static inline void dump_multitasking_info() {
     if (unlikely(current_task == NULL)) return;
 
@@ -128,7 +130,7 @@ static inline void dump_multitasking_info() {
     panic_err_printf("Page:  %p (PRIVILEGE:%lu)\n", (void*) current_task->page_directory, (uint32_t) current_task->privilege);
 }
 
-// Dumps call log
+/* Dumps call log upon crash */
 static inline void dump_call_log(int funcs_per_line) {
     if (likely(!__DEBUG__)) return;
 
@@ -142,6 +144,7 @@ static inline void dump_call_log(int funcs_per_line) {
     panic_err_printf("(%s at %d)\n", last_call_finished ? "Finished" : "Unfinished", log_index);
 }
 
+/* Panic shell dump command */
 static void panic_cmd_dump(uint32_t addr) {
     uint8_t* ptr = (uint8_t*) addr;
     for (int i = 0; i < 64; i++) {
@@ -151,11 +154,13 @@ static void panic_cmd_dump(uint32_t addr) {
     panic_err_printf("\r\n");
 }
 
+/* Panic shell peek command */
 static void panic_cmd_peek(uint32_t addr) {
     uint32_t value = *(volatile uint32_t*) addr;
     panic_err_printf("\n0x%08lx = 0x%08lx", addr, value);
 }
 
+/* Panic shell parser function */
 static void execute_panic_cmd(char cmd[]) {
     if (
         cmd[0] == 'd' &&
@@ -192,6 +197,8 @@ static void execute_panic_cmd(char cmd[]) {
 }
 
 // TODO: Move panic shell out into dedicated file
+
+/* Panic shell main function */
 static void panic_shell() {
     // Flush any leftover keys from the crash event
     while (inb(0x64) & 0x01) inb(0x60);
@@ -220,6 +227,8 @@ static void panic_shell() {
 }
 
 // TODO: use t_printf instead, but t_print doesn't support colors yet
+
+/* Called upon exception caught by IDT */
 void exception_handler(syscalls_registers_x86_32_t* regs) {
     asm volatile("cli");
 
@@ -268,6 +277,7 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
     panic_shell();
 }
 
+/* Handles system calls using EAX, EBX, ECX, and EDX registers */
 void syscall_handler(syscalls_registers_x86_32_t* regs) {
     // EAX: Caller function ID, also return value (if any)
     uint32_t arg1 = regs->ebx;

@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "memory/slab.h"
 
+/* Create and initialise new Slab8 */
 Slab8* create_slab8(uint16_t object_size) {
     void* phys = pmm_alloc_page();
     if (unlikely(!phys)) {
@@ -62,6 +63,7 @@ Slab8* create_slab8(uint16_t object_size) {
     return slab;
 }
 
+/* Free slab from memory */
 void delete_slab8(Slab8* slab) {
     if (slab->prev)
         slab->prev->next = slab->next;
@@ -71,6 +73,7 @@ void delete_slab8(Slab8* slab) {
     pmm_free_page((void*) vmm_unmap_page(slab));
 }
 
+/* alloc space in the slab */
 void* slab_alloc8(Slab8* head) {
     if (unlikely(!head || head->magic != SLAB8_MAGIC)) {
         err_print("slab_alloc8: Invalid head");
@@ -109,6 +112,7 @@ void* slab_alloc8(Slab8* head) {
     return (void*) addr;
 }
 
+/* Free alloc-ed space in slab */
 void slab_free8(void* ptr) {
     // Jump to the start of the 4KB page this pointer lives in.
     // This works because the PMM always gives us page-aligned memory.

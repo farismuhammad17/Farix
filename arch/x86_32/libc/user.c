@@ -19,8 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "farix.h"
 
-// Writing inline assembly is tedious, this function just abstract that off.
-// Unused arguments are set to 0
+/*
+Writing inline assembly is tedious, this function just abstract that off.
+Unused arguments are to be set to 0.
+*/
 int32_t farix_syscall(uint32_t sys_id, uint32_t arg1, uint32_t arg2, uint32_t arg3) {
     int32_t ret;
     asm volatile (

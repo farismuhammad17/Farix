@@ -45,6 +45,7 @@ uint32_t next_pid  = INIT_TASK_ID;
 task_list* first_task_list = NULL;
 task_list* current_task_list = NULL;
 
+/* Task trampoline that executes the task, then kills the task upon termination */
 static void task_trampoline() {
     system_int_on();
 
@@ -57,6 +58,7 @@ static void task_trampoline() {
     while(1) task_yield(); // Keep yielding till deletion
 }
 
+/* Initialise multitasking by creating the init task */
 void init_multitasking() {
     // Create the first task (the one we are currently in)
     main_task = (task*) kmalloc(sizeof(task));
@@ -84,6 +86,7 @@ void init_multitasking() {
     first_task_list = current_task_list;
 }
 
+/* Create new task to execute the `entry_point` with given name and privilege */
 task* create_task(void (*entry_point)(), const char* name, const int privilege) {
     task* new_task = (task*) kmalloc(sizeof(task));
     kmemset(new_task, 0, sizeof(task));
@@ -146,6 +149,7 @@ task* create_task(void (*entry_point)(), const char* name, const int privilege) 
     return new_task;
 }
 
+/* Given task at given ID */
 void kill_task(uint32_t id) {
     system_int_off();
 
@@ -211,8 +215,19 @@ void kill_task(uint32_t id) {
     if (unlikely(target == current_task)) task_yield();
 }
 
-// TODO: Scheduler doesn't deal with sleeping tasks
+/*
+Scheduler, called by interrupts, switches to the next task. The algirhtm that
+chooses the task is as follows:
+
+Each new task records the task that created it as its `parent`, and has no
+children at creation. Its neighbors are a circular singly linked list of all
+the children of its parent. Each parent is not informed of all the children,
+but has one pointer to a child, `next`. When a new task is created, we snuggle
+in the task into this parent-child tree strcture.
+*/
 void schedule() {
+    // TODO: Scheduler doesn't deal with sleeping tasks
+
     task* last = current_task;
     task* next = current_task->next;
 
@@ -233,6 +248,7 @@ void schedule() {
     switch_task(&last->stack_pointer, next->stack_pointer);
 }
 
+/* Get task at given ID */
 task* get_task(uint32_t id) {
     task_list* list = first_task_list;
 

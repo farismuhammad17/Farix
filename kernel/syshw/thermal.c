@@ -25,7 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "syshw/thermal.h"
 
-// Controls the hardware fan state (On / Off)
+/* Set the hardware fan to on or off */
 ACPI_STATUS system_set_fan_state(bool turn_on) {
     // We target the standard motherboard active cooling device node.
     // _ON and _OFF do not take parameters and do not return anything.
@@ -41,7 +41,10 @@ ACPI_STATUS system_set_fan_state(bool turn_on) {
     return status;
 }
 
-// strength: 0 = off, 100 = maximum speed
+/*
+Set the hardware fan to spin at a given strength [0-100], only integer values,
+0 representing off, [1-99] being intermediary speeds, and 100 being full power.
+*/
 ACPI_STATUS system_set_fan_speed(uint32_t strength) {
     // _FSL requires exactly one input argument: the integer speed level.
     ACPI_OBJECT arg_obj;
@@ -64,7 +67,7 @@ ACPI_STATUS system_set_fan_speed(uint32_t strength) {
     return status;
 }
 
-// Returns raw tenths of Kelvin
+/* Returns the CPU temperature in raw tenths of Kelvin */
 ACPI_STATUS system_get_cpu_temperature(uint32_t *temp_kelvin_tenths) {
     // The '_TMP' method doesn't take any inputs,
     // so we tell ACPICA that the argument count is 0.
@@ -102,8 +105,10 @@ ACPI_STATUS system_get_cpu_temperature(uint32_t *temp_kelvin_tenths) {
     return status;
 }
 
-// Critical Shutdown Threshold (Returns raw tenths of Kelvin)
-// Gets maximum temperature before forced hardware shutdown
+/*
+Critical Shutdown Threshold (Returns raw tenths of Kelvin)
+Gets maximum temperature before forced hardware shutdown
+*/
 ACPI_STATUS system_get_thermal_critical_limit(uint32_t *limit_kelvin_tenths) {
     ACPI_BUFFER buffer = { .Length = ACPI_ALLOCATE_BUFFER, .Pointer = NULL };
 
@@ -131,8 +136,10 @@ ACPI_STATUS system_get_thermal_critical_limit(uint32_t *limit_kelvin_tenths) {
     return status;
 }
 
-// Passive Cooling Threshold (Returns raw tenths of Kelvin)
-// Temperature the kernel must cool at without fans
+/*
+Passive Cooling Threshold (Returns raw tenths of Kelvin)
+Temperature the kernel must cool at without fans
+*/
 ACPI_STATUS system_get_thermal_passive_limit(uint32_t *limit_kelvin_tenths) {
     ACPI_BUFFER buffer = { .Length = ACPI_ALLOCATE_BUFFER, .Pointer = NULL };
 
@@ -160,8 +167,10 @@ ACPI_STATUS system_get_thermal_passive_limit(uint32_t *limit_kelvin_tenths) {
     return status;
 }
 
-// Passive Polling Frequency (Returns tenths of a second)
-// How often the kernel should check the temperature
+/*
+Passive Polling Frequency (Returns tenths of a second)
+How often the kernel should check the temperature
+*/
 ACPI_STATUS system_get_thermal_sampling_period(uint32_t *seconds_tenths) {
     ACPI_BUFFER buffer = { .Length = ACPI_ALLOCATE_BUFFER, .Pointer = NULL };
 
@@ -188,8 +197,10 @@ ACPI_STATUS system_get_thermal_sampling_period(uint32_t *seconds_tenths) {
     return status;
 }
 
-// Active Cooling Threshold 0 (Returns raw tenths of Kelvin)
-// The temperature where the primary cooling fan *must* turn on.
+/*
+Active Cooling Threshold 0 (Returns raw tenths of Kelvin)
+The temperature where the primary cooling fan *must* turn on.
+*/
 ACPI_STATUS system_get_thermal_active_limit(uint32_t *limit_kelvin_tenths) {
     ACPI_BUFFER buffer = { .Length = ACPI_ALLOCATE_BUFFER, .Pointer = NULL };
 

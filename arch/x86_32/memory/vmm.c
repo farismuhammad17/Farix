@@ -37,6 +37,7 @@ const uintptr_t PAGE_CACHE   = 0x0;  // Not present in x86, does nothing, but re
 
 uint32_t* kernel_directory = NULL;
 
+/* Enable paging */
 static void vmm_enable_paging(uint32_t pd_phys) {
     asm volatile("mov %0, %%cr3" : : "r"(pd_phys));
 
@@ -49,6 +50,7 @@ static void vmm_enable_paging(uint32_t pd_phys) {
     asm volatile("mov %0, %%cr0" : : "r"(cr0));
 }
 
+/* Initialise the VMM and carve out VMM_INIT_MAP_SIZE of memory, then run vmm_enable_paging */
 void init_vmm() {
     uint32_t phys_pd = (uint32_t) pmm_alloc_page();
     kernel_directory = (uint32_t*) phys_pd;
@@ -76,6 +78,7 @@ void init_vmm() {
     vmm_enable_paging(phys_pd);
 }
 
+/* Map physical page to virtual */
 void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags) {
     uint32_t virt_addr = (uint32_t) virt;
     uint32_t pd_index  = virt_addr >> 22;
@@ -105,6 +108,7 @@ void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags) {
     asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
 }
 
+/* Unmap virtual address from physical */
 uint32_t vmm_unmap_page(void* virt) {
     uint32_t virt_addr = (uint32_t) virt;
     uint32_t pd_index  = virt_addr >> 22;
@@ -126,6 +130,7 @@ uint32_t vmm_unmap_page(void* virt) {
     return phys_to_return;
 }
 
+/* Copy kernel directory into a new page */
 uint32_t* vmm_copy_kernel_directory() {
     uint32_t phys_pd  = (uint32_t)  pmm_alloc_page();
     uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(phys_pd);
@@ -142,19 +147,21 @@ uint32_t* vmm_copy_kernel_directory() {
     return (uint32_t*) phys_pd;
 }
 
-// Uses physical addresses
+/* Switch a new directory given the physical address */
 void vmm_switch_directory(uint32_t* page_directory) {
     // Only switch if we're not current already there
     if (unlikely(vmm_get_current_directory() != page_directory))
         asm volatile("mov %0, %%cr3" : : "r"(page_directory) : "memory");
 }
 
+/* Get the current directory */
 uint32_t* vmm_get_current_directory() {
     uint32_t cr3;
     asm volatile("mov %%cr3, %0" : "=r"(cr3));
     return (uint32_t*) cr3;
 }
 
+/* Get the physical address of a virtual address */
 uint32_t vmm_get_phys(uint32_t* pd_phys, void* virt_addr) {
     uint32_t v = (uint32_t) virt_addr;
     uint32_t pd_idx = v >> 22;
@@ -177,7 +184,7 @@ uint32_t vmm_get_phys(uint32_t* pd_phys, void* virt_addr) {
     return (pt_virt[pt_idx] & ~0xFFF) | (v & 0xFFF);
 }
 
-// Very similar to vmm_get_phys
+/* Check if a virtual address is mapped or not */
 int vmm_is_mapped(uint32_t* pd_phys, void* virt) {
     uint32_t virt_addr = (uint32_t) virt;
     uint32_t pd_index  = virt_addr >> 22;

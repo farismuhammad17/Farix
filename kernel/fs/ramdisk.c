@@ -32,9 +32,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // fix this, but I am very lazy, and don't really need
 // ramdisk yet.
 
-// djb2 hash
-// Source: https://www.cse.yorku.ca/~oz/hash.html
-static unsigned long hash(const char* name) {
+/*
+djb2 hash
+Source: https://www.cse.yorku.ca/~oz/hash.html
+*/
+static unsigned long djb2_hash(const char* name) {
     unsigned long hash = 5381;
     int c;
     while ((c = *name++)) {
@@ -57,12 +59,14 @@ VFS ramdisk_vfs = {
     .check_write_safety = NULL
 };
 
+/* Initialises RAMDISK by setting everything in the files_table to NULL */
 void init_ramdisk() {
     for (int i = 0; i < RAMDISK_HASH_SIZE; i++) {
         files_table[i] = NULL;
     }
 }
 
+/* Read file from offset to offset+size */
 int ramdisk_read(const char* name, void* buffer, size_t size, uint32_t offset) {
     File* file = ramdisk_get(name);
 
@@ -81,6 +85,7 @@ int ramdisk_read(const char* name, void* buffer, size_t size, uint32_t offset) {
     return (int) bytes_to_read;
 }
 
+/* Write from offset to offset+size */
 int ramdisk_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
     File* file = ramdisk_get(name);
     if (unlikely(!file || file->is_directory)) return -1;
@@ -106,8 +111,9 @@ int ramdisk_write(const char* name, const void* buffer, size_t size, uint32_t of
     return (int) size;
 }
 
+/* Create new file */
 int ramdisk_create(const char* name) {
-    uint32_t index = hash(name) % RAMDISK_HASH_SIZE;
+    uint32_t index = djb2_hash(name) % RAMDISK_HASH_SIZE;
     if (files_table[index] != NULL) return 0;
 
     File* new_file = (File*) kmalloc(sizeof(File));
@@ -123,8 +129,9 @@ int ramdisk_create(const char* name) {
     return 1;
 }
 
+/* Create new folder */
 int ramdisk_mkdir(const char* name) {
-    uint32_t index = hash(name) % RAMDISK_HASH_SIZE;
+    uint32_t index = djb2_hash(name) % RAMDISK_HASH_SIZE;
     if (files_table[index] != NULL) return 0;
 
     File* new_file = (File*) kmalloc(sizeof(File));
@@ -140,8 +147,9 @@ int ramdisk_mkdir(const char* name) {
     return 1;
 }
 
+/* Delete file/folder */
 int ramdisk_remove(const char* name) {
-    uint32_t index = hash(name) % RAMDISK_HASH_SIZE;
+    uint32_t index = djb2_hash(name) % RAMDISK_HASH_SIZE;
     File* file = files_table[index];
 
     if (unlikely(file == NULL || strcmp(file->name, name) != 0)) return 0;
@@ -155,10 +163,12 @@ int ramdisk_remove(const char* name) {
     return 1;
 }
 
+/* Get file object at path */
 File* ramdisk_get(const char* name) {
-    return files_table[hash(name) % RAMDISK_HASH_SIZE];
+    return files_table[djb2_hash(name) % RAMDISK_HASH_SIZE];
 }
 
+/* Get all contents of directory */
 FileNode* ramdisk_getall(const char* path) {
     FileNode* head  = NULL;
 

@@ -36,9 +36,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 multiboot_info* mbi = NULL;
 
-// Defined in asm/boot/crti.asm
+/* Defined in asm/boot/crti.asm */
 extern void _init();
 
+/*
+x86 specific initialisations, called right between early_kmain
+and kmain, both of which are architecture independant.
+*/
 void arch_kmain(uint32_t magic, multiboot_info* _mbi) {
     early_kmain();
 

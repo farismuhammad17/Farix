@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 TSSEntry tss_entry;
 
+/* Initialises the TSS */
 void init_tss(uint32_t idx, uint32_t kss, uint32_t kesp) {
     uint32_t base = (uint32_t) PHYSICAL_TO_VIRTUAL(&tss_entry);
     uint32_t limit = sizeof(TSSEntry);
@@ -44,7 +45,7 @@ void init_tss(uint32_t idx, uint32_t kss, uint32_t kesp) {
     tss_entry.iomap_base = sizeof(TSSEntry);
 }
 
-// Defined in stubs.h:
+/* Changes ESP0 to given stack */
 void set_kernel_stack(uint32_t stack) {
     tss_entry.esp0 = stack;
 }

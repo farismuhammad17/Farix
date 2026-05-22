@@ -36,9 +36,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "farix.h"
 
-// For debugging:
-// #include "drivers/uart.h"
-
 #define FD_TABLE_MIN 3
 #define FD_TABLE_MAX 32
 
@@ -50,6 +47,10 @@ typedef struct {
 // A table of strings representing the names of open files
 static FileOpenHandle* fd_table[FD_TABLE_MAX] = {NULL};
 
+/*
+System break, called when more memory is required. Calls `kmalloc` if it is for
+the kernel, and carves out memory for anything else.
+*/
 void* _sbrk(int incr) {
     if (current_task->page_directory == NULL) {
         return kmalloc(incr);
@@ -75,6 +76,7 @@ void* _sbrk(int incr) {
     return (void*) old_break;
 }
 
+/* Kill the current executing task */
 void _exit(int status) {
     // TODO: Kill tasks using dedicated task* killer
     // kill_task wastes time finding the task we already have.
@@ -83,6 +85,7 @@ void _exit(int status) {
     while(1) system_pause();
 }
 
+/* Read a file or take user input */
 int _read(int file, char *ptr, int len) {
     if (file == 0) { // stdin
         int i = 0;
@@ -123,6 +126,7 @@ int _read(int file, char *ptr, int len) {
     return -1;
 }
 
+/* Write to file or print data */
 int _write(int file, char *ptr, int len) {
     if (file == 1 || file == 2) { // stdout/stderr
         // For debugging:
@@ -141,6 +145,7 @@ int _write(int file, char *ptr, int len) {
     return -1;
 }
 
+/* Open file */
 int _open(const char *name, int flags, int mode) {
     File* f = fs_get(name);
 
@@ -168,6 +173,7 @@ int _open(const char *name, int flags, int mode) {
     return -1;
 }
 
+/* Close file */
 int _close(int file) {
     if (file < FD_TABLE_MIN || file >= FD_TABLE_MAX || !fd_table[file]) return -1;
 
@@ -176,10 +182,12 @@ int _close(int file) {
     return 0;
 }
 
+/* Create directory */
 int _mkdir(const char *path, mode_t mode) {
     return fs_mkdir(path) ? SYS_DONE : SYS_ERROR;
 }
 
+/* Return file status */
 int _fstat(int file, struct stat *st) {
     if (unlikely(!st)) return -EFAULT;
 
@@ -206,14 +214,16 @@ int _fstat(int file, struct stat *st) {
     return -EBADF;
 }
 
+/* Check if the given file is in a valid index */
 int _isatty(int file) {
     return file >= 0 && file < FD_TABLE_MIN;
 }
 
+/* Change file offset from reading and writing */
 int _lseek(int file, int ptr, int dir) {
     if (unlikely(file >= 0 && file < FD_TABLE_MIN)) return 0;
 
-    if (file < FD_TABLE_MAX && fd_table[file]) {
+    if (likely(file < FD_TABLE_MAX && fd_table[file])) {
         FileOpenHandle* f = (FileOpenHandle*) fd_table[file];
         size_t f_size = f->file->size;
         int new_pos;
@@ -234,28 +244,31 @@ int _lseek(int file, int ptr, int dir) {
     return -EBADF;
 }
 
+/* Get current task ID */
 int _getpid() {
     return current_task->id;
 }
 
+/* Kill given task */
 int _kill(int pid, int sig) {
     kill_task(pid);
 }
 
+/* Get a random number */
 int getentropy(void *ptr, size_t len) {
     if (len > 256) {
         errno = EIO;
         return SYS_ERROR;
     }
 
-    uint8_t *buf = (uint8_t *)ptr;
+    uint8_t *buf = (uint8_t*) ptr;
     size_t i = 0;
 
     while (i < len) {
         unsigned char ok;
         uint32_t random_val = asm_get_random(&ok);
 
-        if (ok) {
+        if (likely(ok)) {
             // Copy bytes from the 32-bit result into the buffer
             for (int j = 0; j < 4 && i < len; j++) {
                 buf[i++] = (uint8_t)(random_val >> (j << 3));
@@ -265,6 +278,7 @@ int getentropy(void *ptr, size_t len) {
             system_pause();
         }
     }
+
     return 0;
 }
 
@@ -278,6 +292,7 @@ int   isatty(int file) { return _isatty(file); }
 int   kill(int pid, int sig) { return _kill(pid, sig); }
 int   getpid() { return _getpid(); }
 
+/* Free the given pointer from memory */
 void _free_r(struct _reent *r, void *ptr) {
     kfree(ptr);
 }

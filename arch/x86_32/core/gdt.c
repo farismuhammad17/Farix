@@ -32,6 +32,7 @@ extern void load_tss();
 GDTEntry   gdt[6];
 GDTPointer gdt_ptr;
 
+/* Initialises the GDT */
 void init_gdt() {
     gdt_ptr.limit = (sizeof(GDTEntry) * 6) - 1;
     gdt_ptr.base  = (uint32_t) PHYSICAL_TO_VIRTUAL(&gdt);
@@ -72,6 +73,7 @@ void init_gdt() {
     load_tss();
 }
 
+/* Set GDT entry at index `num` of given base, limit, access, and granularity */
 void gdt_set_entry(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran) {
     // Descriptor base address
     gdt[num].base_low    = (base & 0xFFFF);

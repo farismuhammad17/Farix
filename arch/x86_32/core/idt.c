@@ -58,6 +58,7 @@ void isr28(); void isr29(); void isr30(); void isr31();
 static struct idt_entry idt[256];
 static struct idt_ptr   idtp;
 
+/* Set IDT gate at index `num` with given function, sel (0x08 almost always), and flags */
 static void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
     idt[num].base_low  = (base & 0xFFFF);        // Lower 16 bits
     idt[num].base_high = (base >> 16) & 0xFFFF;  // Upper 16 bits
@@ -67,6 +68,10 @@ static void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags
     idt[num].flags   = flags;
 }
 
+/*
+Initialise the IDT by setting everything to exception 15 (Unknown interrupt),
+then setting the interrupts we actually use, so that we can catch stray interrupts.
+*/
 void init_interrupts() {
     idtp.limit = (sizeof(struct idt_entry) << 8) - 1;  // Defines the IDT pointer's size how x86 likes
     idtp.base  = (uint32_t) &idt;                      // The memory address of the IDT array
@@ -126,15 +131,27 @@ void init_interrupts() {
     asm volatile("lidt %0" : : "m"(idtp));
 }
 
+/*
+Exposes idt_set_gate to the rest of the kernel in an architecture independant
+way, by assuming sel=0x08, and flag to KERNEL.
+*/
 void set_interrupt_kernel(uint8_t vector, void* handler) {
     // sel is 0x08 because that's the Kernel Code Segment
     idt_set_gate(vector, (uint32_t) handler, 0x08, IDT_GATE_KERNEL);
 }
 
+/*
+Exposes idt_set_gate to the rest of the kernel in an architecture independant
+way, by assuming sel=0x08, and flag to USER.
+*/
 void set_interrupt_user(uint8_t vector, void* handler) {
     idt_set_gate(vector, (uint32_t) handler, 0x08, IDT_GATE_USER);
 }
 
+/*
+Clears out the interrupt at a given vector, but setting it to exception 15,
+which is for handling "Unknown interrupts".
+*/
 void clear_interrupt(uint8_t vector) {
     idt_set_gate(vector, (uint32_t) isr15, 0x08, IDT_GATE_KERNEL);
 }

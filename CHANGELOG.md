@@ -2,6 +2,12 @@
 
 *Refer [journal](docs/journal.md) for implementation details.*
 
+## Docstrings - *22nd May, 2026*
+
+- Added docstrings to most functions
+- MFuncs
+  - `defs` function prints docstrings now
+
 ## Power, Thermal, and Battery - *20th May, 2026*
 
 - Power

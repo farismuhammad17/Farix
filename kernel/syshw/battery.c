@@ -27,6 +27,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 uint32_t battery_design_capacity    = 0;
 uint32_t battery_last_full_capacity = 0;
 
+/*
+Initialise battery constants:-
+
+- battery_design_capacity: How much the battery was intended to hold
+- battery_last_full_capacity: How much the battery is capable of actually holding.
+
+As time passes and a battery ages, its capicity slowly reduces. When it comes
+out of the factory, battery_last_full_capacity = battery_design_capacity, but slowly
+wears down. The design capacity is actually useless for us, but can be a nice
+bit of information for the user.
+*/
 ACPI_STATUS init_battery() {
     ACPI_BUFFER buffer = { .Length = ACPI_ALLOCATE_BUFFER, .Pointer = NULL };
 
@@ -57,6 +68,12 @@ ACPI_STATUS init_battery() {
     return status;
 }
 
+/*
+The battery status can be found through the ACPICA through just one command, so
+instead of having separate functions to call the same command through the ACPI,
+it is much more efficient to send the command once, and store all the data that
+comes back from it into a usable struct.
+*/
 ACPI_STATUS system_get_battery_status(battery_status_t *status_out) {
     ACPI_BUFFER buffer = { .Length = ACPI_ALLOCATE_BUFFER, .Pointer = NULL };
 

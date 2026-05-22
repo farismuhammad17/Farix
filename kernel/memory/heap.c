@@ -33,6 +33,7 @@ void*        heap_start    = (void*) PHYSICAL_TO_VIRTUAL(0x1000000);
 void*        heap_end      = NULL;
 HeapSegment* first_segment = NULL;
 
+/* Initialises heap by carving out the required memory */
 void init_heap() {
     uint32_t initial_pages = HEAP_INIT_SIZE >> 2;
 
@@ -52,6 +53,7 @@ void init_heap() {
     first_segment->caller  = 0;
 }
 
+/* Kernel malloc */
 void* kmalloc(size_t size) {
     // Align size to 4 bytes
     size = (size + 3) & ~3;
@@ -95,6 +97,7 @@ void* kmalloc(size_t size) {
     return kmalloc(size);
 }
 
+/* Free memory malloc-ed by kernel */
 void kfree(void* ptr) {
     if (ptr == NULL) return;
     HeapSegment* current = (HeapSegment*) ((uint32_t) ptr - sizeof(HeapSegment));
@@ -122,6 +125,7 @@ void kfree(void* ptr) {
     }
 }
 
+/* Kernel memcpy */
 void kmemcpy(void* dest, const void* source, size_t n) {
     volatile uint8_t* dst = (volatile uint8_t*) dest;
     const uint8_t* src = (const uint8_t*) source;
@@ -131,11 +135,13 @@ void kmemcpy(void* dest, const void* source, size_t n) {
     cpu_mem_barrier();
 }
 
+/* Kernel memset */
 void kmemset(void* s, int c, size_t n) {
     uint8_t* p = (uint8_t*) s;
     for (size_t i = 0; i < n; i++) p[i] = (uint8_t) c;
 }
 
+/* Expand heap when exceeded */
 void kheap_expand(size_t size) {
     size_t total_needed = size + sizeof(HeapSegment);
     size_t pages_to_alloc = (total_needed + PAGE_SIZE - 1) >> LOG2_PAGE_SIZE;
@@ -166,6 +172,7 @@ void kheap_expand(size_t size) {
     kfree((void*)((uint32_t) new_seg + sizeof(HeapSegment)));
 }
 
+/* Total used memory by heap */
 size_t get_heap_total() {
     size_t total = 0;
     HeapSegment* current = first_segment;
@@ -176,6 +183,7 @@ size_t get_heap_total() {
     return total;
 }
 
+/* Total memory used by non-free heap segments */
 size_t get_heap_used() {
     size_t used = 0;
     HeapSegment* current = first_segment;

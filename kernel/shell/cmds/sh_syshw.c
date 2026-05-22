@@ -22,11 +22,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "shell/commands.h"
 #include "shell/shell.h"
 
+/* Shutdown command */
 void cmd_shutdown(UNUSED_ARG const char* args) {
     sh_print("Shutting down...");
     system_set_power_s5();
 }
 
+/* Reboot/Restart command */
 void cmd_reboot(UNUSED_ARG const char* args) {
     sh_print("Rebooting...");
     system_reboot();

@@ -47,7 +47,7 @@ static size_t shell_output_ptr = 0;
 static size_t shell_buffer_size = 0;
 
 static char* trim(char* s) {
-    if (s == NULL) return NULL;
+    if (unlikely(s == NULL)) return NULL;
     while (*s == ' ') s++;
     if (*s == '\0') return s;
 
@@ -58,6 +58,7 @@ static char* trim(char* s) {
     return s;
 }
 
+/* Initialises Kernel shell */
 void init_shell() {
     setvbuf(stdout, NULL, _IONBF, 0);
 
@@ -78,6 +79,10 @@ void init_shell() {
     printf("%s> ", shell_directory);
 }
 
+/*
+Read the keyboard buffer and print the character. If the shell is moved into the
+ready state, then it executes shell_parse.
+*/
 void shell_update() {
     while (kbd_tail != kbd_head) {
         char c = kbd_buffer[kbd_tail];
@@ -122,6 +127,10 @@ void shell_update() {
     }
 }
 
+/*
+Takes in the input text, matches it with the list of valid commands, and once
+a command is found, it execute that command's function.
+*/
 void shell_parse(const char* input) {
     if (unlikely(input == NULL || input[0] == '\0')) return;
 
@@ -181,9 +190,11 @@ void shell_parse(const char* input) {
     is_piping = false;
 }
 
-// TODO IMP: Memory fragile, messes the terminal up if
-// it has to flush or print too much
+/* Custom print function to buffer text before printing for speed */
 void sh_print(const char* format, ...) {
+    // TODO IMP: Memory fragile, messes the terminal up if
+    // it has to flush or print too much
+
     static char local_buf[1024];
     va_list args;
     va_start(args, format);
@@ -219,6 +230,7 @@ void sh_print(const char* format, ...) {
     }
 }
 
+/* Flush the text buffer and empty it */
 void shell_flush() {
     if (shell_output_ptr > 0) {
         printf("%s", shell_output_buffer);

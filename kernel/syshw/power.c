@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "syshw/power.h"
 
+/* Moves the system into a complete shutdown (S5) */
 void system_set_power_s5() {
     // S5 state is shutdown
     ACPI_STATUS status = AcpiEnterSleepStatePrep(ACPI_STATE_S5);
@@ -49,6 +50,7 @@ void system_set_power_s5() {
     while (1) system_halt();
 }
 
+/* Executes a reboot via the ACPI */
 void system_reboot() {
     // Reset command
     ACPI_STATUS status = AcpiReset();

@@ -31,6 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 static char path_buffer[256];
 
+/* Get the absolute path to a file using the current shell directory */
 static char* full_path_to(const char* filename) {
     if (filename[0] == '/') {
         return (char*)(filename + 1); // Remove leading slash
@@ -52,6 +53,7 @@ static char* full_path_to(const char* filename) {
     return path_buffer;
 }
 
+/* Change directory command */
 void cmd_cd(const char* args) {
     if (unlikely(!args || args[0] == '\0')) return;
 
@@ -107,6 +109,7 @@ void cmd_cd(const char* args) {
     strncpy(shell_directory, work_path, MAX_DIRECTORY_PATH_LEN - 1);
 }
 
+/* Read file command */
 void cmd_cat(const char* args) {
     #define MAX_BUFFER_SIZE 1024
 
@@ -165,6 +168,7 @@ void cmd_cat(const char* args) {
     #undef MAX_BUFFER_SIZE
 }
 
+/* Write to file command */
 void cmd_write(const char* args) {
     if (unlikely(args == NULL || args[0] == '\0')) return;
 
@@ -199,24 +203,28 @@ void cmd_write(const char* args) {
     }
 }
 
+/* Create file command */
 void cmd_touch(const char* args) {
     if (args != NULL && args[0] != '\0') {
         fs_create(full_path_to(args));
     }
 }
 
+/* Create directory command */
 void cmd_mkdir(const char* args) {
     if (args != NULL && args[0] != '\0') {
         fs_mkdir(full_path_to(args));
     }
 }
 
+/* Delete file/folder command */
 void cmd_rm(const char* args) {
     if (args != NULL && args[0] != '\0') {
         fs_remove(full_path_to(args));
     }
 }
 
+/* List directory command */
 void cmd_ls(const char* args) {
     const char* target_path = (args[0] == '\0') ? shell_directory : full_path_to(args);
 
@@ -237,6 +245,7 @@ void cmd_ls(const char* args) {
     }
 }
 
+/* Execute ELF command */
 void cmd_exec(const char* args) {
     if (args[0] != '\0') {
         exec_elf(full_path_to(args));

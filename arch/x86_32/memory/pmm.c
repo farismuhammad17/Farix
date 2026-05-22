@@ -36,27 +36,32 @@ extern multiboot_info* mbi;
 
 static uint32_t pmm_bitmap[BITMAP_SIZE];
 
-// Mark a page as USED (1)
+/* Mark a page as USED (1) */
 static inline void pmm_set_bit(uint32_t page_number) {
     uint32_t index = page_number >> 5;
     uint32_t bit   = page_number & 31;
     pmm_bitmap[index] |= (1 << bit);
 }
 
-// Mark a page as FREE (0)
+/* Mark a page as FREE (0) */
 static inline void pmm_clear_bit(uint32_t page_number) {
     uint32_t index = page_number >> 5;
     uint32_t bit   = page_number & 31;
     pmm_bitmap[index] &= ~(1 << bit);
 }
 
-// Check if a page is in use
+/* Check if a page is in use */
 static inline bool pmm_test_bit(uint32_t page_number) {
     uint32_t index = page_number >> 5;
     uint32_t bit   = page_number & 31;
     return (pmm_bitmap[index] & (1 << bit));
 }
 
+/*
+Initialise PMM and set the bitmap on the pages for the multiboot, kernel (so that
+we don't overwrite the kernel during runtime), and the bitmask itself (would be a
+shame if the bitmask suicided).
+*/
 void init_pmm() {
     if (unlikely(!(mbi->flags & (1 << 6)))) return;
 
@@ -94,6 +99,9 @@ void init_pmm() {
     pmm_set_bit((uint32_t) mbi >> LOG2_PAGE_SIZE);
 }
 
+/*
+Request a 4 KB page from the PMM using a first-fit algorithm.
+*/
 void* pmm_alloc_page() {
     for (uint32_t i = 0; i < BITMAP_SIZE; i++) { // First-Fit algorithm
         if (unlikely(!IS_FULL(i))) {
@@ -109,6 +117,10 @@ void* pmm_alloc_page() {
     return NULL;
 }
 
+/*
+Iterates through the PMM To find the first continuous block of pages that was
+required, and if none is found, NULL.
+*/
 void* pmm_alloc_pages(size_t length) {
     if (unlikely(length == 0)) return NULL;
     if (unlikely(length == 1)) return pmm_alloc_page();
@@ -156,6 +168,7 @@ void* pmm_alloc_pages(size_t length) {
     return NULL;
 }
 
+/* Unmark the page from the bitmask, letting another process overwrite it later */
 void pmm_free_page(void* addr) {
     uint32_t address     = (uint32_t) addr;
     uint32_t page_number = address >> LOG2_PAGE_SIZE;

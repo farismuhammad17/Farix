@@ -35,6 +35,12 @@ static BDLDevice bdl_ata_device = {
     .write = ata_write_sector
 };
 
+/*
+Makes the ATA wait until certain register bits clear off, namely, we check if
+the status register is BSY (busy), then DRQ (data request). If the ATA is neither
+busy nor processing a data request, that means the ATA is done with whatever it
+was doing, and is free.
+*/
 static bool ata_wait_ready() {
     // 400ns delay for status to stabilize
     for(int i = 0; i < 4; i++) inb(REG_STATUS);
@@ -71,6 +77,9 @@ static bool ata_wait_ready() {
     return false;
 }
 
+/*
+Initialises the ATA by reading BAR0 and BAR1 using the PCI.
+*/
 void init_ata(pci_device_t* pci_ata_device) {
     // Enable I/O Space and Bus Mastering in PCI Command Register
     // Offset 0x04 is the Command Register. Bit 0: I/O Space, Bit 2: Bus Master.
@@ -86,7 +95,7 @@ void init_ata(pci_device_t* pci_ata_device) {
     uint16_t ctrl = (bar1 & 1) ? (uint16_t)(bar1 & 0xFFFC) : CTRL_LEGACY;
 
     // If ctrl is 0, we MUST fallback to the legacy control port.
-    if (ctrl == 0) ctrl = CTRL_LEGACY;
+    if (unlikely(ctrl == 0)) ctrl = CTRL_LEGACY;
 
     // Revalue the global register variables
     REG_DATA     = base;
@@ -131,6 +140,10 @@ void init_ata(pci_device_t* pci_ata_device) {
     bdl_mount(&bdl_ata_device);
 }
 
+/*
+Send a read command to the ATA to write the data at a given LBA into the given
+buffer.
+*/
 void ata_read_sector(uint32_t lba, uint8_t* buffer) {
     outb(REG_DRV_SEL, (uint8_t)((lba >> 24) | LBA_MASTER));
     for(int i = 0; i < 4; i++) inb(REG_STATUS);
@@ -151,6 +164,10 @@ void ata_read_sector(uint32_t lba, uint8_t* buffer) {
     for (int i = 0; i < 256; i++) ptr[i] = inw(REG_DATA);
 }
 
+/*
+Send a write command to the ATA to write the data to a given LBA from the given
+buffer.
+*/
 void ata_write_sector(uint32_t lba, uint8_t* buffer) {
     outb(REG_DRV_SEL, (uint8_t)((lba >> 24) | LBA_MASTER));
     for(int i = 0; i < 4; i++) inb(REG_STATUS);

@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 extern uint32_t stack_top; // From boot.s
 extern void elf_user_trampoline_stub(uint32_t entry, uint32_t stack);
 
+/* ELF trampoline to execute the ELF, then halt after termination */
 void elf_user_trampoline() {
     task* t = current_task;
 
@@ -45,6 +46,10 @@ void elf_user_trampoline() {
     while(1) system_halt(); // Should never reach here
 }
 
+/*
+Read an ELF file located in the given path in the file system, load the data in
+it, then execute the ELF file as its own new task, mapping out the memory for it.
+*/
 task* exec_elf(const char* path) {
     File* file_obj = fs_get(path);
     if (unlikely(!file_obj || file_obj->size == 0)) {

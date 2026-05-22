@@ -32,6 +32,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 static BDLDevice* current_bdl_dev = NULL;
 
+/*
+Looks through the PCI to find storage devices. If the AHCI is found, it would
+initialise with it, else, it would initialise with the ATA, calling init_ahci
+or init_ata respectively.
+*/
 void init_storage() {
     pci_device_t* ata_dev = NULL;
 
@@ -60,10 +65,12 @@ void init_storage() {
     }
 }
 
+/* Change the BDL device */
 void bdl_mount(BDLDevice* dev) {
     current_bdl_dev = dev;
 }
 
+/* Reads from the given LBA and writes to the given buffer */
 void bdl_read(uint32_t lba, void* buf) {
     if (unlikely(!current_bdl_dev || !current_bdl_dev->read)) {
         err_print("bdl_read: BDL operation not found");
@@ -73,6 +80,7 @@ void bdl_read(uint32_t lba, void* buf) {
     return current_bdl_dev->read(lba, (uint8_t*) buf);
 }
 
+/* Writes the given buffer into the given LBA */
 void bdl_write(uint32_t lba, void* buf) {
     if (unlikely(!current_bdl_dev || !current_bdl_dev->write)) {
         err_print("bdl_write: BDL operation not found");

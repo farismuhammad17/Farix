@@ -4,7 +4,6 @@
 
 > *"I'm doing a (free) operating system, (just a Hobby, won't be big and professional like gnu)"* - Linus Torvalds, 1991
 
-- [Journal](docs/journal.md): Implementation sufferings
 - [Changelog](CHANGELOG.md): Brief summary of changes
 
 # Setup

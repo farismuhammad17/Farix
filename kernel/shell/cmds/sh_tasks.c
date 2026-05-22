@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "shell/commands.h"
 #include "shell/shell.h"
 
+/* List task tree command */
 void cmd_tasks(UNUSED_ARG const char* args) {
     system_int_off();
 
@@ -85,6 +86,7 @@ void cmd_tasks(UNUSED_ARG const char* args) {
     system_int_on();
 }
 
+/* Kill task command */
 void cmd_kill(const char* args) {
     if (unlikely(args[0] == '\0')) {
         sh_print("Usage: kill <pid>\n");
@@ -95,6 +97,7 @@ void cmd_kill(const char* args) {
     kill_task(pid);
 }
 
+/* View task registers command */
 void cmd_peek(const char* args) {
     if (unlikely(args[0] == '\0')) {
         sh_print("Usage: peek <pid>\n");
@@ -124,6 +127,7 @@ void cmd_peek(const char* args) {
     sh_print("EIP: %08x   EBP: %08x   ESP: %08x\n", regs->eip, regs->ebp, t->stack_pointer);
 }
 
+/* View tasks in task list command */
 void cmd_tlist(const char* args) {
     task_list* list = first_task_list;
 

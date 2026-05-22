@@ -99,18 +99,6 @@ typedef UINT32 (ACPI_SYSTEM_XFACE *ACPI_OSD_HANDLER)(void *Context);
 
 #define ACPI_USE_C99_FIELDS
 
-// Debugging stuff we don't need
-
-// #define ACPI_RS_DUMP_CAN_DEBUG
-
-// #define ACPI_DEBUGGER
-// #define ACPI_DISASSEMBLER
-
-// #define DEBUGGER_SINGLE_THREADED    0x01
-// #define DEBUGGER_MULTI_THREADED     0x02
-
-// #define DEBUGGER_THREADING          DEBUGGER_SINGLE_THREADED
-
 #define DEBUGGER_THREADING 0
 
 #define ACPI_OS_NAME "Farix"
@@ -159,7 +147,7 @@ typedef UINT32 (ACPI_SYSTEM_XFACE *ACPI_OSD_HANDLER)(void *Context);
     #define ACPI_OFFSET(d, f)      __builtin_offsetof(d, f)
 #endif
 
-#define ACPI_FLUSH_CPU_CACHE() __asm__ volatile("wbinvd":::"memory")
+#define ACPI_FLUSH_CPU_CACHE() asm volatile("wbinvd":::"memory")
 
 #define ACPI_ACQUIRE_GLOBAL_LOCK(GLptr, Acquired) (Acquired) = 1
 #define ACPI_RELEASE_GLOBAL_LOCK(GLptr, Pending) (Pending) = 0

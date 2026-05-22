@@ -234,6 +234,16 @@ static BDLDevice bdl_ahci_device = {
     .write = ahci_write_sector
 };
 
+/*
+Stops a running port. As per the documentation:
+
+* System software places a port into the idle state by clearing PxCMD.ST and waiting for PxCMD.CR to return ‘0’ when read.
+* Software should wait at least 500 milliseconds for this to occur
+* If PxCMD.FRE is set to ‘1’, software should clear it to ‘0’
+* and wait at least 500 milliseconds for PxCMD.FR to return ‘0’ when read.
+
+- Source: Serial ATA AHCI: Specification, Rev. 1.3.1
+*/
 static bool ahci_stop_port(hba_port_t *port) {
     // Clear ST (Start)
     port->cmd &= ~PX_CMD_ST;
@@ -259,6 +269,11 @@ static bool ahci_stop_port(hba_port_t *port) {
     return (timeout > 0);
 }
 
+/*
+From the list of available ports, this function iterates through them, and finds
+the first free port, and returns it. If a free port was not found, it would wait
+for 1 ms, then retry for `max_retry_attempts`.
+*/
 static hba_port_t* ahci_find_free_port(size_t max_retry_attempts) {
     for (size_t attempt_i = 0; attempt_i < max_retry_attempts; attempt_i++) {
         for (size_t port_i = 0; port_i < drives_found; port_i++) {
@@ -276,6 +291,12 @@ static hba_port_t* ahci_find_free_port(size_t max_retry_attempts) {
     return NULL;
 }
 
+/*
+From the slots of the port, we find the first slot that is free. Since we only
+call this function for a free port, we don't actually have to verify the fact,
+nor have any maximum retry attempts, as we are gauranteed to have atleast one
+free slot in the port.
+*/
 static int ahci_find_free_slot(hba_port_t* port) {
     // If a bit is set in either register, the slot is occupied
     uint32_t slots = (port->ci | port->sact);
@@ -289,6 +310,13 @@ static int ahci_find_free_slot(hba_port_t* port) {
     return -1; // All 32 slots are currently full
 }
 
+/*
+AHCI initialisation sequence is documentation in the Serial ATA AHCI: Specification,
+Rev. 1.3.1, section 2.1.11 (ABAR – AHCI Base Address), which details it step-by-step,
+though it is required to move from section-to-section to fully get through it. The
+full explanation on the source can be found in the README.md, or just refer the actual
+specification.
+*/
 void init_ahci(pci_device_t* dev) {
     static int timeout;
 
@@ -455,6 +483,11 @@ void init_ahci(pci_device_t* dev) {
     bdl_mount(&bdl_ahci_device);
 }
 
+/*
+Follows the Serial ATA AHCI: Specification, Rev. 1.3.1, to read port. A read
+command is sent to the AHCI, and we request it to write the data at a given
+LBA into the provided buffer.
+*/
 void ahci_read_sector(uint32_t lba, uint8_t* buffer) {
     if (unlikely(!buffer)) {
         err_print("ahci_read_sector: Void buffer");
@@ -543,6 +576,11 @@ void ahci_read_sector(uint32_t lba, uint8_t* buffer) {
     memcpy(buffer, ahci_bounce, 512);
 }
 
+/*
+Follows the Serial ATA AHCI: Specification, Rev. 1.3.1, to write to port.
+A write command is sent to the AHCI, and we request it to write the data
+to a given LBA from the provided buffer.
+*/
 void ahci_write_sector(uint32_t lba, uint8_t* buffer) {
     if (unlikely(!buffer)) {
         err_print("ahci_read_sector: Void buffer");
@@ -629,7 +667,10 @@ void ahci_write_sector(uint32_t lba, uint8_t* buffer) {
     }
 }
 
-// Defined in idt.asm
+/*
+Defined in idt.asm, it just clears out the port specific bits, and sends and
+EOI through the IRQ.
+*/
 void ahci_interrupt_handler() {
     uint32_t is = g_hba->is;
     if (is == 0) return;

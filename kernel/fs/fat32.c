@@ -162,14 +162,17 @@ VFS fat32_vfs = {
     .check_write_safety = fat32_check_write_safety
 };
 
+/* Get the LBA the given cluster is at */
 static inline uint32_t get_lba_from_cluster(uint32_t cluster) {
     return disk_info->partition_start_lba + disk_info->data_lba + ((cluster - 2) * disk_info->sectors_per_cluster);
 }
 
+/* Get the cluster the given file is at */
 static inline uint32_t get_file_cluster(fat32_file_t* file) {
     return (uint32_t) file->cluster_low | ((uint32_t) file->cluster_high << 16);
 }
 
+/* Get the next cluster of the current cluster in the linker list */
 static uint32_t get_next_cluster(uint32_t cluster) {
     // Check if the cluster index is physically possible
     if (unlikely(cluster < 2 || cluster >= disk_info->total_clusters + 2)) {
@@ -192,6 +195,7 @@ static uint32_t get_next_cluster(uint32_t cluster) {
     return next;
 }
 
+/* Iterate through the FAT to find the first free entry */
 static uint32_t find_free_fat_entry() {
     uint32_t fat_buffer[128];
 
@@ -215,6 +219,7 @@ static uint32_t find_free_fat_entry() {
     return FAT32_ERROR_CODE; // Disk full
 }
 
+/* Format to 8 char for name and 3 for extension */
 static void format_to_83(const char* name, uint8_t* out_name) {
     memset(out_name, ' ', 11);
 
@@ -239,12 +244,14 @@ static void format_to_83(const char* name, uint8_t* out_name) {
     }
 }
 
+/* Check if fat_name == user_name after truncating to 8 char.3 char */
 static inline bool compare_fat_names(uint8_t* fat_name, const char* user_name) {
     uint8_t formatted[11];
     format_to_83(user_name, formatted);
     return memcmp(fat_name, formatted, 11) == 0;
 }
 
+/* Update a FAT32 cluster entry and mirror the write to backup FATs if mirroring is enabled. */
 static void update_fat_entry(uint32_t cluster, uint32_t value) {
     uint32_t fat_buffer[128];
     uint32_t lba = disk_info->reserved_sectors + (cluster / 128);
@@ -263,6 +270,7 @@ static void update_fat_entry(uint32_t cluster, uint32_t value) {
     }
 }
 
+/* Search a directory's cluster chain for an entry by name and return its starting cluster. */
 static uint32_t find_entry_in_cluster(uint32_t directory_cluster, const char* name) {
     uint32_t current_cluster = directory_cluster;
     fat32_file_t entries[ENTRIES_PER_SECTOR];
@@ -294,7 +302,7 @@ static uint32_t find_entry_in_cluster(uint32_t directory_cluster, const char* na
     return FAT32_ERROR_CODE; // Not found
 }
 
-// Helper to find the starting cluster of a directory/file path
+/* Helper to find the starting cluster of a directory/file path */
 static uint32_t find_cluster_for_path(const char* path) {
     uint32_t current_cluster = disk_info->root_cluster;
     const char* start = path;
@@ -333,6 +341,7 @@ static uint32_t find_cluster_for_path(const char* path) {
     return current_cluster;
 }
 
+/* Create a new sub-directory entry, allocate its cluster, and initialize its '.' and '..' links. */
 static bool create_directory_entry(uint32_t sector_lba, int index, const char* name, uint32_t parent_cluster) {
     fat32_file_t entries[ENTRIES_PER_SECTOR];
     bdl_read(sector_lba, entries);
@@ -371,7 +380,7 @@ static bool create_directory_entry(uint32_t sector_lba, int index, const char* n
     return true;
 }
 
-// Finds the folder (path) and the file's name and writes to the pointers
+/* Finds the folder (path) and the file's name and writes to the pointers */
 static void write_path_filename(const char* full_path, char** out_path, size_t* path_len, const char** filename) {
     char* last_slash = strrchr(full_path, '/');
 
@@ -389,6 +398,10 @@ static void write_path_filename(const char* full_path, char** out_path, size_t* 
     }
 }
 
+/*
+Reads the MBR to find the BPB, from which, we initialise the FAT32 system, after
+a set of checks. We then cache the data into `disk_info` to use.
+*/
 void init_fat32() {
     mbr_sector_t mbr;
     bdl_read(0, &mbr);
@@ -488,6 +501,7 @@ void init_fat32() {
     disk_info->partition_start_lba = partition_base;
 }
 
+/* Read a file and write the data into the buffer, reading from offset to offset+size */
 int fat32_read(const char* name, void* buffer, size_t size, uint32_t offset) {
     char* path;
     size_t path_len;
@@ -588,6 +602,7 @@ int fat32_read(const char* name, void* buffer, size_t size, uint32_t offset) {
     return FAT32_ERROR_CODE;
 }
 
+/* Write to the given file from offset to offset+size */
 int fat32_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
     char* path;
     size_t path_len;
@@ -697,6 +712,7 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint32_t offs
     return FAT32_ERROR_CODE;
 }
 
+/* Create a new file at given path */
 int fat32_create(const char* path) {
     char* dir_path;
     size_t path_len;
@@ -787,6 +803,7 @@ int fat32_create(const char* path) {
     return 1;
 }
 
+/* Create a new folder at the given path */
 int fat32_mkdir(const char* path) {
     char* parent_path;
     size_t path_len;
@@ -849,6 +866,7 @@ int fat32_mkdir(const char* path) {
     return create_directory_entry(new_lba, 0, folder_name, parent_cluster);
 }
 
+/* Delete whatever was at the given absolute name */
 int fat32_remove(const char* name) {
     const char* path;
     size_t path_len;
@@ -915,6 +933,7 @@ int fat32_remove(const char* name) {
     return 0;
 }
 
+/* Get the file object at the given absolute name */
 File* fat32_get(const char* name) {
     uint32_t cluster = find_cluster_for_path(name);
     if (unlikely(cluster == 0 && strcmp(name, "/") != 0)) return NULL;
@@ -1014,6 +1033,7 @@ search_done:
     return f;
 }
 
+/* Get a linked list of all the contents of a given directory */
 FileNode* fat32_getall(const char* path) {
     uint32_t parent_cluster = disk_info->root_cluster;
     if (path[0] != '\0' && strcmp(path, "/") != 0) {
@@ -1086,6 +1106,7 @@ FileNode* fat32_getall(const char* path) {
     return head;
 }
 
+/* Prevent writes to protected LBAs */
 int fat32_check_write_safety(uint32_t lba) {
     if (unlikely(!disk_info)) return 1;
 
