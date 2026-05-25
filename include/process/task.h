@@ -50,11 +50,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
     #error "task.h: macro TASKS_LIST_LEN must be 8, 16, 32, or 64"
 #endif
 
-typedef struct {
-    uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax;
-    uint32_t eip;
-} task_registers_t;
-
 typedef struct task {
     struct task* next;        // Next child task
     struct task* parent;      // Caller

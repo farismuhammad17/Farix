@@ -20,12 +20,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <string.h>
 
+#include "cpu/multicore.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "memory/pmm.h"
+#include "memory/slab.h"
 #include "memory/vmm.h"
 
-#include "memory/slab.h"
+static spinlock slab_lock = 0;
 
 /* Create and initialise new Slab64 */
 Slab64* create_slab64(uint16_t object_size) {
@@ -35,18 +37,17 @@ Slab64* create_slab64(uint16_t object_size) {
         return NULL;
     }
 
-    // Convert the physical page address to a virtual one
+    spin_lock(&slab_lock);
+
     Slab64* slab = (Slab64*) PHYSICAL_TO_VIRTUAL(phys);
     vmm_map_page(vmm_get_current_directory(), phys, (void*) slab, PAGE_PRESENT | PAGE_RW);
 
-    // Zero out the page
     memset(slab, 0, PAGE_SIZE);
 
     slab->next  = NULL;
     slab->prev  = NULL;
     slab->magic = SLAB64_MAGIC;
 
-    // Slabs use powers of 2 for faster calculations
     slab->obj_shift = (object_size <= 1) ? 0 : (32 - __builtin_clz(object_size - 1));
 
     uint32_t actual_capacity = (PAGE_SIZE - (uintptr_t) slab->data + (uintptr_t) slab) >> slab->obj_shift;
@@ -54,22 +55,27 @@ Slab64* create_slab64(uint16_t object_size) {
 
     slab->free_slots = actual_capacity;
 
-    // Mask out unusable bits
     if (actual_capacity < 64) {
         slab->mask = ~((1ULL << actual_capacity) - 1);
     } else {
         slab->mask = 0;
     }
 
+    spin_unlock(&slab_lock);
+
     return slab;
 }
 
 /* Free slab from memory */
 void delete_slab64(Slab64* slab) {
+    spin_lock(&slab_lock);
+
     if (slab->prev)
         slab->prev->next = slab->next;
     if (slab->next)
         slab->next->prev = slab->prev;
+
+    spin_unlock(&slab_lock);
 
     pmm_free_page((void*) vmm_unmap_page(slab));
 }
@@ -81,13 +87,31 @@ void* slab_alloc64(Slab64* head) {
         return NULL;
     }
 
+    spin_lock(&slab_lock);
+
     Slab64* curr = head;
 
     while (unlikely(curr->free_slots == 0)) {
         if (unlikely(curr->next == NULL)) {
-            curr->next = create_slab64(1 << curr->obj_shift);
-            curr->next->prev = curr;
-            curr = curr->next; // Don't bother checking if a new slab is empty
+            spin_unlock(&slab_lock);
+            Slab64* new_slab = create_slab64(1 << curr->obj_shift);
+
+            if (unlikely(!new_slab)) {
+                return NULL;
+            }
+
+            spin_lock(&slab_lock);
+
+            if (likely(curr->next == NULL)) {
+                curr->next = new_slab;
+                new_slab->prev = curr;
+                curr = curr->next;
+            } else {
+                spin_unlock(&slab_lock);
+                pmm_free_page((void*) vmm_unmap_page(new_slab));
+                spin_lock(&slab_lock);
+                continue;
+            }
             break;
         }
 
@@ -95,7 +119,6 @@ void* slab_alloc64(Slab64* head) {
     }
 
     int slot = __builtin_ctzll(~curr->mask);
-
     uintptr_t addr = (uintptr_t) curr->data + (slot << curr->obj_shift);
 
     uintptr_t slab_limit = (uintptr_t) curr + PAGE_SIZE;
@@ -104,43 +127,51 @@ void* slab_alloc64(Slab64* head) {
     if (unlikely(object_end > slab_limit)) {
         err_printf("slab_alloc64: Slab at %p, Object at %p extends to %p (Limit: %p)",
                     curr, addr, object_end, slab_limit);
+        spin_unlock(&slab_lock);
         return NULL;
     }
 
     curr->mask |= (1ULL << slot);
     curr->free_slots--;
 
+    spin_unlock(&slab_lock);
+
     return (void*) addr;
 }
 
 /* Free alloc-ed space in slab */
 void slab_free64(void* ptr) {
-    // Jump to the start of the 4KB page this pointer lives in.
-    // This works because the PMM always gives us page-aligned memory.
     Slab64* slab = (Slab64*)((uintptr_t) ptr & 0xFFFFF000);
+
+    spin_lock(&slab_lock);
 
     if (unlikely(slab->magic != SLAB64_MAGIC)) {
         err_printf("slab_free64: Slab pointer %x has invalid magic", ptr);
+        spin_unlock(&slab_lock);
         return;
     }
 
-    // Find the bit index
     int bit_index = ((uintptr_t) ptr - (uintptr_t) slab->data) >> slab->obj_shift;
 
-    // One instruction to clear the bit
     slab->mask &= ~(1ULL << bit_index);
     slab->free_slots++;
+
+    bool should_free_slab = (slab->free_slots == 64 && slab->prev != NULL);
+    if (should_free_slab) {
+        // Stitch neighbors
+        slab->prev->next = slab->next;
+        if (slab->next) {
+            slab->next->prev = slab->prev;
+        }
+    }
+
+    spin_unlock(&slab_lock);
 
     // Free the slab if its empty
     // If no previous, this is head. Deleting head may lead to thrashing,
     // where the kernel pmm allocs and frees constantly. Manually free
     // from PMM if the slab is done.
-    if (slab->free_slots == 64 && slab->prev != NULL) {
-        // Stitch neighbors
-        slab->prev->next = slab->next;
-        if (slab->next)
-            slab->next->prev = slab->prev;
-
+    if (should_free_slab) {
         // Return the memory to the PMM
         pmm_free_page((void*) vmm_unmap_page(slab));
     }

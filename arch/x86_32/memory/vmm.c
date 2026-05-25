@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <string.h>
 
+#include "cpu/multicore.h"
 #include "memory/pmm.h"
 
 #include "memory/vmm.h"
@@ -36,6 +37,8 @@ const uintptr_t PAGE_CACHE   = 0x0;  // Not present in x86, does nothing, but re
 #define PAGE_WP_BIT 0x00010000
 
 uint32_t* kernel_directory = NULL;
+
+static spinlock vmm_lock = 0;
 
 /* Enable paging */
 static void vmm_enable_paging(uint32_t pd_phys) {
@@ -83,6 +86,9 @@ void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags) {
     uint32_t virt_addr = (uint32_t) virt;
     uint32_t pd_index  = virt_addr >> 22;
     uint32_t pt_index  = (virt_addr >> 12) & 0x3FF;
+
+    spin_lock(&vmm_lock);
+
     uint32_t* pd_virt  = (uint32_t*) PHYSICAL_TO_VIRTUAL(pd_phys);
 
     // Check if the Page Table exists
@@ -106,6 +112,8 @@ void vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags) {
 
     // Flush the TLB for the virtual address we just mapped
     asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
+
+    spin_unlock(&vmm_lock);
 }
 
 /* Unmap virtual address from physical */
@@ -114,9 +122,14 @@ uint32_t vmm_unmap_page(void* virt) {
     uint32_t pd_index  = virt_addr >> 22;
     uint32_t pt_index  = (virt_addr >> 12) & 0x3FF;
 
+    spin_lock(&vmm_lock);
+
     uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(vmm_get_current_directory());
 
-    if (unlikely(!(pd_virt[pd_index] & PAGE_PRESENT))) return 0;
+    if (unlikely(!(pd_virt[pd_index] & PAGE_PRESENT))) {
+        spin_unlock(&vmm_lock);
+        return 0;
+    }
 
     uint32_t pt_phys = pd_virt[pd_index] & ~0xFFF;
     uint32_t* pt_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pt_phys);
@@ -127,6 +140,8 @@ uint32_t vmm_unmap_page(void* virt) {
     pt_virt[pt_index] = 0;
     asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
 
+    spin_unlock(&vmm_lock);
+
     return phys_to_return;
 }
 
@@ -136,6 +151,8 @@ uint32_t* vmm_copy_kernel_directory() {
     uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(phys_pd);
     for (int i = 0; i < 1024; i++) pd_virt[i] = 0;
 
+    spin_lock(&vmm_lock);
+
     uint32_t* k_pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(kernel_directory);
 
     // Copy higher-half
@@ -143,6 +160,8 @@ uint32_t* vmm_copy_kernel_directory() {
         pd_virt[i] = k_pd_virt[i];
     for (int i = 0; i < (VMM_INIT_MAP_SIZE >> 2); i++)
         pd_virt[i] = k_pd_virt[i];
+
+    spin_unlock(&vmm_lock);
 
     return (uint32_t*) phys_pd;
 }
@@ -167,18 +186,28 @@ uint32_t vmm_get_phys(uint32_t* pd_phys, void* virt_addr) {
     uint32_t pd_idx = v >> 22;
     uint32_t pt_idx = (v >> 12) & 0x3FF;
 
+    spin_lock(&vmm_lock);
+
     // Get the Page Directory
     uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pd_phys);
 
     // Check if the Page Table exists
-    if (!(pd_virt[pd_idx] & PAGE_PRESENT)) return 0;
+    if (!(pd_virt[pd_idx] & PAGE_PRESENT)) {
+        spin_unlock(&vmm_lock);
+        return 0;
+    }
 
     // Get the Page Table
     uint32_t pt_phys = pd_virt[pd_idx] & ~0xFFF;
     uint32_t* pt_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pt_phys);
 
     // Check if the Page is present
-    if (!(pt_virt[pt_idx] & PAGE_PRESENT)) return 0;
+    if (!(pt_virt[pt_idx] & PAGE_PRESENT)) {
+        spin_unlock(&vmm_lock);
+        return 0;
+    }
+
+    spin_unlock(&vmm_lock);
 
     // Return the physical address + page offset
     return (pt_virt[pt_idx] & ~0xFFF) | (v & 0xFFF);
@@ -190,14 +219,24 @@ int vmm_is_mapped(uint32_t* pd_phys, void* virt) {
     uint32_t pd_index  = virt_addr >> 22;
     uint32_t pt_index  = (virt_addr >> 12) & 0x3FF;
 
+    spin_lock(&vmm_lock);
+
     uint32_t* pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pd_phys);
 
-    if (unlikely(!(pd_virt[pd_index] & PAGE_PRESENT))) return 0;
+    if (unlikely(!(pd_virt[pd_index] & PAGE_PRESENT))) {
+        spin_unlock(&vmm_lock);
+        return 0;
+    }
 
     uint32_t pt_phys = pd_virt[pd_index] & ~0xFFF;
     uint32_t* pt_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(pt_phys);
 
-    if (unlikely(!(pt_virt[pt_index] & PAGE_PRESENT))) return 0;
+    if (unlikely(!(pt_virt[pt_index] & PAGE_PRESENT))) {
+        spin_unlock(&vmm_lock);
+        return 0;
+    }
+
+    spin_unlock(&vmm_lock);
 
     return 1;
 }

@@ -20,12 +20,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <string.h>
 
+#include "cpu/multicore.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
 
 #include "memory/slab.h"
+
+static spinlock slab_lock = 0;
 
 /* Create and initialise new Slab32 */
 Slab32* create_slab32(uint16_t object_size) {
@@ -34,6 +37,8 @@ Slab32* create_slab32(uint16_t object_size) {
         err_print("create_slab32: pmm_alloc_page failed");
         return NULL;
     }
+
+    spin_lock(&slab_lock);
 
     // Convert the physical page address to a virtual one
     Slab32* slab = (Slab32*) PHYSICAL_TO_VIRTUAL(phys);
@@ -60,15 +65,21 @@ Slab32* create_slab32(uint16_t object_size) {
         slab->mask = 0;
     }
 
+    spin_unlock(&slab_lock);
+
     return slab;
 }
 
 /* Free slab from memory */
 void delete_slab32(Slab32* slab) {
+    spin_lock(&slab_lock);
+
     if (slab->prev)
         slab->prev->next = slab->next;
     if (slab->next)
         slab->next->prev = slab->prev;
+
+    spin_unlock(&slab_lock);
 
     pmm_free_page((void*) vmm_unmap_page(slab));
 }
@@ -80,13 +91,32 @@ void* slab_alloc32(Slab32* head) {
         return NULL;
     }
 
+    spin_lock(&slab_lock);
+
     Slab32* curr = head;
 
     while (unlikely(curr->free_slots == 0)) {
         if (unlikely(curr->next == NULL)) {
-            curr->next = create_slab32(1 << curr->obj_shift);
-            curr->next->prev = curr;
-            curr = curr->next; // Don't bother checking if a new slab is empty
+            spin_unlock(&slab_lock);
+            Slab32* new_slab = create_slab32(1 << curr->obj_shift);
+
+            if (unlikely(!new_slab)) {
+                return NULL;
+            }
+
+            spin_lock(&slab_lock);
+
+            if (likely(curr->next == NULL)) {
+                curr->next = new_slab;
+                new_slab->prev = curr;
+                curr = curr->next;
+            } else {
+                // Another core beat us to expanding the slab. Clean up our duplicate up outside the lock.
+                spin_unlock(&slab_lock);
+                pmm_free_page((void*) vmm_unmap_page(new_slab));
+                spin_lock(&slab_lock);
+                continue; // Loop back and use the newly appended slab instead
+            }
             break;
         }
 
@@ -103,11 +133,14 @@ void* slab_alloc32(Slab32* head) {
     if (unlikely(object_end > slab_limit)) {
         err_printf("slab_alloc32: Slab at %p, Object at %p extends to %p (Limit: %p)",
                     curr, addr, object_end, slab_limit);
+        spin_unlock(&slab_lock);
         return NULL;
     }
 
     curr->mask |= (1ULL << slot);
     curr->free_slots--;
+
+    spin_unlock(&slab_lock);
 
     return (void*) addr;
 }
@@ -117,6 +150,8 @@ void slab_free32(void* ptr) {
     // Jump to the start of the 4KB page this pointer lives in.
     // This works because the PMM always gives us page-aligned memory.
     Slab32* slab = (Slab32*)((uintptr_t) ptr & 0xFFFFF000);
+
+    spin_lock(&slab_lock);
 
     if (unlikely(slab->magic != SLAB32_MAGIC)) {
         err_printf("slab_free32: Slab pointer %x has invalid magic", ptr);
@@ -130,16 +165,22 @@ void slab_free32(void* ptr) {
     slab->mask &= ~(1U << bit_index);
     slab->free_slots++;
 
+    bool should_free_slab = (slab->free_slots == 32 && slab->prev != NULL);
+    if (should_free_slab) {
+        // Stitch neighbors
+        slab->prev->next = slab->next;
+        if (slab->next) {
+            slab->next->prev = slab->prev;
+        }
+    }
+
+    spin_unlock(&slab_lock);
+
     // Free the slab if its empty
     // If no previous, this is head. Deleting head may lead to thrashing,
     // where the kernel pmm allocs and frees constantly. Manually free
     // from PMM if the slab is done.
-    if (slab->free_slots == 32 && slab->prev != NULL) {
-        // Stitch neighbors
-        slab->prev->next = slab->next;
-        if (slab->next)
-            slab->next->prev = slab->prev;
-
+    if (should_free_slab) {
         // Return the memory to the PMM
         pmm_free_page((void*) vmm_unmap_page(slab));
     }

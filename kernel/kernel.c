@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "cpu/ints.h"
 #include "cpu/irq.h"
+#include "cpu/multicore.h"
 #include "cpu/timer.h"
 #include "drivers/acpi/acpi.h"
 #include "drivers/keyboard.h"
@@ -28,9 +29,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/storage/bdl.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
-#include "fs/elf.h"
 #include "fs/fat32.h"
 #include "fs/ramdisk.h"
+#include "fs/types/elf.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
 #include "process/task.h"
@@ -103,9 +104,16 @@ is defined to a truthy value, it would boot into the built-in kernel shell, else
 would boot into the `shelf.elf` file. If the shelf executable is absent, it would run
 the kernel shell anyway as a fallback.
 
+- init_multicore
+
+The only reason init_multicore is swept at the bottom of the initialisation sequence is
+because it is slow. It wastes time using the PIT for hardware required stalls.
+
 Once everything is done, the kernel must run into a forever halt loop. Without this,
 the CPU would finish executation, and terminate, which would turn off the computer.
 Making it halt would also cause the CPU to not use up energy while doing nothing.
+Interrupts take the CPU from this halt loop to the required instruction, hence only
+performing work when required.
 */
 void kmain() {
     init_interrupts();
@@ -133,24 +141,22 @@ void kmain() {
     init_ramdisk();
     init_fat32();
 
-    vfs_mount(&fat32_vfs); // TODO: One day have a proper disk file system like EXT2 or FAT32 and mount onto it instead
+    vfs_mount(&fat32_vfs);
 
     init_battery();
 
     create_task(handle_mouse, "Terminal mouse handler", 0);
 
-    File* shelf_file = fs_get("shelf.elf");
+    File* shelf_file = fs_get("system/shelf.elf");
     if (shelf_file && !BOOT_INTO_KSHELL) {
-        task* shelf_task = exec_elf("shelf.elf");
+        task* shelf_task = exec_elf("system/shelf.elf");
         shelf_task->privilege = PRIV_SUPER;
     } else {
         create_task(shell_thread, "Shell", 0);
     }
-    kfree(shelf_file);
+    kfree((void*) shelf_file);
 
-    // The OS must NEVER die.
-    // Interrupts take back control from this loop whenever
-    // they are called, so the OS is never stuck in the
-    // while loop forever.
+    init_multicore();
+
     while (1) system_halt();
 }

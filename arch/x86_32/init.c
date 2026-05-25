@@ -20,10 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 #include <stdio.h>
 
-#include "include/gdt.h"
-#include "include/multiboot.h"
-#include "include/pic.h"
-#include "include/tss.h"
+#include "gdt.h"
+#include "multiboot.h"
+#include "pic.h"
+#include "tss.h"
 
 #include "cpu/pci.h"
 #include "drivers/terminal.h"
@@ -47,7 +47,7 @@ void arch_kmain(uint32_t magic, multiboot_info* _mbi) {
     early_kmain();
 
     if (unlikely(magic != MULTIBOOT_BOOTLOADER_MAGIC)) {
-        err_print("arch_kmain: Invalid Multiboot Magic Number");
+        err_printf("arch_kmain: Invalid Multiboot Magic Number: %x", magic);
         while(1) asm volatile("hlt");
     }
 

@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define VFS_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 typedef struct {
@@ -36,6 +37,8 @@ typedef struct FileNode {
 } FileNode;
 
 typedef struct {
+    char name[8];
+
     int       (*read)   (const char* name, void* buffer, size_t size, uint32_t offset);
     int       (*write)  (const char* name, const void* buffer, size_t size, uint32_t offset);
     int       (*create) (const char* name);

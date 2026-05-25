@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "drivers/terminal.h"
 
+#include "fs/ramdisk.h"
 #include "fs/vfs.h"
 
 VFS* current_vfs = NULL;

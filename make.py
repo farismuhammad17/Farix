@@ -53,7 +53,8 @@ if not os.path.exists(globals.MAKE_CONF_JSON):
         json.dump({
             "BOOT_USB_PATH": None,
             "DEFAULT_ARCH": DEFAULT_ARCH,
-            "THREADS": 4
+            "THREADS": 4,
+            "CORES": 4
         }, mjson, indent=4)
 
 with open(globals.MAKE_CONF_JSON) as mjson:
@@ -89,6 +90,14 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    "-cores", "-c",
+    dest="cores",
+    type=int,
+    default=conf_data.get("CORES", 4),
+    help="Number of threads to use for compilation"
+)
+
+arg_parser.add_argument(
     "--log", "--l",
     dest="log",
     action="store_true",
@@ -102,6 +111,7 @@ globals.LOGGING = args.log
 globals.THREADS = args.threads
 
 STORAGE_DEV = args.storage_dev
+CORES = args.cores if args.cores > 0 else 1
 
 globals.IGNORES = (
     # These ACPI stuff come with ACPICA, having these make it easier to
@@ -137,6 +147,8 @@ if globals.arch == "x86_32":
         "-m 256 "
         "-boot menu=on,strict=on "
         "-global i8042.extended-state=off "
+
+        f"-smp {CORES} "
 
         "-device virtio-mouse-pci "
         "-vga std "
@@ -180,26 +192,25 @@ globals.TARGET_DIR = globals.PREFIX.rstrip('-')
 
 globals.PROJECT_ROOT = os.getcwd()
 
-globals.NEWLIB_SRC = os.path.join(globals.PROJECT_ROOT, "newlib-cygwin")
-globals.NEWLIB_TARGET = globals.PREFIX.rstrip('-')
 globals.LIBC_INSTALL_DIR = os.path.join(os.getcwd(), f"libc_build_{globals.arch}")
 globals.LIBC_DIR = os.path.join(globals.LIBC_INSTALL_DIR, globals.TARGET_DIR)
 globals.LIBC_INC = os.path.join(globals.LIBC_DIR, "include")
 globals.LIBC_LIB = os.path.join(globals.LIBC_DIR, "lib")
 
-globals.ACPICA_ARCH_INDEPENDANT = os.path.join(globals.PROJECT_ROOT, "include/drivers/acpi")
-globals.ACPICA_ARCH_DEPENDANT   = os.path.join(globals.PROJECT_ROOT, f"arch/{globals.arch}/include/acpi")
-
 globals.CC = f"{globals.PREFIX}gcc"
 globals.AS = f"{globals.PREFIX}as"
+
+ACPICA_ARCH_INDEPENDANT = os.path.join(globals.PROJECT_ROOT, "include/drivers/acpi")
+ACPICA_ARCH_DEPENDANT   = os.path.join(globals.PROJECT_ROOT, f"arch/{globals.arch}/include/acpi")
 
 globals.CFLAGS = (
     "-ffreestanding -O2 -Wall -Wextra -fno-exceptions "
     "-fdiagnostics-color=always "
     f"-Iinclude -I{globals.LIBC_INC} "
-    f"-I{globals.ACPICA_ARCH_INDEPENDANT} -I{globals.ACPICA_ARCH_DEPENDANT} "
-    "-include include/kernel.h "
+    f"-I{ACPICA_ARCH_INDEPENDANT} -I{ACPICA_ARCH_DEPENDANT} "
+    f"-Iarch/{globals.arch}/include "
     f"-Iarch/{globals.arch} "
+    "-include include/kernel.h "
 )
 
 globals.ACPICA_SRC = "kernel/drivers/acpi"
@@ -207,13 +218,10 @@ globals.ACPICA_CFLAGS = (
     "-ffreestanding -O2 -Wall -Wextra -fno-exceptions "
     "-fdiagnostics-color=always "
     f"-Iinclude -I{globals.LIBC_INC} "
-    f"-I{globals.ACPICA_ARCH_INDEPENDANT} -I{globals.ACPICA_ARCH_DEPENDANT} "
+    f"-I{ACPICA_ARCH_INDEPENDANT} -I{ACPICA_ARCH_DEPENDANT} "
 )
 
 globals.BOOT_OBJ = "build/boot.o"
-
-globals.CRTBEGIN = globals.run(f"{globals.CC} {globals.CFLAGS} -print-file-name=crtbegin.o")
-globals.CRTEND   = globals.run(f"{globals.CC} {globals.CFLAGS} -print-file-name=crtend.o")
 
 globals.USER_LIBC_DIR = f"arch/{globals.arch}/libc"
 globals.USER_LIBC = "kernel/libc/user.c"
@@ -225,7 +233,6 @@ globals.USER_LIBC_OBJ = "build/kernel/libc/user.o"
 globals.USER_LIBC_ARCH_OBJ = f"{globals.USER_BUILD_DIR}/user.o"
 globals.USER_ASM_OBJ  = f"{globals.USER_BUILD_DIR}/user_asm.o"
 
-globals.APPS_ROOT = "apps"
 globals.USER_CFLAGS = f"-ffreestanding -O2 -Iinclude -I{globals.LIBC_INC} -include include/kernel.h"
 
 # --- MAIN ---

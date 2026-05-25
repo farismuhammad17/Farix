@@ -151,6 +151,8 @@ typedef struct {
 static fat32_header_t* disk_info = NULL;
 
 VFS fat32_vfs = {
+    .name = "FAT32",
+
     .read   = fat32_read,
     .write  = fat32_write,
     .create = fat32_create,

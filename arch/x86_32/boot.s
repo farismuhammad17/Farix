@@ -39,7 +39,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 .align 16
 stack_bottom:
 .global stack_bottom
-.skip 65536 /* 64 KiB of space */
+.skip 65536 /* 64 KiB stack */
 stack_top:
 .global stack_top
 
@@ -58,11 +58,3 @@ _start:
 
 	/* Call the C function */
 	call arch_kmain
-
-	/* Safety Net */
-	/* If kernel_main ever returns, we put the CPU in an infinite loop */
-cli
-1:	hlt
-	jmp 1b
-
-.size _start, . - _start

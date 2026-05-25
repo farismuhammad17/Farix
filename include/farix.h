@@ -90,7 +90,6 @@ typedef struct {
     uint32_t stack_origin;
     uint32_t page_dir;
     char     name[32];
-    uint32_t eax, ebx, ecx, edx, esi, edi, ebp, eip;
 } TaskData;
 
 typedef struct {

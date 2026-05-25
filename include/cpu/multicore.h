@@ -17,35 +17,32 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#ifndef MULTICORE_H
+#define MULTICORE_H
+
 #include <stdint.h>
 
-#include "gdt.h"
+#include "hal.h"
 
-#include "memory/heap.h"
-#include "memory/vmm.h"
+#define MAX_CORES 256
 
-#include "include/tss.h"
+typedef volatile uint32_t spinlock;
 
-TSSEntry tss_entry;
+extern uint8_t  core_apic_ids[MAX_CORES];
+extern uint32_t core_count;
 
-/* Initialises the TSS */
-void init_tss(uint32_t idx, uint32_t kss, uint32_t kesp) {
-    uint32_t base = (uint32_t) PHYSICAL_TO_VIRTUAL(&tss_entry);
-    uint32_t limit = sizeof(TSSEntry);
+void RARE_FUNC init_multicore();
 
-    // Access: 0x89 (Present, Executable, Accessed, Ring 0)
-    gdt_set_entry(idx, base, limit, 0x89, 0x00);
-
-    kmemset(&tss_entry, 0, sizeof(TSSEntry));
-
-    tss_entry.ss0  = kss; // Usually 0x10 (Kernel Data)
-    tss_entry.esp0 = kesp;
-
-    // Set the I/O map base to the size of the TSS to disable it
-    tss_entry.iomap_base = sizeof(TSSEntry);
+/* Lock given spinlock */
+static inline void spin_lock(spinlock *lock) {
+    while (__sync_lock_test_and_set(lock, 1)) {
+        system_pause();
+    }
 }
 
-/* Changes ESP0 to given stack */
-void set_kernel_stack(uint32_t stack) {
-    tss_entry.esp0 = stack;
+/* Unlock given spinlock */
+static inline void spin_unlock(spinlock *lock) {
+    __sync_lock_release(lock);
 }
+
+#endif

@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef TSS_H
 #define TSS_H
 
+#include <stdint.h>
+
 typedef struct TSSEntry {
     uint32_t prev_tss;
     uint32_t esp0;     // Kernel stack pointer

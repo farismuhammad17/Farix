@@ -23,6 +23,9 @@ from concurrent.futures import ThreadPoolExecutor
 import makefile.globals as m
 
 def farix_bin_x86_32():
+    CRTBEGIN = m.run(f"{m.CC} {m.CFLAGS} -print-file-name=crtbegin.o")
+    CRTEND   = m.run(f"{m.CC} {m.CFLAGS} -print-file-name=crtend.o")
+
     CRTI_SRC = "arch/x86_32/asm/boot/crti.asm"
     CRTN_SRC = "arch/x86_32/asm/boot/crtn.asm"
     BOOT_SRC = "arch/x86_32/boot.s"
@@ -58,11 +61,11 @@ def farix_bin_x86_32():
 
     # Link compiled files
     ld_flags = "-T arch/x86_32/linker.ld -ffreestanding -O2 -nostdlib"
-    all_objs = [m.BOOT_OBJ, CRTI_OBJ, m.CRTBEGIN] + c_objs + other_asm_objs
+    all_objs = [m.BOOT_OBJ, CRTI_OBJ, CRTBEGIN] + c_objs + other_asm_objs
     objs = " ".join(all_objs)
     libs = f"-L{m.LIBC_LIB} -lc -lm -lgcc"
 
-    cmd = f"{m.CC} {ld_flags} -o farix.bin {objs} {libs} {m.CRTEND} {CRTN_OBJ}"
+    cmd = f"{m.CC} {ld_flags} -o farix.bin {objs} {libs} {CRTEND} {CRTN_OBJ}"
 
     print("\x1b[3;33mLinking farix.bin for x86_32...\x1b[0m")
     m.run(cmd)

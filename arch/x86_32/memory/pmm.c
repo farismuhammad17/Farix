@@ -21,7 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
-#include "include/multiboot.h"
+#include "multiboot.h"
+
+#include "cpu/multicore.h"
 
 #include "memory/pmm.h"
 
@@ -34,7 +36,9 @@ extern char _kernel_end;
 
 extern multiboot_info* mbi;
 
-static uint32_t pmm_bitmap[BITMAP_SIZE];
+static uint32_t pmm_bitmap[PMM_BITMAP_SIZE];
+
+static spinlock pmm_lock = 0;
 
 /* Mark a page as USED (1) */
 static inline void pmm_set_bit(uint32_t page_number) {
@@ -66,14 +70,14 @@ void init_pmm() {
     if (unlikely(!(mbi->flags & (1 << 6)))) return;
 
     // Start by marking everything as used (1)
-    for (int i = 0; i < BITMAP_SIZE; i++) pmm_bitmap[i] = FULL_MASK;
+    for (int i = 0; i < PMM_BITMAP_SIZE; i++) pmm_bitmap[i] = FULL_MASK;
 
     // Clear bits for available memory according to Multiboot
     multiboot_mmap_entry* mmap = (multiboot_mmap_entry*) mbi->mmap_addr;
     while((uint32_t) mmap < mbi->mmap_addr + mbi->mmap_length) {
         if (mmap->type == 1) { // 1 -> Available RAM | 2 -> Reserved | Others -> Other stuff
-            uint32_t start_page  = (uint32_t) mmap->addr >> LOG2_PAGE_SIZE;
-            uint32_t total_pages = (uint32_t) mmap->len  >> LOG2_PAGE_SIZE;
+            uint32_t start_page  = (uint32_t) mmap->addr / PAGE_SIZE;
+            uint32_t total_pages = (uint32_t) mmap->len  / PAGE_SIZE;
 
             for (uint32_t i = start_page; i < total_pages + start_page; i++) {
                 pmm_clear_bit(i);
@@ -86,32 +90,36 @@ void init_pmm() {
     for (uint32_t i = 0; i < 256; i++) pmm_set_bit(i);
 
     // Protect Kernel (_kernel_start to _kernel_end)
-    uint32_t start_p = (uint32_t)  &_kernel_start >> LOG2_PAGE_SIZE;
-    uint32_t end_p   = ((uint32_t) &_kernel_end + PAGE_SIZE - 1) >> LOG2_PAGE_SIZE;
+    uint32_t start_p = (uint32_t)  &_kernel_start / PAGE_SIZE;
+    uint32_t end_p   = ((uint32_t) &_kernel_end + PAGE_SIZE - 1) / PAGE_SIZE;
     for (uint32_t i = start_p; i <= end_p; i++) pmm_set_bit(i);
 
     // Protect the Bitmap itself
-    uint32_t b_start = (uint32_t)  pmm_bitmap >> LOG2_PAGE_SIZE;
-    uint32_t b_end   = ((uint32_t) pmm_bitmap + sizeof(pmm_bitmap) + PAGE_SIZE - 1) >> LOG2_PAGE_SIZE;
+    uint32_t b_start = (uint32_t)  pmm_bitmap / PAGE_SIZE;
+    uint32_t b_end   = ((uint32_t) pmm_bitmap + sizeof(pmm_bitmap) + PAGE_SIZE - 1) / PAGE_SIZE;
     for (uint32_t i = b_start; i <= b_end; i++) pmm_set_bit(i);
 
     // Protect Multiboot structure
-    pmm_set_bit((uint32_t) mbi >> LOG2_PAGE_SIZE);
+    pmm_set_bit((uint32_t) mbi / PAGE_SIZE);
 }
 
-/*
-Request a 4 KB page from the PMM using a first-fit algorithm.
-*/
+/* Request a 4 KB page from the PMM using a first-fit algorithm. */
 void* pmm_alloc_page() {
-    for (uint32_t i = 0; i < BITMAP_SIZE; i++) { // First-Fit algorithm
+    spin_lock(&pmm_lock);
+
+    for (uint32_t i = 0; i < PMM_BITMAP_SIZE; i++) { // First-Fit algorithm
         if (unlikely(!IS_FULL(i))) {
             // Find first zero bit by inverting and counting trailing zeros
             uint32_t page_number = (i << 5) | __builtin_ctz(~pmm_bitmap[i]);
             pmm_set_bit(page_number);
 
-            return (void*)((uintptr_t) page_number << LOG2_PAGE_SIZE);
+            spin_unlock(&pmm_lock);
+
+            return (void*)((uintptr_t) page_number * PAGE_SIZE);
         }
     }
+
+    spin_unlock(&pmm_lock);
 
     // If we're out of memory
     return NULL;
@@ -122,10 +130,12 @@ Iterates through the PMM To find the first continuous block of pages that was
 required, and if none is found, NULL.
 */
 void* pmm_alloc_pages(size_t length) {
-    if (unlikely(length == 0)) return NULL;
+    if (unlikely(length <= 0)) return NULL;
     if (unlikely(length == 1)) return pmm_alloc_page();
 
-    for (uint32_t i = 0; i <= (BITMAP_SIZE * 32) - length;) {
+    spin_lock(&pmm_lock);
+
+    for (uint32_t i = 0; i <= (PMM_BITMAP_SIZE * 32) - length;) {
         // Skip quickly if the current bit is set
         if (pmm_test_bit(i)) {
             // If the whole 32-bit chunk is full, skip it
@@ -158,12 +168,16 @@ void* pmm_alloc_pages(size_t length) {
                 }
             }
 
-            return (void*)((uintptr_t) i << LOG2_PAGE_SIZE);
+            spin_unlock(&pmm_lock);
+
+            return (void*)((uintptr_t) i * PAGE_SIZE);
         }
 
         // Jump to the bit after the one that failed
         i += pages_found + 1;
     }
+
+    spin_unlock(&pmm_lock);
 
     return NULL;
 }
@@ -171,7 +185,9 @@ void* pmm_alloc_pages(size_t length) {
 /* Unmark the page from the bitmask, letting another process overwrite it later */
 void pmm_free_page(void* addr) {
     uint32_t address     = (uint32_t) addr;
-    uint32_t page_number = address >> LOG2_PAGE_SIZE;
+    uint32_t page_number = address / PAGE_SIZE;
 
+    spin_lock(&pmm_lock);
     pmm_clear_bit(page_number);
+    spin_unlock(&pmm_lock);
 }

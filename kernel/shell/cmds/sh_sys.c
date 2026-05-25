@@ -17,35 +17,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdint.h>
+#include "fs/vfs.h"
+#include "syshw/power.h"
 
-#include "gdt.h"
+#include "shell/commands.h"
+#include "shell/shell.h"
 
-#include "memory/heap.h"
-#include "memory/vmm.h"
-
-#include "include/tss.h"
-
-TSSEntry tss_entry;
-
-/* Initialises the TSS */
-void init_tss(uint32_t idx, uint32_t kss, uint32_t kesp) {
-    uint32_t base = (uint32_t) PHYSICAL_TO_VIRTUAL(&tss_entry);
-    uint32_t limit = sizeof(TSSEntry);
-
-    // Access: 0x89 (Present, Executable, Accessed, Ring 0)
-    gdt_set_entry(idx, base, limit, 0x89, 0x00);
-
-    kmemset(&tss_entry, 0, sizeof(TSSEntry));
-
-    tss_entry.ss0  = kss; // Usually 0x10 (Kernel Data)
-    tss_entry.esp0 = kesp;
-
-    // Set the I/O map base to the size of the TSS to disable it
-    tss_entry.iomap_base = sizeof(TSSEntry);
+/* Outputs the current VFS */
+void cmd_vfs(UNUSED_ARG const char* args) {
+    sh_print("%s\n", current_vfs->name);
 }
 
-/* Changes ESP0 to given stack */
-void set_kernel_stack(uint32_t stack) {
-    tss_entry.esp0 = stack;
+/* Shutdown command */
+void cmd_shutdown(UNUSED_ARG const char* args) {
+    sh_print("Shutting down...");
+    system_set_power_state(5);
+}
+
+/* Reboot/Restart command */
+void cmd_reboot(UNUSED_ARG const char* args) {
+    sh_print("Rebooting...");
+    system_reboot();
 }

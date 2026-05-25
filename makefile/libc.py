@@ -21,6 +21,9 @@ import os
 
 import makefile.globals as m
 
+NEWLIB_SRC = os.path.join(os.getcwd(), "newlib-cygwin")
+NEWLIB_TARGET = m.PREFIX.rstrip('-')
+
 def libc_x86_32():
     # Ensure we use the i686-elf prefix and the arch-specific build folder
     build_dir = "build/newlib-x86_32-build"
@@ -30,7 +33,7 @@ def libc_x86_32():
         f"cd {build_dir} && "
         f"CC_FOR_TARGET={m.PREFIX}gcc AS_FOR_TARGET={m.PREFIX}as "
         f"LD_FOR_TARGET={m.PREFIX}ld RANLIB_FOR_TARGET={m.PREFIX}ranlib "
-        f"{m.NEWLIB_SRC}/configure --target={m.NEWLIB_TARGET} --prefix={m.LIBC_INSTALL_DIR} "
+        f"{NEWLIB_SRC}/configure --target={NEWLIB_TARGET} --prefix={LIBC_INSTALL_DIR} "
         f"--disable-newlib-supplied-syscalls --with-newlib --enable-languages=c,c++"
     )
 
@@ -48,7 +51,7 @@ def libc_arm32():
         f"cd {build_dir} && "
         f"CC_FOR_TARGET={m.CC} AS_FOR_TARGET={m.AS} "
         f"LD_FOR_TARGET={m.PREFIX}ld RANLIB_FOR_TARGET={m.PREFIX}ranlib "
-        f"{m.NEWLIB_SRC}/configure --target={m.NEWLIB_TARGET} --prefix={m.LIBC_INSTALL_DIR} "
+        f"{NEWLIB_SRC}/configure --target={NEWLIB_TARGET} --prefix={LIBC_INSTALL_DIR} "
         f"--disable-newlib-supplied-syscalls --with-newlib --enable-languages=c"
     )
 

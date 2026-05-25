@@ -97,36 +97,6 @@ void cmd_kill(const char* args) {
     kill_task(pid);
 }
 
-/* View task registers command */
-void cmd_peek(const char* args) {
-    if (unlikely(args[0] == '\0')) {
-        sh_print("Usage: peek <pid>\n");
-        return;
-    }
-
-    uint32_t target_pid = atoi(args);
-    task* t = get_task(target_pid);
-
-    if (unlikely(t == NULL)) {
-        sh_print("Task not found\n");
-        return;
-    }
-
-    task_registers_t* regs = (task_registers_t*) t->stack_pointer;
-
-    sh_print("Name            %s\n", t->name);
-    sh_print("State:          %d\n", t->state);
-    if (t->parent)
-        sh_print("Parent:         %s (%d)\n", t->parent->name, t->parent->id);
-    if (t->next)
-        sh_print("Next task:      %s (%d)\n", t->next->name, t->next->id);
-    sh_print("Page directory: %p\n", t->page_directory);
-    sh_print("Stack origin:   %p\n", t->stack_origin);
-    sh_print("EAX: %08x   EBX: %08x   ECX: %08x\n", regs->eax, regs->ebx, regs->ecx);
-    sh_print("EDX: %08x   ESI: %08x   EDI: %08x\n", regs->edx, regs->esi, regs->edi);
-    sh_print("EIP: %08x   EBP: %08x   ESP: %08x\n", regs->eip, regs->ebp, t->stack_pointer);
-}
-
 /* View tasks in task list command */
 void cmd_tlist(const char* args) {
     task_list* list = first_task_list;

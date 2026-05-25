@@ -29,7 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/vmm.h"
 #include "process/task.h"
 
-#include "fs/elf.h"
+#include "fs/types/elf.h"
 
 extern uint32_t stack_top; // From boot.s
 extern void elf_user_trampoline_stub(uint32_t entry, uint32_t stack);

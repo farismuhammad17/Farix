@@ -48,6 +48,8 @@ static unsigned long djb2_hash(const char* name) {
 static File* files_table[RAMDISK_HASH_SIZE];
 
 VFS ramdisk_vfs = {
+    .name  = "RAMDISK",
+
     .read   = ramdisk_read,
     .write  = ramdisk_write,
     .create = ramdisk_create,

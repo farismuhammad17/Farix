@@ -20,12 +20,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <string.h>
 
+#include "cpu/multicore.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
 
 #include "memory/slab.h"
+
+static spinlock slab_lock = 0;
 
 /* Create and initialise new Slab8 */
 Slab8* create_slab8(uint16_t object_size) {
@@ -34,6 +37,8 @@ Slab8* create_slab8(uint16_t object_size) {
         err_print("create_slab8: pmm_alloc_page failed\n");
         return NULL;
     }
+
+    spin_lock(&slab_lock);
 
     // Convert the physical page address to a virtual one
     Slab8* slab = (Slab8*) PHYSICAL_TO_VIRTUAL(phys);
@@ -60,15 +65,21 @@ Slab8* create_slab8(uint16_t object_size) {
         slab->mask = 0;
     }
 
+    spin_unlock(&slab_lock);
+
     return slab;
 }
 
 /* Free slab from memory */
 void delete_slab8(Slab8* slab) {
+    spin_lock(&slab_lock);
+
     if (slab->prev)
         slab->prev->next = slab->next;
     if (slab->next)
         slab->next->prev = slab->prev;
+
+    spin_unlock(&slab_lock);
 
     pmm_free_page((void*) vmm_unmap_page(slab));
 }
@@ -80,13 +91,31 @@ void* slab_alloc8(Slab8* head) {
         return NULL;
     }
 
+    spin_lock(&slab_lock);
+
     Slab8* curr = head;
 
     while (unlikely(curr->free_slots == 0)) {
         if (unlikely(curr->next == NULL)) {
-            curr->next = create_slab8(1 << curr->obj_shift);
-            curr->next->prev = curr;
-            curr = curr->next; // Don't bother checking if a new slab is empty
+            spin_unlock(&slab_lock);
+            Slab8* new_slab = create_slab8(1 << curr->obj_shift);
+
+            if (unlikely(!new_slab)) {
+                return NULL;
+            }
+
+            spin_lock(&slab_lock);
+
+            if (likely(curr->next == NULL)) {
+                curr->next = new_slab;
+                new_slab->prev = curr;
+                curr = curr->next;
+            } else {
+                spin_unlock(&slab_lock);
+                pmm_free_page((void*) vmm_unmap_page(new_slab));
+                spin_lock(&slab_lock);
+                continue;
+            }
             break;
         }
 
@@ -103,11 +132,14 @@ void* slab_alloc8(Slab8* head) {
     if (unlikely(object_end > slab_limit)) {
         err_printf("slab_alloc8: Slab at %p, Object at %p extends to %p (Limit: %p)",
                     curr, addr, object_end, slab_limit);
+        spin_unlock(&slab_lock);
         return NULL;
     }
 
     curr->mask |= (1ULL << slot);
     curr->free_slots--;
+
+    spin_unlock(&slab_lock);
 
     return (void*) addr;
 }
@@ -118,8 +150,11 @@ void slab_free8(void* ptr) {
     // This works because the PMM always gives us page-aligned memory.
     Slab8* slab = (Slab8*)((uintptr_t) ptr & 0xFFFFF000);
 
+    spin_lock(&slab_lock);
+
     if (unlikely(slab->magic != SLAB8_MAGIC)) {
         err_printf("slab_free8: Slab pointer %x has invalid magic", ptr);
+        spin_unlock(&slab_lock);
         return;
     }
 
@@ -130,16 +165,22 @@ void slab_free8(void* ptr) {
     slab->mask &= ~(1U << bit_index);
     slab->free_slots++;
 
+    bool should_free_slab = (slab->free_slots == 8 && slab->prev != NULL);
+    if (should_free_slab) {
+        // Stitch neighbors
+        slab->prev->next = slab->next;
+        if (slab->next) {
+            slab->next->prev = slab->prev;
+        }
+    }
+
+    spin_unlock(&slab_lock);
+
     // Free the slab if its empty
     // If no previous, this is head. Deleting head may lead to thrashing,
     // where the kernel pmm allocs and frees constantly. Manually free
     // from PMM if the slab is done.
-    if (slab->free_slots == 8 && slab->prev != NULL) {
-        // Stitch neighbors
-        slab->prev->next = slab->next;
-        if (slab->next)
-            slab->next->prev = slab->prev;
-
+    if (should_free_slab) {
         // Return the memory to the PMM
         pmm_free_page((void*) vmm_unmap_page(slab));
     }

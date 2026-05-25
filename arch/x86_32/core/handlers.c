@@ -28,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
-#include "fs/elf.h"
+#include "fs/types/elf.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
@@ -588,17 +588,6 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
             out->stack_origin  = (uint32_t) t->stack_origin;
             out->page_dir      = (uint32_t) t->page_directory;
             strncpy(out->name, t->name, 31);
-
-            // Snapshot registers from the saved stack
-            task_registers_t* kregs = (task_registers_t*) t->stack_pointer;
-            out->eax = kregs->eax;
-            out->ebx = kregs->ebx;
-            out->ecx = kregs->ecx;
-            out->edx = kregs->edx;
-            out->esi = kregs->esi;
-            out->edi = kregs->edi;
-            out->eip = kregs->eip;
-            out->ebp = kregs->ebp;
 
             regs->eax = SYS_DONE;
             break;

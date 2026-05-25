@@ -52,6 +52,7 @@ Usage: \x1b[1m m [target] <architecture>\x1b[0m
     \x1b[1m-arch\x1b[0m           Architecture to compile to
     \x1b[1m-threads\x1b[0m        Number of threads to compile with
     \x1b[1m-storage\x1b[0m        Options: AHCI, ATA
+    \x1b[1m-cores\x1b[0m          Number of CPU cores to launch from
     \x1b[1m--log\x1b[0m           Write all command output text to \x1b[90mbuild.log\x1b[0m
 
 \x1b[1;36mConfiguration:\x1b[0m \x1b[90m(make.conf.json)\x1b[0m

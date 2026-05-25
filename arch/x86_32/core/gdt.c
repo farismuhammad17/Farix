@@ -19,11 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-#include "include/tss.h"
+#include "tss.h"
 
 #include "memory/vmm.h"
 
-#include "include/gdt.h"
+#include "gdt.h"
 
 // Defined in asm/gdt_flush.asm
 extern void gdt_flush(uint32_t gdt_ptr_addr);

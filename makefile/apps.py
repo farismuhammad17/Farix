@@ -22,6 +22,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import makefile.globals as m
 
+APPS_ROOT = "apps"
+
 def compile_apps():
     os.makedirs(m.USER_BUILD_DIR, exist_ok=True)
 
@@ -33,8 +35,8 @@ def compile_apps():
 
     # Iterate through every folder in /apps
     app_link_data = []
-    for app_name in os.listdir(m.APPS_ROOT):
-        app_dir = os.path.join(m.APPS_ROOT, app_name)
+    for app_name in os.listdir(APPS_ROOT):
+        app_dir = os.path.join(APPS_ROOT, app_name)
         if not os.path.isdir(app_dir):
             continue
 
@@ -88,5 +90,5 @@ def deploy_apps():
         for f in os.listdir(m.USER_BUILD_DIR):
             if f.endswith(".elf"):
                 elf_path = os.path.join(m.USER_BUILD_DIR, f)
-                m.run(f"mcopy -i {m.DISK_PATH} -o {elf_path} ::/{f}")
+                m.run(f"mcopy -i {m.DISK_PATH} -o {elf_path} ::/system/{f}")
                 print(f"\x1b[32mDeployed {f}\x1b[0m")

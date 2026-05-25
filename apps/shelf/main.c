@@ -56,7 +56,6 @@ ShellCommand command_table[] = {
     {"ls", cmd_ls, "List directory contents"},
     {"tasks", cmd_tasks, "List of running tasks"},
     {"kill", cmd_kill, "Kill a task given the process ID"},
-    {"peek", cmd_peek, "Inspect a task"},
     {"tlist", cmd_tlist, "Bit map of every task list"},
 
     {NULL, NULL, NULL} // to mark the end

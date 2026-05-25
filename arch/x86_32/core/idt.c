@@ -26,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define IDT_GATE_KERNEL 0x8E  // 1000 1110: Present, Ring 0, Interrupt Gate
 #define IDT_GATE_USER   0xEE  // 1110 1110: Present, Ring 3, Interrupt Gate
 
-typedef struct idt_entry {
+typedef struct {
     uint16_t base_low;    // Lower 16 bits of the handler address
     uint16_t sel;         // Kernel Segment Selector (0x08)
     uint8_t  always0;     // This byte must be 0
@@ -34,7 +34,7 @@ typedef struct idt_entry {
     uint16_t base_high;   // Upper 16 bits of the handler address
 } __attribute__((packed)) idt_entry;
 
-typedef struct idt_ptr {
+typedef struct {
     uint16_t limit; // 2 bytes
     uint32_t base;  // 4 bytes
 } __attribute__((packed)) idt_ptr;
@@ -55,8 +55,8 @@ void isr20(); void isr21(); void isr22(); void isr23();
 void isr24(); void isr25(); void isr26(); void isr27();
 void isr28(); void isr29(); void isr30(); void isr31();
 
-static struct idt_entry idt[256];
-static struct idt_ptr   idtp;
+static idt_entry idt[256];
+static idt_ptr   idtp;
 
 /* Set IDT gate at index `num` with given function, sel (0x08 almost always), and flags */
 static void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
@@ -73,8 +73,8 @@ Initialise the IDT by setting everything to exception 15 (Unknown interrupt),
 then setting the interrupts we actually use, so that we can catch stray interrupts.
 */
 void init_interrupts() {
-    idtp.limit = (sizeof(struct idt_entry) << 8) - 1;  // Defines the IDT pointer's size how x86 likes
-    idtp.base  = (uint32_t) &idt;                      // The memory address of the IDT array
+    idtp.limit = (sizeof(idt_entry) * 256) - 1;  // Defines the IDT pointer's size how x86 likes
+    idtp.base  = (uint32_t) &idt;                       // The memory address of the IDT array
 
     for (int i = 0; i < 256; i++) {
         idt_set_gate(i, (uint32_t) isr15, 0x08, IDT_GATE_KERNEL);

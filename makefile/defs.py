@@ -144,7 +144,7 @@ def fetch_and_print_docs(query, info):
     print(f"\x1b[1;32m[Documentation] \x1b[0;90m({os.path.basename(resolved_source)})\x1b[0m")
     if docstring:
         # Indent docstring text cleanly for terminal alignment
-        print("\n".join(f"  {line}" for line in docstring.splitlines()))
+        print("\n".join(f" | {line}" for line in docstring.splitlines()))
     else:
         print("  \x1b[90mNo docstring found\x1b[0m")
 
@@ -187,13 +187,13 @@ def query_loop():
                 for h in sorted(info["headers"]):
                     print(f"\x1b[1;33m[Header]\x1b[0m {h}")
                 for b in sorted(info["bodies"]):
-                    print(f"\x1b[1;36m[Body]   \x1b[0m {b}")
+                    print(f"\x1b[1;36m[Body]\x1b[0m   {b}")
 
                 print("\x1b[1m[Used in]\x1b[0m")
                 if info["used_in"]:
                     for u in sorted(info["used_in"]):
                         status = "(internal)" if (u in info["headers"] or u in info["bodies"]) else ""
-                        print(f"  {u} \x1b[90m{status}\x1b[0m")
+                        print(f" | {u} \x1b[90m{status}\x1b[0m")
                 else:
                     print("  No usages found.")
                 print()

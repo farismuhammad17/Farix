@@ -5,10 +5,10 @@ System hardware is mostly managed using the ACPI
 Shutdown, power states, reboot, etc. are all here.
 
 ```c
-void system_set_power_s5();
+void system_set_power_state(uint8_t state);
 ```
 
-Shuts down the computer. Sending `ACPI_STATE_S5` would just set it to state 5, which is just a normal shut down on a computer. Of course, you have `S0` to `S5`:
+Changes the system's power state, state being a value from S0 to S5, inclusive.
 
 | ACPI State | Description |
 | --- | --- |

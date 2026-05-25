@@ -45,10 +45,10 @@ ShellCommand command_table[] = {
     // tasks
     {"tasks", cmd_tasks, "List of running tasks"},
     {"kill", cmd_kill, "Kill a task given the process ID"},
-    {"peek", cmd_peek, "Inspect a task"},
     {"tlist", cmd_tlist, "Bit map of every task list"},
 
-    // syshw
+    // sys
+    {"vfs", cmd_vfs, "Outputs current VFS"},
     {"shutdown", cmd_shutdown, "Shutdown machine"},
     {"reboot", cmd_reboot, "Reboot machine"},
 

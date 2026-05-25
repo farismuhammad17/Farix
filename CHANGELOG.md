@@ -1,6 +1,31 @@
 # Changelog
 
-*Refer [journal](docs/journal.md) for implementation details.*
+## Multicore - *25th May, 2026*
+
+- Multicore
+  - Added `init_multicore`
+- Spinlocks
+  - Added `spin_lock` and `spin_unlock`
+  - Added to Newlib stubs, PMM, VMM, Heap, and Slab
+- PMM
+  - Renamed header macro `BITMAP_SIZE` to `PMM_BITMAP_SIZE`
+  - Removed `LOG2_PAGE_SIZE`
+- Power
+  - Added `device_set_power_state`
+  - Renamed `system_set_power_s5` to `system_set_power_state`, and supports all 6 states
+- Multitasking
+  - Removed `task_registers_t`
+- File system
+  - Added `name` to VFS struct
+  - Moved `fs/elf` to `fs/types/elf`
+- Shell/Shelf
+  - Added `vfs` command
+  - Renamed `shell/cmds/sh_syshw` to `shell/cmds/sh_sys`
+  - Removed `peek` command
+- MFuncs
+  - Added `system` folder to disk.img
+  - Added `cores` argument
+  - Emulates x86 with 4 cores by default
 
 ## Docstrings - *22nd May, 2026*
 

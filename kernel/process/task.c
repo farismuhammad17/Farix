@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "memory/heap.h"
 #include "memory/vmm.h"
 
-#include "fs/elf.h"
+#include "fs/types/elf.h"
 
 #include "process/task.h"
 

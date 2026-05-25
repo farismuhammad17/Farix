@@ -20,7 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef SYS_POWER_H
 #define SYS_POWER_H
 
-void system_set_power_s5();
+#include <stdint.h>
+
+#include "drivers/acpi/acpi.h"
+
+ACPI_STATUS device_set_power_state(uint8_t state, const char *device_path);
+void system_set_power_state(uint8_t state);
 
 void system_reboot();
 

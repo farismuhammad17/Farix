@@ -17,19 +17,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "syshw/power.h"
+#ifndef APIC_H
+#define APIC_H
 
-#include "shell/commands.h"
-#include "shell/shell.h"
+#include <stdint.h>
 
-/* Shutdown command */
-void cmd_shutdown(UNUSED_ARG const char* args) {
-    sh_print("Shutting down...");
-    system_set_power_s5();
-}
+#define LAPIC_REG_ID       0x20
+#define LAPIC_REG_ICR_LOW  0x300
+#define LAPIC_REG_ICR_HIGH 0x310
+#define LAPIC_ID_SHIFT     24
 
-/* Reboot/Restart command */
-void cmd_reboot(UNUSED_ARG const char* args) {
-    sh_print("Rebooting...");
-    system_reboot();
-}
+extern uint32_t lapic_virt;
+extern uint32_t ioapic_virt;
+extern uint8_t  irq0_pin;
+
+void lapic_write(uint32_t reg, uint32_t data);
+uint32_t lapic_read(uint32_t reg);
+
+#endif

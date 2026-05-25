@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
+#include "cpu/multicore.h"
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "fs/vfs.h"
@@ -47,13 +48,22 @@ typedef struct {
 // A table of strings representing the names of open files
 static FileOpenHandle* fd_table[FD_TABLE_MAX] = {NULL};
 
+static spinlock heap_lock = 0;
+static spinlock fd_lock   = 0;
+static spinlock kbd_lock  = 0;
+static spinlock log_lock  = 0;
+
 /*
 System break, called when more memory is required. Calls `kmalloc` if it is for
 the kernel, and carves out memory for anything else.
 */
 void* _sbrk(int incr) {
+    spin_lock(&heap_lock);
+
     if (current_task->page_directory == NULL) {
-        return kmalloc(incr);
+        void* res = kmalloc(incr);
+        spin_unlock(&heap_lock);
+        return res;
     }
 
     uint32_t old_break = current_task->heap_break;
@@ -73,6 +83,8 @@ void* _sbrk(int incr) {
     }
 
     current_task->heap_break = new_break;
+
+    spin_unlock(&heap_lock);
     return (void*) old_break;
 }
 
@@ -90,13 +102,21 @@ int _read(int file, char *ptr, int len) {
     if (file == 0) { // stdin
         int i = 0;
         while (i < len - 1) {
+            spin_lock(&kbd_lock);
+
             while (kbd_head == kbd_tail) {
+                spin_unlock(&kbd_lock);
+
                 current_task->state = TASK_SLEEPING;
                 task_yield();
+
+                spin_lock(&kbd_lock);
             }
 
             char c = kbd_buffer[kbd_tail];
             kbd_tail = (kbd_tail + 1) % KBD_BUFFER_LEN;
+
+            spin_unlock(&kbd_lock);
 
             if (c == '\b') {
                 if (i > 0) {
@@ -115,12 +135,24 @@ int _read(int file, char *ptr, int len) {
         return i;
     }
 
-    else if (file >= 3 && file < 20 && fd_table[file] != NULL) {
-        FileOpenHandle* h = (FileOpenHandle*) fd_table[file];
-        // fs_read returns bool, Newlib wants bytes read
-        if (fs_read(h->file->name, ptr, len, h->pos)) { // TODO: Read directly in the future
-            return len;
+    else if (file >= 3 && file < 20) {
+        spin_lock(&fd_lock);
+
+        if (fd_table[file] != NULL) {
+            FileOpenHandle* h = (FileOpenHandle*) fd_table[file];
+
+            const char* filename = h->file->name;
+            uint32_t current_pos = h->pos;
+
+            spin_unlock(&fd_lock);
+
+            if (fs_read(filename, ptr, len, current_pos)) {
+                return len;
+            }
+            return -1;
         }
+
+        spin_unlock(&fd_lock);
     }
 
     return -1;
@@ -129,17 +161,31 @@ int _read(int file, char *ptr, int len) {
 /* Write to file or print data */
 int _write(int file, char *ptr, int len) {
     if (file == 1 || file == 2) { // stdout/stderr
-        // For debugging:
-        // uart_print(ptr);
+        spin_lock(&log_lock);
         echo_raw(ptr, len);
+        spin_unlock(&log_lock);
+
         return len;
     }
 
-    else if (file >= 3 && file < 20 && fd_table[file] != NULL) {
-        FileOpenHandle* h = (FileOpenHandle*) fd_table[file];
-        if (fs_write(h->file->name, ptr, len, h->pos)) {
-            return len;
+    else if (file >= 3 && file < 20) {
+        spin_lock(&fd_lock);
+
+        if (fd_table[file] != NULL) {
+            FileOpenHandle* h = (FileOpenHandle*) fd_table[file];
+
+            const char* filename = h->file->name;
+            uint32_t current_pos = h->pos;
+
+            spin_unlock(&fd_lock);
+
+            if (fs_write(filename, ptr, len, current_pos)) {
+                return len;
+            }
+            return -1;
         }
+
+        spin_unlock(&fd_lock);
     }
 
     return -1;
@@ -159,6 +205,8 @@ int _open(const char *name, int flags, int mode) {
         }
     }
 
+    spin_lock(&fd_lock);
+
     for (int i = FD_TABLE_MIN; i < FD_TABLE_MAX; i++) {
         if (fd_table[i] == NULL) {
             FileOpenHandle* handle = kmalloc(sizeof(FileOpenHandle));
@@ -166,19 +214,35 @@ int _open(const char *name, int flags, int mode) {
             handle->pos = 0;
 
             fd_table[i] = handle;
+
+            spin_unlock(&fd_lock);
             return i;
         }
     }
+
+    spin_unlock(&fd_lock);
 
     return -1;
 }
 
 /* Close file */
 int _close(int file) {
-    if (file < FD_TABLE_MIN || file >= FD_TABLE_MAX || !fd_table[file]) return -1;
+    if (unlikely(file < FD_TABLE_MIN || file >= FD_TABLE_MAX)) return -1;
 
-    kfree((void*) fd_table[file]);
+    spin_lock(&fd_lock);
+
+    if (!fd_table[file]) {
+        spin_unlock(&fd_lock);
+        return -1;
+    }
+
+    void* handle = (void*) fd_table[file];
     fd_table[file] = NULL;
+
+    spin_unlock(&fd_lock);
+
+    kfree(handle);
+
     return 0;
 }
 
@@ -199,7 +263,8 @@ int _fstat(int file, struct stat *st) {
         return 0;
     }
 
-    // Handle actual files
+    spin_lock(&fd_lock);
+
     if (file < FD_TABLE_MAX && fd_table[file] != NULL) {
         FileOpenHandle* f = (FileOpenHandle*) fd_table[file];
 
@@ -207,8 +272,11 @@ int _fstat(int file, struct stat *st) {
         st->st_size    = f->file->size;
         st->st_blksize = PAGE_SIZE;  // Optimal I/O chunk (one page)
 
+        spin_unlock(&fd_lock);
         return 0;
     }
+
+    spin_unlock(&fd_lock);
 
     // If we get here, the ticket (FD) is invalid or empty
     return -EBADF;
@@ -223,6 +291,8 @@ int _isatty(int file) {
 int _lseek(int file, int ptr, int dir) {
     if (unlikely(file >= 0 && file < FD_TABLE_MIN)) return 0;
 
+    spin_lock(&fd_lock);
+
     if (likely(file < FD_TABLE_MAX && fd_table[file])) {
         FileOpenHandle* f = (FileOpenHandle*) fd_table[file];
         size_t f_size = f->file->size;
@@ -231,15 +301,23 @@ int _lseek(int file, int ptr, int dir) {
         if (dir == 0)      new_pos = ptr;          // SEEK_SET
         else if (dir == 1) new_pos = f->pos + ptr; // SEEK_CUR
         else if (dir == 2) new_pos = f_size + ptr; // SEEK_END
-        else return -EINVAL;
+        else {
+            spin_unlock(&fd_lock);
+            return -EINVAL;
+        }
 
         // Clamp to file boundaries
         if (new_pos < 0) new_pos = 0;
         else if (new_pos > (int) f_size) new_pos = f_size;
 
         f->pos = new_pos;
-        return f->pos;
+        int final_pos = f->pos;
+
+        spin_unlock(&fd_lock);
+        return final_pos;
     }
+
+    spin_unlock(&fd_lock);
 
     return -EBADF;
 }

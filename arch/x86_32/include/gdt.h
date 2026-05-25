@@ -32,7 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define GDT_GRAN_32BIT 0x40 // 32-bit protected mode
 #define GDT_GRAN_64BIT 0x20 // Not used in i386
 
-typedef struct GDTEntry {
+typedef struct {
     uint16_t limit_low;
     uint16_t base_low;
     uint8_t  base_middle;
@@ -41,7 +41,7 @@ typedef struct GDTEntry {
     uint8_t  base_high;
 } __attribute__((packed)) GDTEntry;
 
-typedef struct GDTPointer {
+typedef struct {
     uint16_t limit;
     uint32_t base;
 } __attribute__((packed)) GDTPointer;

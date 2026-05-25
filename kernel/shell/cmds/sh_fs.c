@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string.h>
 
 #include "drivers/terminal.h"
-#include "fs/elf.h"
+#include "fs/types/elf.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
 #include "process/task.h"
@@ -232,7 +232,6 @@ void cmd_ls(const char* args) {
     FileNode* temp = NULL;
 
     while (head) {
-
         if (head->file.is_directory) {
             sh_print("\033[36m%s\033[0m\n", head->file.name);
         } else {

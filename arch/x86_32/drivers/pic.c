@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // it makes the code more readable, hence the functions are nicer.
 #include "hal.h"
 
-#include "include/pic.h"
+#include "pic.h"
 
 void init_pic() {
     // ICW1

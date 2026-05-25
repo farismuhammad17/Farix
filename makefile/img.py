@@ -32,4 +32,6 @@ def disk_img():
         m.run(f"qemu-img create -f raw {m.DISK_PATH} 64M")
         m.run(f"mkfs.fat -F 32 -n FARIX {m.DISK_PATH}")
 
+    m.run(f"mmd -i {m.DISK_PATH} ::/system")
+
     print(f"\x1b[32mCreated disk at {m.DISK_PATH}\x1b[0m")

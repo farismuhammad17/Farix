@@ -56,7 +56,4 @@ SECTIONS
     }
 
     _kernel_end = .;
-
-    _end = .;
-    end = .;
 }

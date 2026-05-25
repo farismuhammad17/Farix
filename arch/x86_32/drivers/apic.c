@@ -17,25 +17,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include "include/pic.h"
+#include "pic.h"
 
 #include "cpu/ints.h"
+#include "cpu/multicore.h"
 #include "drivers/acpi/acpi.h"
 #include "drivers/terminal.h"
 #include "memory/vmm.h"
 
+#include "apic.h"
 #include "cpu/irq.h"
 
-static uint32_t lapic_virt;
-static uint32_t ioapic_virt;
-static uint8_t  irq0_pin = 2; // Default PIT pin
+uint32_t lapic_virt;
+uint32_t ioapic_virt;
+uint8_t  irq0_pin = 2; // Default PIT pin
 
 static ACPI_TABLE_HEADER* ACPI_MADT_P;
 
 static void parse_madt(ACPI_TABLE_MADT* madt);
-
-static inline void lapic_write(uint32_t reg, uint32_t data);
-static inline uint32_t lapic_read(uint32_t reg);
 
 static inline void ioapic_set_entry(uint8_t pin, uint64_t data);
 static inline void ioapic_write(uintptr_t base, uint32_t reg, uint32_t val);
@@ -83,6 +82,18 @@ void apic_spurious_handler() {
     irq_send_eoi();
 }
 
+// --- APIC functions ---
+
+void lapic_write(uint32_t reg, uint32_t data) {
+    volatile uint32_t* addr = (volatile uint32_t*)(lapic_virt + reg);
+    *addr = data;
+}
+
+uint32_t lapic_read(uint32_t reg) {
+    volatile uint32_t* addr = (volatile uint32_t*)(lapic_virt + reg);
+    return *addr;
+}
+
 // --- Helper functions ---
 
 static void parse_madt(ACPI_TABLE_MADT* madt) {
@@ -100,12 +111,24 @@ static void parse_madt(ACPI_TABLE_MADT* madt) {
             vmm_map_page(kernel_directory, (void*) io->Address, (void*) ioapic_virt,
                          PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
         }
+
         else if (sub->Type == ACPI_MADT_TYPE_INTERRUPT_OVERRIDE) {
             ACPI_MADT_INTERRUPT_OVERRIDE* iso = (ACPI_MADT_INTERRUPT_OVERRIDE*) sub;
             if (iso->SourceIrq == 0) {
                 irq0_pin = iso->GlobalIrq;
             }
         }
+
+        else if (sub->Type == ACPI_MADT_TYPE_LOCAL_APIC) {
+                ACPI_MADT_LOCAL_APIC* core = (ACPI_MADT_LOCAL_APIC*) sub;
+
+                // Check if the core is enabled and we have space in the array
+                if ((core->LapicFlags & ACPI_MADT_ENABLED) && (core_count < MAX_CORES)) {
+                    core_apic_ids[core_count] = core->Id;
+                    core_count++;
+                }
+            }
+
         ptr += sub->Length;
     }
 }
@@ -115,16 +138,6 @@ static inline void ioapic_set_entry(uint8_t pin, uint64_t data) {
     // 0x10 + (pin * 2) is the low bits, +1 is the high bits
     ioapic_write(ioapic_virt, 0x10 + (pin * 2), (uint32_t) data);
     ioapic_write(ioapic_virt, 0x10 + (pin * 2) + 1, (uint32_t)(data >> 32));
-}
-
-static inline void lapic_write(uint32_t reg, uint32_t data) {
-    volatile uint32_t* addr = (volatile uint32_t*)(lapic_virt + reg);
-    *addr = data;
-}
-
-static inline uint32_t lapic_read(uint32_t reg) {
-    volatile uint32_t* addr = (volatile uint32_t*)(lapic_virt + reg);
-    return *addr;
 }
 
 static inline void ioapic_write(uintptr_t base, uint32_t reg, uint32_t val) {

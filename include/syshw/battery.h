@@ -29,13 +29,15 @@ typedef struct {
     uint32_t voltage;            // Precise terminal voltage (mV)
 } battery_status_t;
 
-// How much the battery was designed to hold
+/* How much the battery was designed to hold */
 extern uint32_t battery_design_capacity;
 
-// From the factory, battery_last_full_capacity = battery_design_capacity,
-// but chemical degradation reduces that battery's total capacity. This is
-// how much the battery can actually hold, i.e. how much is inside when the
-// battery is "at 100%".
+/*
+From the factory, battery_last_full_capacity = battery_design_capacity,
+but chemical degradation reduces that battery's total capacity. This is
+how much the battery can actually hold, i.e. how much is inside when the
+battery is "at 100%".
+*/
 extern uint32_t battery_last_full_capacity;
 
 ACPI_STATUS RARE_FUNC init_battery();
