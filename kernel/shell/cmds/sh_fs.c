@@ -140,7 +140,7 @@ void cmd_cat(const char* args) {
     uint32_t offset = 0;
 
     while (offset < f->size) {
-        kmemset(buffer, 0, MAX_BUFFER_SIZE + 1);
+        memset(buffer, 0, MAX_BUFFER_SIZE + 1);
 
         // Calculate how much to read for this specific chunk
         uint32_t remaining = f->size - offset;

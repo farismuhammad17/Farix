@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdio.h>
 #include <string.h>
 
 #include "hal.h"
@@ -31,8 +30,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "fs/types/elf.h"
 
-extern uint32_t stack_top; // From boot.s
-extern void elf_user_trampoline_stub(uint32_t entry, uint32_t stack);
+// Defined boot.s
+extern uint32_t stack_top;
+
+// Defined in elf.asm
+void elf_user_trampoline_stub(uint32_t entry, uint32_t stack);
 
 /* ELF trampoline to execute the ELF, then halt after termination */
 void elf_user_trampoline() {
@@ -73,10 +75,10 @@ task* exec_elf(const char* path) {
 
     // An ELF file always starts with 0x7F, then 'E', 'L', and 'F'
     if (unlikely(
-        header->e_ident[0] != ELFMAG0 ||
-        header->e_ident[1] != ELFMAG1 ||
-        header->e_ident[2] != ELFMAG2 ||
-        header->e_ident[3] != ELFMAG3))
+        header->e_ident[0] != 0x7F ||
+        header->e_ident[1] != 'E' ||
+        header->e_ident[2] != 'L' ||
+        header->e_ident[3] != 'F'))
     {
         err_print("exec_elf: Not a valid ELF executable");
         kfree(file_buffer);
@@ -111,8 +113,9 @@ task* exec_elf(const char* path) {
             uint32_t start_vaddr = phdr[i].p_vaddr & ~0xFFF;
             uint32_t end_vaddr   = (phdr[i].p_vaddr + phdr[i].p_memsz + 0xFFF) & ~0xFFF;
 
-            if (end_vaddr > highest_vaddr)
+            if (end_vaddr > highest_vaddr) {
                 highest_vaddr = end_vaddr;
+            }
 
             for (uint32_t v = start_vaddr; v < end_vaddr; v += PAGE_SIZE) {
                 void* phys = pmm_alloc_page();
@@ -122,7 +125,7 @@ task* exec_elf(const char* path) {
                 uint8_t* kernel_vaddr = (uint8_t*) PHYSICAL_TO_VIRTUAL(phys);
 
                 // Always zero the page first (handles .bss and padding)
-                kmemset(kernel_vaddr, 0, PAGE_SIZE);
+                memset(kernel_vaddr, 0, PAGE_SIZE);
 
                 // Check if we need to copy file data into this specific page
                 uint32_t segment_start    = phdr[i].p_vaddr;
@@ -137,7 +140,7 @@ task* exec_elf(const char* path) {
                     uint32_t offset_in_file = copy_start - segment_start;
                     uint32_t len = copy_end - copy_start;
 
-                    kmemcpy(kernel_vaddr + offset_in_page,
+                    memcpy(kernel_vaddr + offset_in_page,
                             file_buffer + phdr[i].p_offset + offset_in_file,
                             len);
                 }
@@ -147,7 +150,7 @@ task* exec_elf(const char* path) {
 
     system_int_on();
 
-    task* elf_task = create_task((void(*)()) header->e_entry, file_obj->name, 1);
+    task* elf_task = create_task((void(*)()) header->e_entry, file_obj->name, PRIV_USER, NULL);
 
     elf_task->page_directory = user_pd_phys;
     elf_task->heap_break     = highest_vaddr;
@@ -161,7 +164,7 @@ task* exec_elf(const char* path) {
                     PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_CACHE);
 
     uint32_t* stack_ptr = (uint32_t*) PHYSICAL_TO_VIRTUAL(stack_phys);
-    kmemset(stack_ptr, 0, PAGE_SIZE);
+    memset(stack_ptr, 0, PAGE_SIZE);
 
     kfree(file_buffer);
 

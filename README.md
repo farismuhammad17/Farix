@@ -4,6 +4,7 @@
 
 > *"I'm doing a (free) operating system, (just a Hobby, won't be big and professional like gnu)"* - Linus Torvalds, 1991
 
+- [Documentation](DOCUMENTATION.md): Detailed summary of every component
 - [Changelog](CHANGELOG.md): Brief summary of changes
 
 # Setup

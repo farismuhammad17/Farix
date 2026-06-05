@@ -20,9 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+
+#include "klib/stdio.h"
+#include "klib/string.h"
 
 #include "hal.h"
 
@@ -60,8 +60,6 @@ static char* trim(char* s) {
 
 /* Initialises Kernel shell */
 void init_shell() {
-    setvbuf(stdout, NULL, _IONBF, 0);
-
     // Initialize the directory array
     strncpy(shell_directory, "/", MAX_DIRECTORY_PATH_LEN - 1);
     shell_directory[MAX_DIRECTORY_PATH_LEN - 1] = '\0';

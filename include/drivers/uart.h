@@ -21,7 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define UART_H
 
 #include <stdarg.h>
-#include <stdio.h>
+
+#include "klib/stdio.h"
 
 void init_uart();
 

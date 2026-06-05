@@ -18,7 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <stddef.h>
-#include <string.h>
+
+#include "klib/string.h"
 
 #include "cpu/multicore.h"
 #include "drivers/terminal.h"

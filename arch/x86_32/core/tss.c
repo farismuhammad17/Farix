@@ -36,7 +36,7 @@ void init_tss(uint32_t idx, uint32_t kss, uint32_t kesp) {
     // Access: 0x89 (Present, Executable, Accessed, Ring 0)
     gdt_set_entry(idx, base, limit, 0x89, 0x00);
 
-    kmemset(&tss_entry, 0, sizeof(TSSEntry));
+    memset(&tss_entry, 0, sizeof(TSSEntry));
 
     tss_entry.ss0  = kss; // Usually 0x10 (Kernel Data)
     tss_entry.esp0 = kesp;

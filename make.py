@@ -200,8 +200,8 @@ globals.LIBC_LIB = os.path.join(globals.LIBC_DIR, "lib")
 globals.CC = f"{globals.PREFIX}gcc"
 globals.AS = f"{globals.PREFIX}as"
 
-ACPICA_ARCH_INDEPENDANT = os.path.join(globals.PROJECT_ROOT, "include/drivers/acpi")
-ACPICA_ARCH_DEPENDANT   = os.path.join(globals.PROJECT_ROOT, f"arch/{globals.arch}/include/acpi")
+ACPICA_ARCH_INDEPENDANT = "include/drivers/acpi"
+ACPICA_ARCH_DEPENDANT   = f"arch/{globals.arch}/include/acpi"
 
 globals.CFLAGS = (
     "-ffreestanding -O2 -Wall -Wextra -fno-exceptions "
@@ -217,7 +217,7 @@ globals.ACPICA_SRC = "kernel/drivers/acpi"
 globals.ACPICA_CFLAGS = (
     "-ffreestanding -O2 -Wall -Wextra -fno-exceptions "
     "-fdiagnostics-color=always "
-    f"-Iinclude -I{globals.LIBC_INC} "
+    f"-Iinclude "
     f"-I{ACPICA_ARCH_INDEPENDANT} -I{ACPICA_ARCH_DEPENDANT} "
 )
 
@@ -248,15 +248,16 @@ if __name__ == "__main__":
 
     if   target == globals.arch: farix_bin()
     elif target in ("all", "*"):
+        get_deps()
+        if not os.path.exists(f"libc_build_{globals.arch}"): libc()
         if not os.path.exists("farix.bin"): farix_bin()
         if not os.path.exists(globals.DISK_PATH): disk_img()
         compile_apps()
         deploy_apps()
-    elif target == "iso":
-        create_iso()
+    elif target == "iso": create_iso()
     elif target == "clean": clean(sys.argv[1:])
-    elif target == "libc": libc()
     elif target == "get_deps": get_deps()
+    elif target == "libc": libc()
     elif target == "disk": disk_img()
     elif target == "iso": farix_iso()
     elif target == "wipe_usb": clean_boot_usb()
@@ -279,10 +280,6 @@ if __name__ == "__main__":
     elif target == "apps":
         compile_apps()
         deploy_apps()
-    elif target == "compile_apps":
-        compile_apps()
-    elif target == "deploy_apps":
-        deploy_apps()
     elif target == "defs":
         scan_files()
         query_loop()
@@ -291,7 +288,7 @@ if __name__ == "__main__":
     elif target == "config":
         config_mjson()
     elif target == "help":
-        print(HELP)
+        parse_help(sys.argv[2:])
     else:
         print("\x1b[31mUnknown command\x1b[0m")
 

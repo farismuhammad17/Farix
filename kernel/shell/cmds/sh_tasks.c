@@ -28,6 +28,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /* List task tree command */
 void cmd_tasks(UNUSED_ARG const char* args) {
+    #define PER_INDENT_SIZE 1
+
     system_int_off();
 
     task* curr = main_task;
@@ -36,10 +38,10 @@ void cmd_tasks(UNUSED_ARG const char* args) {
     while (curr != NULL) {
         char* state_str = "READY";
         if (curr->state == TASK_RUNNING) state_str = "RUNNING";
-        if (curr->state == TASK_SLEEPING) state_str = "SLEEPING";
-        if (curr->state == TASK_DEAD) state_str = "DEAD";
+        else if (curr->state == TASK_SLEEPING) state_str = "SLEEPING";
+        else if (curr->state == TASK_DEAD) state_str = "DEAD";
 
-        for (int i = 0; i < indent; i++) sh_print(" ");
+        for (int i = 0; i < indent * PER_INDENT_SIZE; i++) sh_print(" ");
         sh_print("%s (%ld) - %s\n",
             curr->name,
             curr->id,
@@ -84,6 +86,8 @@ void cmd_tasks(UNUSED_ARG const char* args) {
     }
 
     system_int_on();
+
+    #undef PER_INDENT_SIZE
 }
 
 /* Kill task command */
@@ -114,7 +118,9 @@ void cmd_tlist(const char* args) {
 
             sh_print("\n");
             list_id++;
-        } while (list->next != NULL);
+
+            list = list->next;
+        } while (list != NULL);
     } else {
         size_t target = atoi(args);
 
@@ -134,8 +140,8 @@ void cmd_tlist(const char* args) {
 
                 char* state_str = "READY";
                 if (t->state == TASK_RUNNING) state_str = "RUNNING";
-                if (t->state == TASK_SLEEPING) state_str = "SLEEPING";
-                if (t->state == TASK_DEAD) state_str = "DEAD";
+                else if (t->state == TASK_SLEEPING) state_str = "SLEEPING";
+                else if (t->state == TASK_DEAD) state_str = "DEAD";
 
                 sh_print("%-4ld%-10s%s\n",
                     t->id,
@@ -145,4 +151,10 @@ void cmd_tlist(const char* args) {
             }
         }
     }
+}
+
+/* Clean task list command */
+void cmd_cltlist(UNUSED_ARG const char* args) {
+    size_t tlists_cleaned = clean_task_lists();
+    sh_print("Deleted %d task lists\n", tlists_cleaned);
 }

@@ -120,14 +120,14 @@ static void parse_madt(ACPI_TABLE_MADT* madt) {
         }
 
         else if (sub->Type == ACPI_MADT_TYPE_LOCAL_APIC) {
-                ACPI_MADT_LOCAL_APIC* core = (ACPI_MADT_LOCAL_APIC*) sub;
+            ACPI_MADT_LOCAL_APIC* core = (ACPI_MADT_LOCAL_APIC*) sub;
 
-                // Check if the core is enabled and we have space in the array
-                if ((core->LapicFlags & ACPI_MADT_ENABLED) && (core_count < MAX_CORES)) {
-                    core_apic_ids[core_count] = core->Id;
-                    core_count++;
-                }
+            // Check if the core is enabled and we have space in the array
+            if ((core->LapicFlags & ACPI_MADT_ENABLED) && (core_count < MAX_CORES)) {
+                core_apic_ids[core_count] = core->Id;
+                core_count++;
             }
+        }
 
         ptr += sub->Length;
     }

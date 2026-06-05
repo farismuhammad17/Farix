@@ -1,5 +1,22 @@
 # Changelog
 
+## Newlib to Musl porting
+
+> [!NOTE]
+> WIP commit; changelog is not made perfect or organized thus (too lazy).
+
+- Removed Newlib
+- Removed most syscalls
+- Implemented `klib`
+- `syscall_handler` takes 5 args now.
+- Terminal ANSI `A`, `B`, `C`, `D` clamps (still have to check)
+- Removed `kmemcpy` and `kmemset`
+- Added shell commands `cltlist`, `sleep`
+- ACPICA creates new task upon function execution
+- `create_task` supports arguments
+- Advanced `help` m-func command
+- `lint` warns `BRACES` and undefined function defined macros
+
 ## Multicore - *25th May, 2026*
 
 - Multicore

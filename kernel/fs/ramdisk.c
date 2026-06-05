@@ -19,7 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
+
+#include "klib/string.h"
 
 #include "fs/vfs.h"
 #include "memory/heap.h"
@@ -82,7 +83,7 @@ int ramdisk_read(const char* name, void* buffer, size_t size, uint32_t offset) {
     }
 
     // Copy starting from the offset pointer
-    kmemcpy(buffer, (uint8_t*) file->data + offset, bytes_to_read);
+    memcpy(buffer, (uint8_t*) file->data + offset, bytes_to_read);
 
     return (int) bytes_to_read;
 }
@@ -99,7 +100,7 @@ int ramdisk_write(const char* name, const void* buffer, size_t size, uint32_t of
 
         // If there was old data, preserve it
         if (file->data) {
-            kmemcpy(new_data, file->data, file->size);
+            memcpy(new_data, file->data, file->size);
             kfree(file->data);
         }
 
@@ -108,7 +109,7 @@ int ramdisk_write(const char* name, const void* buffer, size_t size, uint32_t of
     }
 
     // Now that we're sure the buffer is big enough, copy to the offset
-    kmemcpy((uint8_t*) file->data + offset, buffer, size);
+    memcpy((uint8_t*) file->data + offset, buffer, size);
 
     return (int) size;
 }
@@ -119,7 +120,7 @@ int ramdisk_create(const char* name) {
     if (files_table[index] != NULL) return 0;
 
     File* new_file = (File*) kmalloc(sizeof(File));
-    kmemset(new_file, 0, sizeof(File));
+    memset(new_file, 0, sizeof(File));
 
     new_file->name = (char*) strdup(name);
     new_file->data = NULL;
@@ -137,7 +138,7 @@ int ramdisk_mkdir(const char* name) {
     if (files_table[index] != NULL) return 0;
 
     File* new_file = (File*) kmalloc(sizeof(File));
-    kmemset(new_file, 0, sizeof(File));
+    memset(new_file, 0, sizeof(File));
 
     new_file->name = (char*) strdup(name);
     new_file->data = NULL;
@@ -193,7 +194,7 @@ FileNode* ramdisk_getall(const char* path) {
 
                 FileNode* newNode = (FileNode*) kmalloc(sizeof(FileNode));
                 if (!newNode) return head;
-                kmemset(newNode, 0, sizeof(FileNode));
+                memset(newNode, 0, sizeof(FileNode));
 
                 newNode->file.size = file_ptr->size;
                 newNode->file.is_directory = file_ptr->is_directory;

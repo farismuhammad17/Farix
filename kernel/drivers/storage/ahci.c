@@ -19,19 +19,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <string.h>
+
+#include "klib/string.h"
 
 #include "hal.h"
 
 #include "cpu/irq.h"
 #include "cpu/pci.h"
 #include "cpu/timer.h"
-#include "drivers/storage/bdl.h"
 #include "drivers/terminal.h"
-#include "drivers/uart.h"
-#include "memory/heap.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
+
+#include "drivers/storage/bdl.h"
 
 #include "drivers/storage/ahci.h"
 

@@ -35,7 +35,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define PRIV_USER     1 // User
 #define PRIV_SUPER    2 // Super user
 
-// Ensure this is a proper power of 2, no more than 64
+/*
+Ensure this is exactly 8, 16, 32, or 64 exactly; files that use this header will
+throw an error and will not compile if this requirement is not met.
+
+The higher this value, the more tasks one task_list can accomodate. Unfortunately,
+that also means if, while running, there aren't enough tasks to fill out a task
+list, then the space the array takes up is wasted with empty nothings.
+
+The lower this value, the less space the array takes up, but the more linked lists
+that are made, which would slow down traversals due to cache misses.
+
+This value must be properly tuned to required needs.
+*/
 #define TASKS_LIST_LEN 8
 
 #if TASKS_LIST_LEN == 8
@@ -47,7 +59,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #elif TASKS_LIST_LEN == 64
     typedef uint64_t task_list_mask_t;
 #else
-    #error "task.h: macro TASKS_LIST_LEN must be 8, 16, 32, or 64"
+    #error "task.h: macro TASKS_LIST_LEN must be 8, 16, 32, or 64 exactly"
 #endif
 
 typedef struct task {
@@ -61,6 +73,7 @@ typedef struct task {
     uint32_t state;           // Running, Ready, etc.
     uint32_t* stack_origin;   // Memory allocated for the stack
     void (*entry_func)();
+    void* args;
     int privilege;
     const char* name;
 } task;
@@ -79,11 +92,13 @@ extern task_list* first_task_list;
 
 void RARE_FUNC init_multitasking();
 
-task* create_task(void (*entry_point)(), const char* name, const int privilege);
-void  kill_task(uint32_t id);
+task* RARE_FUNC create_task(void (*entry_point)(void*), const char* name, const int privilege, void* args);
+void  RARE_FUNC kill_task(uint32_t id);
 
 void FREQ_FUNC schedule();
 
-task* get_task(uint32_t id);
+task* RARE_FUNC get_task(uint32_t id);
+
+size_t RARE_FUNC clean_task_lists();
 
 #endif

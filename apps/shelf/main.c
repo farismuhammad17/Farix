@@ -73,7 +73,7 @@ static char* trim(char* s) {
     return s;
 }
 
-void shell_parse(const char* input);
+static void shell_parse(const char* input);
 
 int main() {
     char input[256];
@@ -98,7 +98,7 @@ int main() {
     return 0;
 }
 
-void shell_parse(const char* input) {
+static void shell_parse(const char* input) {
     if (input == NULL || input[0] == '\0') return;
 
     char* segments[2];

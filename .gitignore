@@ -1,8 +1,14 @@
-*.log
+# Schema
+# 1. Prefix patterns
+# 2. Suffix patterns
+# 3. Folders (Deepest nested to highest)
+# 4. Files (Deepest nested to highest)
 
-# System
-.DS_Store
+# System & IDEs
 __pycache__/
+.vscode/
+.idea/
+.DS_Store
 
 # Docker
 .bash_history
@@ -11,19 +17,19 @@ __pycache__/
 *.bin
 *.iso
 *.img
-build/
-libc_build*/
-newlib-cygwin/
+/libc_build*/
+/build/
+/musl/
+build.log
 
 # Emulation
 bochsout.txt
 bochsrc.txt
 
 # Testing grounds
-pending/
-test/
-hidden/
-*test*
+/pending/
+/test/
+/hidden/
 
 # Makefile
 make.conf.json
@@ -36,4 +42,5 @@ TODO.md
 README-UNFINISHED.md
 
 # WIP
-arch/x86_64
+/arch/x86_64
+DOCUMENTATION.md

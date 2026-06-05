@@ -46,9 +46,6 @@ void RARE_FUNC init_heap();
 void*  kmalloc(size_t size);
 void   kfree(void* ptr);
 
-void   kmemcpy(void* dest, const void* source, size_t n);
-void   kmemset(void* s, int c, size_t n);
-
 void   kheap_expand(size_t size);
 
 size_t RARE_FUNC get_heap_total();

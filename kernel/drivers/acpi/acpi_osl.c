@@ -17,7 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdlib.h>
+#include <stdarg.h>
 #include <stdint.h>
 
 #include "hal.h"
@@ -131,8 +131,8 @@ ACPI tasks from blocking the main execution flow. Use it to run background servi
 routines or asynchronous callbacks without stalling the core interpreter.
 */
 ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, void (*Function)(void *), void *Context) {
-    if (Function) {
-        (void) Function(Context);
+    if (likely(Function)) {
+        create_task(Function, "ACPI Task", PRIV_KERNEL, Context);
     }
 
     return AE_OK;

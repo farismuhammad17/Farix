@@ -19,9 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdarg.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/stat.h>
+
+#include "klib/string.h"
 
 #include "hal.h"
 
@@ -283,75 +282,17 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
     uint32_t arg1 = regs->ebx;
     uint32_t arg2 = regs->ecx;
     uint32_t arg3 = regs->edx;
+    uint32_t arg4 = regs->esi;
+    uint32_t arg5 = regs->edi;
 
     switch (regs->eax) {
-        case SYS_EXIT: {
-            _exit(arg1);
-            break;
-        }
-
-        case SYS_READ: {
-            regs->eax = (uint32_t) _read((int) arg1, (char*) arg2, (int) arg3);
-            break;
-        }
-
-        case SYS_WRITE: {
-            regs->eax = (uint32_t) _write((int) arg1, (char*) arg2, (int) arg3);
-            break;
-        }
-
-        case SYS_OPEN: {
-            regs->eax = (uint32_t) _open((const char*) arg1, (int) arg2, (int) arg3);
-            break;
-        }
-
-        case SYS_CLOSE: {
-            regs->eax = (uint32_t) _close((int) arg1);
-            break;
-        }
-
         case SYS_EXEC: {
             regs->eax = (uint32_t) exec_elf((const char*) arg1) ? SYS_DONE : SYS_ERROR;
             break;
         }
 
-        case SYS_MKDIR: {
-            regs->eax = (uint32_t) _mkdir((const char*) arg1, (mode_t) arg2);
-            break;
-        }
-
         case SYS_REMOVE: {
-            regs->eax = (uint32_t) (fs_remove((const char*) arg1) ? SYS_DONE : SYS_ERROR);
-            break;
-        }
-
-        case SYS_LSEEK: {
-            regs->eax = (uint32_t) _lseek((int) arg1, (int) arg2, (int) arg3);
-            break;
-        }
-
-        case SYS_GETPID: {
-            regs->eax = (uint32_t) _getpid();
-            break;
-        }
-
-        case SYS_KILL: {
-            regs->eax = (uint32_t) _kill((int) arg1, (int) arg2);
-            break;
-        }
-
-        case SYS_SBRK: {
-            regs->eax = (uint32_t) _sbrk((int) arg1);
-            break;
-        }
-
-        case SYS_ISATTY: {
-            regs->eax = (uint32_t) _isatty((int) arg1);
-            break;
-        }
-
-        case SYS_FSTAT: {
-            regs->eax = (uint32_t) _fstat((int) arg1, (struct stat*) arg2);
+            regs->eax = (uint32_t) fs_remove((const char*) arg1) ? SYS_DONE : SYS_ERROR;
             break;
         }
 
@@ -629,14 +570,14 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
                 break;
             }
 
-            task* t = get_task(arg1);
+            task* t = get_task((uint32_t) arg1);
             kill_task(t->id);
 
             break;
         }
 
         default: {
-            err_printf("Unknown syscall (%s): %ld\n", current_task->name, regs->eax);
+            err_printf("Unknown syscall (%s): %d", current_task->name, regs->eax);
             regs->eax = SYS_ERROR;
             break;
         }

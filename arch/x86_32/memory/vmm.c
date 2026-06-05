@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 
 #include "cpu/multicore.h"
 #include "memory/pmm.h"
@@ -169,8 +168,9 @@ uint32_t* vmm_copy_kernel_directory() {
 /* Switch a new directory given the physical address */
 void vmm_switch_directory(uint32_t* page_directory) {
     // Only switch if we're not current already there
-    if (unlikely(vmm_get_current_directory() != page_directory))
+    if (unlikely(vmm_get_current_directory() != page_directory)) {
         asm volatile("mov %0, %%cr3" : : "r"(page_directory) : "memory");
+    }
 }
 
 /* Get the current directory */

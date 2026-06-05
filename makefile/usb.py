@@ -26,7 +26,10 @@ import re
 import makefile.globals as m
 
 def clean_boot_usb():
-    shutil.rmtree(m.BOOT_USB_PATH, ignore_errors=True)
+    if not os.path.exists(m.BOOT_USB_PATH):
+        print(f"\x1b[31m(make.conf.json) Boot USB path '{m.BOOT_USB_PATH}' not found.\x1b[0m")
+    else:
+        shutil.rmtree(m.BOOT_USB_PATH, ignore_errors=True)
 
 def deploy_usb():
     if m.is_in_docker():

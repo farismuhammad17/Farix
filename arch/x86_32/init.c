@@ -18,7 +18,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <stdint.h>
-#include <stdio.h>
 
 #include "gdt.h"
 #include "multiboot.h"
@@ -37,7 +36,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 multiboot_info* mbi = NULL;
 
 /* Defined in asm/boot/crti.asm */
-extern void _init();
+void _init();
 
 /*
 x86 specific initialisations, called right between early_kmain

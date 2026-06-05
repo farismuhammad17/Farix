@@ -24,12 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "process/task.h"
 
-// ELF Identifiers
-#define ELFMAG0 0x7F
-#define ELFMAG1 'E'
-#define ELFMAG2 'L'
-#define ELFMAG3 'F'
-
 #define ELFCLASS32  1
 #define ELFDATA2LSB 1 // Little Endian (Standard for x86)
 
@@ -67,7 +61,7 @@ typedef struct {
     uint32_t p_align;
 } __attribute__((packed)) elf_program_header_t;
 
-extern void elf_user_trampoline();
+void elf_user_trampoline();
 
 task* exec_elf(const char* path);
 

@@ -17,9 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <ctype.h>
 #include <stddef.h>
-#include <string.h>
+
+#include "klib/string.h"
 
 #include "drivers/storage/bdl.h"
 #include "drivers/terminal.h"

@@ -21,45 +21,30 @@ import os
 
 import makefile.globals as m
 
-NEWLIB_SRC = os.path.join(os.getcwd(), "newlib-cygwin")
-NEWLIB_TARGET = m.PREFIX.rstrip('-')
-
 def libc_x86_32():
-    # Ensure we use the i686-elf prefix and the arch-specific build folder
-    build_dir = "build/newlib-x86_32-build"
+    musl_src = "musl"
+    build_dir = "build/musl-x86_32-build"
+
     os.makedirs(build_dir, exist_ok=True)
 
     config_cmd = (
         f"cd {build_dir} && "
-        f"CC_FOR_TARGET={m.PREFIX}gcc AS_FOR_TARGET={m.PREFIX}as "
-        f"LD_FOR_TARGET={m.PREFIX}ld RANLIB_FOR_TARGET={m.PREFIX}ranlib "
-        f"{NEWLIB_SRC}/configure --target={NEWLIB_TARGET} --prefix={LIBC_INSTALL_DIR} "
-        f"--disable-newlib-supplied-syscalls --with-newlib --enable-languages=c,c++"
+        f"../../{musl_src}/configure "
+        f"--target=i686-linux-gnu "
+        f"--prefix={m.LIBC_INSTALL_DIR} "
+        f"--disable-shared "
+        f"--disable-wrapper "
+        f"CC=\"{m.PREFIX}gcc\" "
+        f"CROSS_COMPILE=\"{m.PREFIX}\""
     )
 
-    print(f"\x1b[1;33mBuilding LibC for x86_32... (This may take a while)\x1b[0m")
-
+    print(f"\x1b[1;33mBuilding Musl LibC for x86_32...\x1b[0m")
     m.run(config_cmd, capture_output=False)
     m.run(f"make -C {build_dir} -j$(nproc)", capture_output=False)
     m.run(f"make -C {build_dir} install", capture_output=False)
 
 def libc_arm32():
-    build_dir = "build/newlib-arm32-build"
-    os.makedirs(build_dir, exist_ok=True)
-
-    config_cmd = (
-        f"cd {build_dir} && "
-        f"CC_FOR_TARGET={m.CC} AS_FOR_TARGET={m.AS} "
-        f"LD_FOR_TARGET={m.PREFIX}ld RANLIB_FOR_TARGET={m.PREFIX}ranlib "
-        f"{NEWLIB_SRC}/configure --target={NEWLIB_TARGET} --prefix={LIBC_INSTALL_DIR} "
-        f"--disable-newlib-supplied-syscalls --with-newlib --enable-languages=c"
-    )
-
-    print(f"\x1b[1;33mBuilding LibC for arm32... (This may take a while)\x1b[0m")
-
-    m.run(config_cmd, capture_output=False)
-    m.run(f"make -C {build_dir} -j$(nproc)", capture_output=False)
-    m.run(f"make -C {build_dir} install", capture_output=False)
+    raise NotImplementedError("ARM32 is currently unsupported, will add later")
 
 def libc():
     match m.arch:

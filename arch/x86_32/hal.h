@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 
 /* Assembly outb */
-static inline void outb(uint32_t port, uint8_t  val) {
+static inline void outb(uint32_t port, uint8_t val) {
     asm volatile("outb %0, %1" : : "a"(val), "Nd"(port) );
 }
 

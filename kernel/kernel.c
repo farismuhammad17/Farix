@@ -41,7 +41,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "kernel.h"
 
 /* Whether to boot into kernel shell or not */
-#define BOOT_INTO_KSHELL 1
+#define BOOT_INTO_KSHELL 0
 
 int logged_num = 0;
 
@@ -145,18 +145,23 @@ void kmain() {
 
     init_battery();
 
-    create_task(handle_mouse, "Terminal mouse handler", 0);
+    create_task(handle_mouse, "Terminal mouse handler", PRIV_KERNEL, NULL);
 
     File* shelf_file = fs_get("system/shelf.elf");
     if (shelf_file && !BOOT_INTO_KSHELL) {
         task* shelf_task = exec_elf("system/shelf.elf");
         shelf_task->privilege = PRIV_SUPER;
     } else {
-        create_task(shell_thread, "Shell", 0);
+        create_task(shell_thread, "Shell", PRIV_KERNEL, NULL);
     }
     kfree((void*) shelf_file);
 
-    init_multicore();
+    // TODO: Consider putting this into a task and moving on
+    // PIT stalls can then be isolated to a task, while the
+    // rest of the OS can keep booting, but of course, this
+    // may lead to problems; turning on multiple cores while
+    // other things are getting initialised.
+    // init_multicore();
 
     while (1) system_halt();
 }

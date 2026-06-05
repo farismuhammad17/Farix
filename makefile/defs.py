@@ -63,7 +63,7 @@ def scan_files():
 
                             data[name]["lines"][path] = line_idx
 
-                            if file.endswith(('.h', '.hpp')):
+                            if file.endswith('.h'):
                                 data[name]["headers"].add(path)
                             else:
                                 data[name]["bodies"].add(path)
@@ -141,7 +141,7 @@ def fetch_and_print_docs(query, info):
                     resolved_source = path
                     break
 
-    print(f"\x1b[1;32m[Documentation] \x1b[0;90m({os.path.basename(resolved_source)})\x1b[0m")
+    print(f"\x1b[1;32m[Documentation] \x1b[0;90m{os.path.basename(resolved_source)}\x1b[0m")
     if docstring:
         # Indent docstring text cleanly for terminal alignment
         print("\n".join(f" | {line}" for line in docstring.splitlines()))
@@ -153,8 +153,6 @@ def query_loop():
         try:
             query = input("\x1b[1;34m>>> \x1b[0m").strip()
 
-            if query.lower() in ("quit", "exit", "q"):
-                break
             if not query:
                 continue
 

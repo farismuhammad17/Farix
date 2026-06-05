@@ -38,7 +38,7 @@ uint8_t  core_apic_ids[MAX_CORES];
 uint32_t core_count = 0;
 
 /* Broadcasts the INIT signal to every secondary core on the system bus at once. */
-static void broadcast_init_ipi(void) {
+static void broadcast_init_ipi() {
     lapic_write(LAPIC_REG_ICR_LOW, IPI_CMD_BROADCAST_INIT);
 }
 

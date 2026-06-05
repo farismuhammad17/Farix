@@ -144,22 +144,6 @@ void kfree(void* ptr) {
     spin_unlock(&heap_lock);
 }
 
-/* Kernel memcpy */
-void kmemcpy(void* dest, const void* source, size_t n) {
-    volatile uint8_t* dst = (volatile uint8_t*) dest;
-    const uint8_t* src = (const uint8_t*) source;
-    for (size_t i = 0; i < n; i++) dst[i] = src[i];
-
-    // Ensure writes are finished
-    cpu_mem_barrier();
-}
-
-/* Kernel memset */
-void kmemset(void* s, int c, size_t n) {
-    uint8_t* p = (uint8_t*) s;
-    for (size_t i = 0; i < n; i++) p[i] = (uint8_t) c;
-}
-
 /* Expand heap when exceeded */
 void kheap_expand(size_t size) {
     size_t total_needed = size + sizeof(HeapSegment);

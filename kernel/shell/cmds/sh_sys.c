@@ -20,18 +20,35 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "fs/vfs.h"
 #include "syshw/power.h"
 
+#include "fs/fat32.h"
+#include "fs/ramdisk.h"
+
 #include "shell/commands.h"
 #include "shell/shell.h"
 
 /* Outputs the current VFS */
 void cmd_vfs(UNUSED_ARG const char* args) {
-    sh_print("%s\n", current_vfs->name);
+    if (args[0] == '\0') {
+        sh_print("%s\n", current_vfs->name);
+    } else if (args[0] == 'F' || args[0] == 'f') {
+        vfs_mount(&fat32_vfs);
+    } else if (args[0] == 'R' || args[0] == 'r') {
+        vfs_mount(&ramdisk_vfs);
+    } else {
+        sh_print("vfs: Unknown VFS '%s'", args);
+    }
 }
 
 /* Shutdown command */
 void cmd_shutdown(UNUSED_ARG const char* args) {
     sh_print("Shutting down...");
     system_set_power_state(5);
+}
+
+/* Sleep command */
+void cmd_sleep(UNUSED_ARG const char* args) {
+    sh_print("Sleeping...");
+    system_set_power_state(3);
 }
 
 /* Reboot/Restart command */

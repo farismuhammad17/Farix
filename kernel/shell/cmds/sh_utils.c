@@ -80,7 +80,7 @@ void cmd_memstat(UNUSED_ARG const char* args) {
     size_t total_segs = 0;
 
     while (current != NULL) {
-        sh_print("%p | %-9lu | %-6s | 0x%08lX\n",
+        printf("%p | %-9lu | %-6s | 0x%08lX\n",
                 current,
                 current->size,
                 current->is_free ? "FREE" : "USED",

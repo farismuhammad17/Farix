@@ -21,9 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+
+#include "klib/stdio.h"
+#include "klib/string.h"
 
 #include "hal.h"
 
@@ -104,11 +104,8 @@ void update_cursor(size_t x, size_t y) {
     outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
 }
 
-// TODO: Can be technically sped up if we store the empty slate
-// beforehand, but that takes up memory, and doesn't matter I
-// suppose. Will think of it later.
 void terminal_clear() {
-    uint16_t empty_char  = terminal_entry(' ', terminal_color);
+    uint16_t empty_char = terminal_entry(' ', terminal_color);
 
     for (int i = 0; i < WIDTH * HEIGHT; i++) {
         terminal_buffer[i] = empty_char;
@@ -251,7 +248,7 @@ void scroll_down() {
 
 void save_cmd_to_history(const char* command) {
     TerminalCmd* newNode = (TerminalCmd*) kmalloc(sizeof(TerminalCmd));
-    kmemset(newNode, 0, sizeof(TerminalCmd));
+    memset(newNode, 0, sizeof(TerminalCmd));
 
     newNode->command = (const char*) strdup(command);
     newNode->next    = NULL;
@@ -341,7 +338,7 @@ void echo_char(uint16_t c) {
 }
 
 void echo_raw(const char* data, size_t len) {
-    if (len == 0) return;
+    if (unlikely(len == 0)) return;
 
     // Pre-calcualte the total lines required by data
     size_t needed_lines = 0;
@@ -635,18 +632,30 @@ void handle_ansi_char(uint16_t c) {
                     terminal_buffer[i] = terminal_entry(' ', terminal_color);
                 break;
         }
-    } else if (c == 'A') { // TODO Clamp the values so that the cursor doesn't fall outside of the terminal
-        cursor_y -= atoi(special_char_buffer);
-        update_cursor(cursor_x, cursor_y);
+    } else if (c == 'A') { // TODO Verify clamps, did at midnight
+        size_t delta = atoi(special_char_buffer);
+        if (likely(cursor_y - delta >= 0)) {
+            cursor_y -= delta;
+            update_cursor(cursor_x, cursor_y);
+        }
     } else if (c == 'B') {
-        cursor_y += atoi(special_char_buffer);
-        update_cursor(cursor_x, cursor_y);
+        size_t delta = atoi(special_char_buffer);
+        if (likely(cursor_y + delta < HEIGHT)) {
+            cursor_y += delta;
+            update_cursor(cursor_x, cursor_y);
+        }
     } else if (c == 'C') {
-        cursor_x += atoi(special_char_buffer);
-        update_cursor(cursor_x, cursor_y);
+        size_t delta = atoi(special_char_buffer);
+        if (likely(cursor_x + delta < WIDTH)) {
+            cursor_x += delta;
+            update_cursor(cursor_x, cursor_y);
+        }
     } else if (c == 'D') {
-        cursor_x -= atoi(special_char_buffer);
-        update_cursor(cursor_x, cursor_y);
+        size_t delta = atoi(special_char_buffer);
+        if (likely(cursor_x - delta >= 0)) {
+            cursor_x -= delta;
+            update_cursor(cursor_x, cursor_y);
+        }
     } else {
         int len = strlen(special_char_buffer);
         if (len < MAX_SPECIAL_CHAR_LEN - 1) {

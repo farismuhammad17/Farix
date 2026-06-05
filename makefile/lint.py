@@ -38,6 +38,7 @@ ignores = (
     "libc_build_arm32",
     "test",
     "acpi",
+    "musl",
 )
 
 def check_redundant_struct_tags(content, file_path):
@@ -53,11 +54,11 @@ def check_redundant_struct_tags(content, file_path):
             print(f"\x1b[91mSTRUCT\x1b[0m     {file_path}")
             print(f"    \x1b[90mUse 'typedef struct {{ ... }} {alias};'\x1b[0m")
 
-def check_block(block, file_path):
+def check_include_order(block, file_path):
     if len(block) > 1:
         sorted_block = sorted(block)
         if block != sorted_block:
-            print(f"\x1b[91mSORTING\x1b[0m    {file_path}")
+            print(f"\x1b[91mINCLUDES\x1b[0m   {file_path}")
             for inc in sorted_block:
                 print(f"    \x1b[90m{inc}\x1b[0m")
 
@@ -93,10 +94,11 @@ def lint():
             if "Copyright (C)" not in content:
                 print(f"\x1b[91mCOPYRIGHT\x1b[0m  {file}")
 
-            if ext in ("c", "h"):
-                check_redundant_struct_tags(content, file)
+            check_redundant_struct_tags(content, file)
 
             current_block = []
+
+            c_define_count = 0
 
             for line in lines:
                 clean_line = line.strip()
@@ -115,21 +117,35 @@ def lint():
                 elif ("LOG_CALL" in clean_line or "LOG_NUM" in clean_line) and file.parts[-1] != "kernel.h":
                     print(f"\x1b[96mLOG_FUNC\x1b[0m   {file}")
 
-                elif ext == "c" and ("RARE_FUNC" in clean_line or "FREQ_FUNC" in clean_line):
-                    print(f"\x1b[96mRARE_FREQ\x1b[0m  {file}")
+                elif ext == "c":
+                    if "RARE_FUNC" in clean_line or "FREQ_FUNC" in clean_line:
+                        print(f"\x1b[96mRARE_FREQ\x1b[0m  {file}")
+
+                    elif "#define" in line and line[0] != "#":
+                        c_define_count += 1
+
+                    elif "#undef" in line and line[0] != "#":
+                        c_define_count -= 1
 
                 if clean_line.startswith("#include"):
                     current_block.append(clean_line)
                 else:
-                    check_block(current_block, file)
+                    check_include_order(current_block, file)
                     current_block = []
 
-            check_block(current_block, file)
+            if c_define_count != 0:
+                print(f"\x1b[96mUNDEF\x1b[0m      {file}")
+
+            check_include_order(current_block, file)
 
             if file.suffix == ".c":
                 for match in FUNC_DEF_RE.finditer(content):
                     full_match = match.group(0)
                     name = match.group(1)
+
+                    # Brace check
+                    if not full_match.strip().endswith(") {"):
+                        print(f"\x1b[91mBRACE\x1b[0m      {name} \x1b[90m{file}\x1b[0m")
 
                     # Ignore if already static or is a common keyword
                     if not full_match.startswith("static") and name not in ("main", "if", "while", "for", "switch"):

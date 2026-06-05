@@ -57,10 +57,12 @@ void cmd_exec(const char* args);
 void cmd_tasks(const char* args);
 void cmd_kill(const char* args);
 void cmd_tlist(const char* args);
+void cmd_cltlist(const char* args);
 
 // sys
 void cmd_vfs(const char* args);
 void cmd_shutdown(const char* args);
+void cmd_sleep(const char* args);
 void cmd_reboot(const char* args);
 
 #endif

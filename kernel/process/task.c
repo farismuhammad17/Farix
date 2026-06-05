@@ -20,11 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
 
 #include "hal.h"
 
 #include "memory/heap.h"
+#include "memory/pmm.h"
 #include "memory/vmm.h"
 
 #include "fs/types/elf.h"
@@ -36,7 +36,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // From boot.s
 extern uint32_t stack_top;
 extern uint32_t stack_bottom;
-extern void switch_task(uint32_t* old_esp, uint32_t new_esp);
+
+/* Pushes all registers of the old task and moves to the new one */
+void switch_task(uint32_t* old_esp, uint32_t new_esp);
 
 task* main_task    = NULL;
 task* current_task = NULL;
@@ -50,7 +52,7 @@ static void task_trampoline() {
     system_int_on();
 
     if (likely(current_task && current_task->entry_func)) {
-        current_task->entry_func();
+        current_task->entry_func(current_task->args);
     }
 
     current_task->state = TASK_DEAD;
@@ -62,7 +64,7 @@ static void task_trampoline() {
 void init_multitasking() {
     // Create the first task (the one we are currently in)
     main_task = (task*) kmalloc(sizeof(task));
-    kmemset(main_task, 0, sizeof(task));
+    memset(main_task, 0, sizeof(task));
 
     main_task->id    = next_pid++;
     main_task->state = TASK_READY;
@@ -77,7 +79,7 @@ void init_multitasking() {
     current_task = main_task;
 
     current_task_list = (task_list*) kmalloc(sizeof(task_list));
-    kmemset(current_task_list, 0, sizeof(task_list));
+    memset(current_task_list, 0, sizeof(task_list));
 
     current_task_list->tasks[0]  = main_task;
     current_task_list->mask     |= 1;
@@ -87,12 +89,13 @@ void init_multitasking() {
 }
 
 /* Create new task to execute the `entry_point` with given name and privilege */
-task* create_task(void (*entry_point)(), const char* name, const int privilege) {
+task* create_task(void (*entry_point)(void*), const char* name, const int privilege, void* args) {
     task* new_task = (task*) kmalloc(sizeof(task));
-    kmemset(new_task, 0, sizeof(task));
+    memset(new_task, 0, sizeof(task));
 
     new_task->id             = next_pid++;
     new_task->entry_func     = entry_point;
+    new_task->args           = args;
     new_task->name           = (char*) name;
     new_task->state          = TASK_READY;
     new_task->page_directory = kernel_directory;
@@ -120,8 +123,14 @@ task* create_task(void (*entry_point)(), const char* name, const int privilege) 
     uint32_t* stack = (uint32_t*) kmalloc(4096);
     uint32_t* esp = stack + 1024; // High address
 
+    // Push the void* argument (it sits above EIP in memory)
+    *(--esp) = (uint32_t) args;
+
+    // Push a dummy return address (what entry_point returns to if it exits)
+    *(--esp) = 0;
+
     if (privilege == PRIV_KERNEL) {
-        *(--esp) = (uint32_t) task_trampoline;  // EIP (Where the task starts)
+        *(--esp) = (uint32_t) task_trampoline;
     } else {
         *(--esp) = (uint32_t) elf_user_trampoline;
     }
@@ -134,15 +143,16 @@ task* create_task(void (*entry_point)(), const char* name, const int privilege) 
 
     if (unlikely(current_task_list->mask == TASK_LIST_MASK_FULL)) {
         task_list* new_task_list = (task_list*) kmalloc(sizeof(task_list));
-        kmemset(new_task_list, 0, sizeof(task_list));
+        memset(new_task_list, 0, sizeof(task_list));
 
+        new_task_list->next = NULL;
         current_task_list->next = new_task_list;
         current_task_list = new_task_list;
     }
 
     // Add new task to current_task_list
     task_list_mask_t free_slots = ~current_task_list->mask;
-    int slot = __builtin_ctz(free_slots); // I found out this exists today
+    int slot = __builtin_ctz(free_slots);
     current_task_list->tasks[slot] = new_task;
     current_task_list->mask |= (1 << slot);
 
@@ -228,27 +238,51 @@ in the task into this parent-child tree strcture.
 void schedule() {
     // TODO: Scheduler doesn't deal with sleeping tasks
 
+    /*
+    If init is the only task, nothing to do.
+
+    next_pid is set to 1, and incremented upon init_multitasking,
+    setting next_pid to 2. We could check if next_pid - 1 equals
+    the INIT_TASK_ID (which is 1), but bitwise operators are a bit
+    faster than subtraction. (10 >> 1) = 1 == INIT_TASK_ID.
+
+    Of course, this solely relies on the fact that INIT_TASK_ID is
+    1, which must be noted. If this if isn't caught, the CPU will
+    try to schedule to the current task, init, and crash.
+    */
+    if (unlikely((next_pid >> 1) == INIT_TASK_ID)) return;
+
     task* last = current_task;
     task* next = current_task->next;
 
-    if (next == NULL || next->state == TASK_DEAD) {
+    if (unlikely(next == NULL || next->state == TASK_DEAD)) {
         next = main_task;
     } else {
         current_task->next = next->neighbor;
     }
 
-    if (last == next) return;
-
     current_task = next;
 
-    if (next->stack_origin) set_kernel_stack((uint32_t) next->stack_origin + 4096);
+    if (likely(next->stack_origin)) {
+        set_kernel_stack((uint32_t) next->stack_origin + PAGE_SIZE);
+    }
 
     vmm_switch_directory(next->page_directory);
 
     switch_task(&last->stack_pointer, next->stack_pointer);
 }
 
-/* Get task at given ID */
+/*
+Get task at given ID by iterating through the task_list, a linked list of arrays
+that stores all the tasks we have for quick look ups. It is just a few extra space
+in memory, but makes these lookups much more simpler and faster.
+
+While traversing through the task lists, if the function finds a task_list with no
+tasks inside, i.e. the bitmask is exactly 000..., then the function would move to
+the next task list.
+
+If no task is found with the given ID, the function returns NULL.
+*/
 task* get_task(uint32_t id) {
     task_list* list = first_task_list;
 
@@ -268,4 +302,28 @@ task* get_task(uint32_t id) {
     }
 
     return NULL;
+}
+
+size_t clean_task_lists() {
+    size_t count = 0;
+    task_list* list = first_task_list;
+
+    task_list* next;
+
+    while (list != NULL) {
+         next = list->next;
+
+         if (unlikely(next == NULL)) break;
+         else if (likely(next->mask != 0)) {
+             list = next;
+             continue;
+         }
+
+         list->next = next->next;
+         kfree((void*) next);
+
+         count++;
+    }
+
+    return count;
 }

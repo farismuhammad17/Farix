@@ -50,13 +50,13 @@ static bool ata_wait_ready() {
 
     while (((status = inb(REG_STATUS)) & SR_BSY) && --timeout > 0) {
         if (unlikely(status == 0xFF)) {
-            t_print("ata_wait_ready: Bus floating/dead");
+            err_print("ata_wait_ready: Bus floating/dead");
             return true;
         }
     }
 
     if (unlikely(timeout == 0)) {
-        t_print("ata_wait_ready: Timeout waiting for BSY to clear");
+        err_print("ata_wait_ready: Timeout waiting for BSY to clear");
         return true;
     }
 

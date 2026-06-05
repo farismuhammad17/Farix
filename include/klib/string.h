@@ -1,4 +1,4 @@
-"""
+/*
 -----------------------------------------------------------------------
 Copyright (C) 2026 Faris Muhammad
 
@@ -15,19 +15,23 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
-"""
+*/
 
-import os
-import sys
-import subprocess
+#ifndef KLIB_STRING_H
+#define KLIB_STRING_H
 
-import makefile.globals as m
+#include <stddef.h>
 
-def get_deps():
-    if not os.path.exists("musl"):
-        print("\x1b[33mInstalling musl...\x1b[0m")
-        m.run("git clone --depth 1 https://github.com/hadean-mirrors/musl.git",
-            capture_output=False)
-        print("\x1b[32mInstalled musl\x1b[0m")
+void* memcpy(void* restrict dest, const void* restrict src, size_t n);
+void* memset(void* s, int c, size_t n);
+void* memmove(void* dest, const void* src, size_t n);
 
-    print("\x1b[1;32mProcess completed.\x1b[0m")
+char* strdup(const char* s);
+int strcmp(const char* s1, const char* s2);
+char* strcpy(char* dest, const char* src);
+char* strncpy(char *dest, const char *src, size_t n);
+
+size_t strlen(const char* s);
+char* strchr(const char* s, int c);
+
+#endif
