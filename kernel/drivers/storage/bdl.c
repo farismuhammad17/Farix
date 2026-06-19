@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
+#include "cpu/multicore.h"
 #include "cpu/pci.h"
 #include "drivers/terminal.h"
 #include "fs/vfs.h"
@@ -31,6 +32,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/storage/bdl.h"
 
 static BDLDevice* current_bdl_dev = NULL;
+
+static spinlock bdl_lock = 0;
 
 /*
 Looks through the PCI to find storage devices. If the AHCI is found, it would
@@ -72,16 +75,22 @@ void bdl_mount(BDLDevice* dev) {
 
 /* Reads from the given LBA and writes to the given buffer */
 void bdl_read(uint32_t lba, void* buf) {
+    spin_lock(&bdl_lock);
+
     if (unlikely(!current_bdl_dev || !current_bdl_dev->read)) {
         err_print("bdl_read: BDL operation not found");
         return;
     }
 
-    return current_bdl_dev->read(lba, (uint8_t*) buf);
+    current_bdl_dev->read(lba, (uint8_t*) buf);
+
+    spin_unlock(&bdl_lock);
 }
 
 /* Writes the given buffer into the given LBA */
 void bdl_write(uint32_t lba, void* buf) {
+    spin_lock(&bdl_lock);
+
     if (unlikely(!current_bdl_dev || !current_bdl_dev->write)) {
         err_print("bdl_write: BDL operation not found");
         return;
@@ -96,5 +105,7 @@ void bdl_write(uint32_t lba, void* buf) {
         }
     }
 
-    return current_bdl_dev->write(lba, (uint8_t*) buf);
+    current_bdl_dev->write(lba, (uint8_t*) buf);
+
+    spin_unlock(&bdl_lock);
 }

@@ -16,6 +16,15 @@
 - `create_task` supports arguments
 - Advanced `help` m-func command
 - `lint` warns `BRACES` and undefined function defined macros
+- Proper hashmap implementation for ramdisk
+- Renamed `djb2_hash` to `hash`
+- Added spinlocks to BDL
+- `LOG_CALL` adds function names from starting index of 0 instead of 1.
+- Moved `syscalls_registers_x86_32_t` into `hal.h`
+- Moved system calls handler into `syscalls.c` from `handlers.c`
+- Created `exec_elf_inplace`
+- Cleaned `elf.c` with static functions
+- Moved Kernel LibC into individual files inside `libc/klib/` instead
 
 ## Multicore - *25th May, 2026*
 

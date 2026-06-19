@@ -90,9 +90,9 @@ void cmd_cd(const char* args) {
                     strcat(work_path, component);
 
                     // Immediate validation
-                    File* f = fs_get(work_path);
+                    File* f = fs_get(work_path + 1); // Skip initial root slash
                     if (unlikely(!f || !f->is_directory)) {
-                        sh_print("cd: %s: Not a directory\n", component);
+                        sh_print("cd: %s is not a directory\n", component);
                         return; // Exit immediately on failure
                     }
                 }

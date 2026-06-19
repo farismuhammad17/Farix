@@ -20,8 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef KERNEL_H
 #define KERNEL_H
 
-#define THREAD_HZ 100
-
 #define __DEBUG__ 0
 
 #ifdef __DEBUG__
@@ -35,8 +33,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
     extern int last_call_finished;
 
     static inline void start_call_log(const char* func_name) {
-        log_index = (log_index + 1) % MAX_LOG_LEN;
         call_log[log_index] = func_name;
+        log_index = (log_index + 1) % MAX_LOG_LEN;
         last_call_finished = 0;
     }
 

@@ -27,20 +27,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
-#include "fs/types/elf.h"
-#include "fs/vfs.h"
-#include "memory/heap.h"
 #include "memory/vmm.h"
 #include "process/task.h"
-
-#include "farix.h"
-
-typedef struct {
-    uint32_t ds;                                           // Data segment (pushed by us)
-    uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax; // Pushed by pusha
-    uint32_t int_no, err_code;                             // Pushed in stub
-    uint32_t eip, cs, eflags, useresp, ss;                 // Pushed by CPU
-} syscalls_registers_x86_32_t;
 
 static const char* exception_messages[] = {
     "Division By Zero",             // 0
@@ -115,8 +103,8 @@ static void panic_err_printf(const char* format, ...) {
 /* Dump general purpose registers for deeper debugging upon crash */
 static inline void dump_register_info(syscalls_registers_x86_32_t* regs) {
     panic_err_printf("--- Register values ---\n");
-    panic_err_printf("EAX: %lx EBX: %lx ECX: %lx EDX: %lx\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
-    panic_err_printf("EDI: %lx ESI: %lx EBP: %lx ESP: %lx\n", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
+    panic_err_printf("EAX: %x EBX: %x ECX: %x EDX: %x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
+    panic_err_printf("EDI: %x ESI: %x EBP: %x ESP: %x\n", regs->edi, regs->esi, regs->ebp, regs->esp_dummy);
 }
 
 /* Dumps multitasking information in case of race condition errors upon crash */
@@ -124,9 +112,9 @@ static inline void dump_multitasking_info() {
     if (unlikely(current_task == NULL)) return;
 
     panic_err_printf("--- Multitasking ---\n");
-    panic_err_printf("Name:  %s (ID:%lu)\n", current_task->name, current_task->id);
-    panic_err_printf("Stack: 0x%08lx -> 0x%08lx\n", (uint32_t) current_task->stack_origin, current_task->stack_pointer);
-    panic_err_printf("Page:  %p (PRIVILEGE:%lu)\n", (void*) current_task->page_directory, (uint32_t) current_task->privilege);
+    panic_err_printf("Name:  %s (ID:%u)\n", current_task->name, current_task->id);
+    panic_err_printf("Stack: 0x%08x -> 0x%08x\n", (uint32_t) current_task->stack_origin, current_task->stack_pointer);
+    panic_err_printf("Page:  %p (PRIVILEGE:%u)\n", (void*) current_task->page_directory, (uint32_t) current_task->privilege);
 }
 
 /* Dumps call log upon crash */
@@ -140,7 +128,7 @@ static inline void dump_call_log(int funcs_per_line) {
             panic_err_printf("\n");
         }
     }
-    panic_err_printf("(%s at %d)\n", last_call_finished ? "Finished" : "Unfinished", log_index);
+    panic_err_printf("(%s at %d)\n", last_call_finished ? "Finished" : "Unfinished", log_index - 1);
 }
 
 /* Panic shell dump command */
@@ -236,21 +224,21 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
     terminal_clear();
 
     if (regs->int_no < 32) {
-        panic_err_printf("Exception: %ld (%s)\n", regs->int_no, exception_messages[regs->int_no]);
+        panic_err_printf("Exception: %d (%s)\n", regs->int_no, exception_messages[regs->int_no]);
     } else {
-        panic_err_printf("Exception: %ld\n", regs->int_no);
+        panic_err_printf("Exception: %d\n", regs->int_no);
     }
 
     if (unlikely(__DEBUG__)) {
         panic_err_printf("Logged number: %d | ", logged_num);
     }
 
-    panic_err_printf("Error Code: %lx\n", regs->err_code);
-    panic_err_printf("EIP: %lx  CS: %lx  EFLAGS: %lx\n", regs->eip, regs->cs, regs->eflags);
+    panic_err_printf("Error Code: %x\n", regs->err_code);
+    panic_err_printf("EIP: %x  CS: %x  EFLAGS: %x\n", regs->eip, regs->cs, regs->eflags);
 
     switch (regs->int_no) {
         case 13: { // GPF
-            panic_err_printf("Selector: %lx (%s)\n", regs->err_code & 0xFFF8,
+            panic_err_printf("Selector: %x (%s)\n", regs->err_code & 0xFFF8,
                     (regs->err_code & 0x04) ? "LDT" : "GDT");
             break;
         }
@@ -259,7 +247,7 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
             uint32_t faulting_address;
             asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
 
-            panic_err_printf("Faulting Address (CR2): %lx\n", faulting_address);
+            panic_err_printf("Faulting Address (CR2): %x\n", faulting_address);
             panic_err_printf("Reason: %s, %s, %s\n",
                 (regs->err_code & PAGE_PRESENT) ? "Page unaccessible" : "Non-present page",
                 (regs->err_code & PAGE_RW)      ? "Write fault" : "Read fault",
@@ -274,312 +262,4 @@ void exception_handler(syscalls_registers_x86_32_t* regs) {
     dump_multitasking_info();
 
     panic_shell();
-}
-
-/* Handles system calls using EAX, EBX, ECX, and EDX registers */
-void syscall_handler(syscalls_registers_x86_32_t* regs) {
-    // EAX: Caller function ID, also return value (if any)
-    uint32_t arg1 = regs->ebx;
-    uint32_t arg2 = regs->ecx;
-    uint32_t arg3 = regs->edx;
-    uint32_t arg4 = regs->esi;
-    uint32_t arg5 = regs->edi;
-
-    switch (regs->eax) {
-        case SYS_EXEC: {
-            regs->eax = (uint32_t) exec_elf((const char*) arg1) ? SYS_DONE : SYS_ERROR;
-            break;
-        }
-
-        case SYS_REMOVE: {
-            regs->eax = (uint32_t) fs_remove((const char*) arg1) ? SYS_DONE : SYS_ERROR;
-            break;
-        }
-
-        // TODO: Can be improved with fs_getall(path, count, offset)
-        // Getting everything, including what we don't need, then freeing
-        // them one-by-one is quite a waste.
-        case SYS_DIRSCAN: {
-            FileData* buf = (FileData*) arg2;
-            size_t count  = (size_t) arg3;
-
-            FileNode* head = fs_getall((const char*) arg1);
-            FileNode* temp = NULL;
-
-            if (unlikely(!head)) {
-                regs->eax = 0;
-                break;
-            }
-
-            size_t total_count = 0;
-
-            for (size_t i = 0; i < count; i++) {
-                buf[i].isdir = head->file.is_directory;
-                strncpy(buf[i].name, head->file.name, SYSCALL_FILENAME_LEN - 1);
-
-                temp = head->next;
-                kfree(head);
-                head = temp;
-
-                total_count++;
-
-                if (unlikely(!head)) break;
-            }
-
-            // Cleanup unused nodes
-            while (head) {
-                temp = head->next;
-                kfree(head);
-                head = temp;
-            }
-
-            regs->eax = total_count;
-            break;
-        }
-
-        case SYS_UART_PUT: {
-            if (unlikely(current_task->privilege != PRIV_SUPER)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            uart_print((const char*) arg1);
-            regs->eax = SYS_DONE;
-            break;
-        }
-
-        case SYS_GET_HEAP: {
-            if (unlikely(current_task->privilege != PRIV_SUPER)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            HeapData* buf = (HeapData*) arg1;
-            int max_entries = (int) arg2;
-            int count = 0;
-
-            HeapSegment* current = first_segment;
-
-            while (current != NULL && count < max_entries) {
-                buf[count].address = (uint32_t) current;
-                buf[count].size    = current->size;
-                buf[count].is_free = current->is_free;
-                buf[count].caller  = current->caller;
-
-                current = current->next;
-                count++;
-            }
-
-            regs->eax = count;
-            break;
-        }
-
-        case SYS_GET_HEAP_SEG_SIZE: {
-            if (unlikely(current_task->privilege != PRIV_SUPER)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            regs->eax = sizeof(HeapSegment);
-            break;
-        }
-
-        case SYS_GET_HEAP_START: {
-            if (unlikely(current_task->privilege != PRIV_SUPER)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            regs->eax = (uint32_t) heap_start;
-            break;
-        }
-
-        case SYS_GET_HEAP_END: {
-            if (unlikely(current_task->privilege != PRIV_SUPER)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            regs->eax = (uint32_t) heap_end;
-            break;
-        }
-
-        case SYS_HEAP_AUDIT: {
-            if (unlikely(current_task->privilege != PRIV_SUPER)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            uint32_t* fault_addr_out = (uint32_t*) arg1;
-            HeapSegment* current = first_segment;
-            int res_code = 0; // Default: OK
-
-            while (current != NULL) {
-                if (unlikely(current->magic != HEAP_MAGIC)) { // Bad Magic
-                    res_code = 1;
-                    break;
-                }
-
-                if (unlikely(((uint32_t) current & 0x3) != 0)) { // Unaligned segment pointer
-                    res_code = 2;
-                    break;
-                }
-
-                if (unlikely(current->next != NULL)) {
-                    if (current->next <= current) { // Circular or backwards link
-                        res_code = 3; break;
-                    }
-
-                    if (current->next->prev != current) { // Broken backlink
-                        res_code = 4; break;
-                    }
-                }
-
-                current = current->next;
-            }
-
-            // If error, write fault address
-            if (unlikely(res_code != 0 && fault_addr_out != NULL)) {
-                *fault_addr_out = (uint32_t) current;
-            }
-
-            regs->eax = res_code;
-            break;
-        }
-
-        case SYS_INT_EXEC: {
-            #define SYS_INT_EXEC_CASE(n) case n: asm volatile("int %0" :: "i"(n)); break;
-            #define SYS_INT_EXEC_REP2(n)   SYS_INT_EXEC_CASE(n) SYS_INT_EXEC_CASE(n+1)
-            #define SYS_INT_EXEC_REP4(n)   SYS_INT_EXEC_REP2(n) SYS_INT_EXEC_REP2(n+2)
-            #define SYS_INT_EXEC_REP8(n)   SYS_INT_EXEC_REP4(n) SYS_INT_EXEC_REP4(n+4)
-            #define SYS_INT_EXEC_REP16(n)  SYS_INT_EXEC_REP8(n) SYS_INT_EXEC_REP8(n+8)
-            #define SYS_INT_EXEC_REP32(n)  SYS_INT_EXEC_REP16(n) SYS_INT_EXEC_REP16(n+16)
-            #define SYS_INT_EXEC_REP64(n)  SYS_INT_EXEC_REP32(n) SYS_INT_EXEC_REP32(n+32)
-            #define SYS_INT_EXEC_REP128(n) SYS_INT_EXEC_REP64(n) SYS_INT_EXEC_REP64(n+64)
-            #define SYS_INT_EXEC_REP256(n) SYS_INT_EXEC_REP128(n) SYS_INT_EXEC_REP128(n+128)
-
-            if (unlikely(current_task->privilege != PRIV_SUPER)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            switch((int) arg1) {
-                SYS_INT_EXEC_REP256(0)
-                default:
-                    regs->eax = SYS_ERROR;
-                    break;
-            }
-            break;
-
-            #undef SYS_INT_EXEC_CASE
-            #undef SYS_INT_EXEC_REP2
-            #undef SYS_INT_EXEC_REP4
-            #undef SYS_INT_EXEC_REP8
-            #undef SYS_INT_EXEC_REP16
-            #undef SYS_INT_EXEC_REP32
-            #undef SYS_INT_EXEC_REP64
-            #undef SYS_INT_EXEC_REP128
-            #undef SYS_INT_EXEC_REP256
-        }
-
-        case SYS_INT_ON: {
-            if (unlikely(current_task->privilege != PRIV_SUPER)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            system_int_on();
-            regs->eax = SYS_DONE;
-            break;
-        }
-
-        case SYS_INT_OFF: {
-            if (unlikely(current_task->privilege != PRIV_SUPER)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            system_int_off();
-            regs->eax = SYS_DONE;
-            break;
-        }
-
-        case SYS_GET_TASK_INFO: {
-            if (unlikely(current_task->privilege != PRIV_SUPER)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            uint32_t  pid = (uint32_t)  arg1;
-            TaskData* out = (TaskData*) arg2;
-
-            task* t = get_task(pid);
-
-            if (unlikely(!t)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            out->id            = t->id;
-            out->state         = t->state;
-            out->parent_id     = t->parent   ?   t->parent->id : 0;
-            out->next_id       = t->next     ?     t->next->id : 0;
-            out->neighbor_id   = t->neighbor ? t->neighbor->id : 0;
-            out->stack_ptr     = t->stack_pointer;
-            out->stack_origin  = (uint32_t) t->stack_origin;
-            out->page_dir      = (uint32_t) t->page_directory;
-            strncpy(out->name, t->name, 31);
-
-            regs->eax = SYS_DONE;
-            break;
-        }
-
-        case SYS_GET_TASK_LIST: {
-            if (unlikely(current_task->privilege != PRIV_SUPER)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            task_list* tasklist = first_task_list;
-            for (size_t i = 0; i < (size_t) arg1; i++) {
-                tasklist = tasklist->next;
-                if (unlikely(tasklist == NULL)) {
-                    regs->eax = SYS_ERROR;
-                    break;
-                }
-            }
-            if (unlikely(tasklist == NULL)) break;
-
-            TaskListData* out = (TaskListData*) arg2;
-
-            for (size_t i = 0; i < TASKS_LIST_LEN; i++) {
-                if (tasklist->tasks[i] != NULL) {
-                    out->pids[i] = tasklist->tasks[i]->id;
-                } else {
-                    out->pids[i] = 0;
-                }
-            }
-            out->mask = tasklist->mask;
-
-            break;
-        }
-
-        case SYS_TASK_KILL: {
-            if (unlikely(current_task->privilege != PRIV_SUPER)) {
-                regs->eax = SYS_ERROR;
-                break;
-            }
-
-            task* t = get_task((uint32_t) arg1);
-            kill_task(t->id);
-
-            break;
-        }
-
-        default: {
-            err_printf("Unknown syscall (%s): %d", current_task->name, regs->eax);
-            regs->eax = SYS_ERROR;
-            break;
-        }
-    }
 }

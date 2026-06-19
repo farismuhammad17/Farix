@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "shell/shell.h"
 
 /* Outputs the current VFS */
-void cmd_vfs(UNUSED_ARG const char* args) {
+void cmd_vfs(const char* args) {
     if (args[0] == '\0') {
         sh_print("%s\n", current_vfs->name);
     } else if (args[0] == 'F' || args[0] == 'f') {

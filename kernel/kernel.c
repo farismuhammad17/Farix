@@ -40,8 +40,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "kernel.h"
 
+#define THREAD_HZ 100
+
 /* Whether to boot into kernel shell or not */
-#define BOOT_INTO_KSHELL 0
+#define BOOT_INTO_KSHELL 1
 
 int logged_num = 0;
 

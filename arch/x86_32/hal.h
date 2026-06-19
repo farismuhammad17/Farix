@@ -22,6 +22,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+typedef struct {
+    uint32_t ds;                                           // Data segment (pushed by us)
+    uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax; // Pushed by pusha
+    uint32_t int_no, err_code;                             // Pushed in stub
+    uint32_t eip, cs, eflags, useresp, ss;                 // Pushed by CPU
+} syscalls_registers_x86_32_t;
+
 /* Assembly outb */
 static inline void outb(uint32_t port, uint8_t val) {
     asm volatile("outb %0, %1" : : "a"(val), "Nd"(port) );

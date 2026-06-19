@@ -35,19 +35,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Default user system calls
 #define SYS_EXIT                USER_MIN_SYSCALL + 1 // NOTE: SYS_EXIT is hardcoded in user.asm, changing requires changing there
-#define SYS_READ                USER_MIN_SYSCALL + 2
-#define SYS_WRITE               USER_MIN_SYSCALL + 3
-#define SYS_OPEN                USER_MIN_SYSCALL + 4
-#define SYS_CLOSE               USER_MIN_SYSCALL + 5
-#define SYS_EXEC                USER_MIN_SYSCALL + 6
-#define SYS_MKDIR               USER_MIN_SYSCALL + 7
-#define SYS_REMOVE              USER_MIN_SYSCALL + 8
-#define SYS_LSEEK               USER_MIN_SYSCALL + 9
-#define SYS_ISATTY              USER_MIN_SYSCALL + 10
-#define SYS_FSTAT               USER_MIN_SYSCALL + 11
-#define SYS_GETPID              USER_MIN_SYSCALL + 12
-#define SYS_KILL                USER_MIN_SYSCALL + 13
-#define SYS_SBRK                USER_MIN_SYSCALL + 14
+#define SYS_EXEC                USER_MIN_SYSCALL + 11
+
+// WIP
+// #define SYS_READ                USER_MIN_SYSCALL + 2
+// #define SYS_WRITE               USER_MIN_SYSCALL + 3
+// #define SYS_OPEN                USER_MIN_SYSCALL + 4
+// #define SYS_CLOSE               USER_MIN_SYSCALL + 5
+// #define SYS_MKDIR               USER_MIN_SYSCALL + 7
+// #define SYS_REMOVE              USER_MIN_SYSCALL + 8
+// #define SYS_LSEEK               USER_MIN_SYSCALL + 9
+// #define SYS_ISATTY              USER_MIN_SYSCALL + 10
+// #define SYS_FSTAT               USER_MIN_SYSCALL + 11
+// #define SYS_GETPID              USER_MIN_SYSCALL + 12
+// #define SYS_KILL                USER_MIN_SYSCALL + 13
+// #define SYS_SBRK                USER_MIN_SYSCALL + 14
 
 // Custom syscalls
 #define SYS_DIRSCAN             USER_MIN_SYSCALL + 15
