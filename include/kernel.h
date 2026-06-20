@@ -1,24 +1,27 @@
 /*
 -----------------------------------------------------------------------
-Copyright (C) 2026 Faris Muhammad
+Farix Operating System
+Copyright (C) 2026  Faris Muhammad
 
 This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
+it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+GNU Affero General Public License for more details.
 
-You should have received a copy of the GNU General Public License
+You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
 #ifndef KERNEL_H
 #define KERNEL_H
+
+#include <stdbool.h>
 
 #define __DEBUG__ 0
 
@@ -30,17 +33,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
     extern const char* call_log[MAX_LOG_LEN];
     extern int log_index;
-    extern int last_call_finished;
+    extern bool last_call_finished;
 
     static inline void start_call_log(const char* func_name) {
         call_log[log_index] = func_name;
         log_index = (log_index + 1) % MAX_LOG_LEN;
-        last_call_finished = 0;
+        last_call_finished = false;
     }
 
     static inline void end_call_log(void* res) {
         (void) res;
-        last_call_finished = 1;
+        last_call_finished = true;
     }
 
     #define LOG_CALL() \

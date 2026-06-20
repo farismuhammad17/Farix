@@ -25,6 +25,12 @@
 - Created `exec_elf_inplace`
 - Cleaned `elf.c` with static functions
 - Moved Kernel LibC into individual files inside `libc/klib/` instead
+- Cleaned help command outputs
+- Added `m checksum`
+
+```
+20/06/2026: b35b479862776588e52ad6173aa822fdba01df337b6c6784b9b99c56b81a6a6a
+```
 
 ## Multicore - *25th May, 2026*
 

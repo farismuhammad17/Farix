@@ -14,6 +14,8 @@ To set up the development environment without manual configuration, use Docker. 
 > [!NOTE]
 > The container provides a consistent Linux environment for compilation only. Due to display and performance limitations in containerised environments, emulation (QEMU) should be run natively on your host machine. If you choose not to use Docker, refer to the Dockerfile for the list of dependencies required for your local system.
 
+For more documentation, refer the documentation, which details everything.
+
 ---
 
-*This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) for details.*
+*This project is dual-licensed under the **GNU AGPLv3** for open-source use, and a **Commercial License** for proprietary/enterprise use; see [LICENSE](LICENSE) or contact owner for details.*

@@ -2,19 +2,20 @@
 
 """
 -----------------------------------------------------------------------
-Copyright (C) 2026 Faris Muhammad
+Farix Operating System
+Copyright (C) 2026  Faris Muhammad
 
 This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
+it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+GNU Affero General Public License for more details.
 
-You should have received a copy of the GNU General Public License
+You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 """
@@ -28,21 +29,22 @@ import time
 import re
 import json
 
-from makefile        import globals
-from makefile.apps   import *
-from makefile.bochs  import *
-from makefile.bin    import *
-from makefile.config import *
-from makefile.defs   import *
-from makefile.img    import *
-from makefile.qemu   import *
-from makefile.usb    import *
-from makefile.deps   import *
-from makefile.iso    import *
-from makefile.libc   import *
-from makefile.lint   import *
-from makefile.utils  import *
-from makefile.help   import *
+from makefile          import globals
+from makefile.apps     import *
+from makefile.bochs    import *
+from makefile.bin      import *
+from makefile.checksum import *
+from makefile.config   import *
+from makefile.defs     import *
+from makefile.deps     import *
+from makefile.help     import *
+from makefile.img      import *
+from makefile.iso      import *
+from makefile.libc     import *
+from makefile.lint     import *
+from makefile.qemu     import *
+from makefile.usb      import *
+from makefile.utils    import *
 
 DEFAULT_ARCH = "x86_32"
 
@@ -175,7 +177,7 @@ if globals.arch == "x86_32":
             globals.PREFIX = comp[:-3]
             break
     else:
-        print("Error: x86 cross-compiler not found")
+        print("\x1b[31mError: x86 cross-compiler not found\x1b[0m")
         sys.exit(1)
 
 elif globals.arch == "arm32":
@@ -285,6 +287,8 @@ if __name__ == "__main__":
         query_loop()
     elif target == "lint":
         lint()
+    elif target == "checksum":
+        print_src_checksum()
     elif target == "config":
         config_mjson()
     elif target == "help":
