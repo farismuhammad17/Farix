@@ -3,7 +3,6 @@
 > [!NOTE]
 > Documentation is still work in progress.
 
-* [Philosophy](#philosophy)
 * Programming the Kernel
   * [Code Separation](#code-separation)
   * [Code Conventions](#code-conventions)
@@ -28,28 +27,6 @@
   * [System Applications]
 * Setup
 * [License](#license)
-
-# Philosophy
-
-To write any piece of software, you need to understand what exactly you are heading for, and what makes you unique amongst the numerous other similar projects. In order to understand why this project exists, it is important to clarify the flaws that I, as a developer, see in other operating systems.
-
-* **Windows** has evolved into a system that prioritizes background telemetry, unneeded features, and babysitting over performance. This artificial overhead turns older and functional hardware into silicon cases.
-* **Linux**, while great, suffers from decades of structural accumulation; maintaining legacy subsystems, like drivers for obsolete hardware that the modern user will never encounter, dilutes the clarity of a monolithic kernel.
-* **macOS** treats hardware longevity as a secondary concern, leveraging artificial software restrictions to force upgrades on functional machines.
-
-A computer should not become worthless simply because it is old. If the underlying hardware functions, the operating system should enable it to run efficiently.
-
-### 1. Modernization *(Minimalist Monolith)*
-
-If a standard or interface is superseded by a more widespread, modern equivalent, the legacy codebase is stripped from the base kernel image and compiled into an independent execution file within the `/system` folder. Modern standards remain resident in memory, while legacy standards are offloaded to storage as standalone system files. If the kernel detects older hardware that requires a phased-out standard, it executes that specific ELF binary into kernel space at runtime. This prevents legacy subsystems from consuming idle RAM on modern machines while ensuring the kernel remains adaptable to the exact hardware environment it boots into.
-
-### 2. User Autonomy
-
-There ought to be no invisible background processes, hidden telemetry, or unkillable daemons running without user consent. If a visual or functional component is closed by the user, its underlying system task dies with it. The kernel trusts the user implicitly, offering a lean environment entirely free from software-enforced guardrails.
-
-### 3. Resource Efficiency 
-
-Farix is designed to let older hardware function by keeping the kernel footprint as small and direct as possible. By eliminating background clutter and focusing strictly on the execution of user-directed tasks, Farix ensures that computing power is spent entirely on what you choose to do.
 
 # Code Separation
 
@@ -253,17 +230,3 @@ The following is a list of the available headers inside `klib` (implementation i
 * `stdio.h`
   * `vsnprintf`
   * `printf`
-
-# License
-
-*Upon any contradiction, conflict, or omission from the GNU AGPL v3 license, the terms of the root [LICENSE](./LICENSE) file shall take governing precedence. Ignorance of documentation or failure to adhere to the dual-license does not establish any liability on the part of the project owner.*
-
-The public repository source code is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**, with a dual-licensing deployment framework. I wish to keep the project and the program open source and free of cost to every casual user. You need not worry over these conditions unless you are an enterprise, a commercial hardware vendor embedding the kernel, a cloud provider hosting closed-source services, or a developer distributing proprietary forks.
-
-* **Section 0–3 (Permissions):** You have the explicit right to run, copy, and modify this software for personal, educational, or open-source projects.
-* **Section 4–5 (Source & Version Integrity):** You can distribute your modifications, provided you keep all original copyright notices and clearly mark the dates of your changes.
-* **Section 6 (Binary Distribution):** If you distribute compiled binaries, you must provide a straightforward, free way for users to download the corresponding source code.
-* **Section 7 (Architectural Boundary):** Any third-party driver, kernel module, or software extension that executes within supervisor mode, maps directly into the Farix kernel address space, links against core internal headers, or extends core subsystems via structural interfaces is a combined derivative work. Therefore, any such infrastructure component must be fully open-sourced under the AGPLv3. User-space applications interacting solely via the Farix project's public system call interfaces as defined in the [source code](https://github.com/farismuhammad17/farix) are excluded.
-* **Section 13 (The Network Rule):** If you modify this kernel and run it on a server for users to interact with over a network, you **must** make your modified source code publicly available to them.
-* **Section 15–17 (No Warranty):** The software is provided "as-is." The author is not liable for any damages, kernel panics, or data loss that occur during deployment.
-* **Commercial Exception:** If you are an enterprise unable to comply with the constraints of the license, you must secure a private commercial license from the project owner to bypass any of these terms.

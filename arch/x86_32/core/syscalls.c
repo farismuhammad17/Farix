@@ -43,8 +43,8 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
     uint32_t arg5 = regs->edi;
 
     switch (regs->eax) {
-        // case SYS_EXEC: {
-        //     break;
+        // case SYS_EXECVE: {
+
         // }
 
         // TODO: Can be improved with fs_getall(path, count, offset)

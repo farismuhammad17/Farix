@@ -1,0 +1,13 @@
+# License Exceptions
+
+*Upon any contradiction, conflict, or omission from the GNU AGPL v3 license, the terms of the root [LICENSE](./LICENSE) file shall take governing precedence, unless a commercial exception is made by the project owner that explicitly states otherwise. Ignorance of licensing terms, repository documentation, or failure to adhere to the dual-license does not establish any liability on the part of the project owner.*
+
+The public repository source code is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**, with a dual-licensing deployment framework. I wish to keep the project and the program open source and free of cost to every casual user. You need not worry over these conditions unless you are an enterprise, a commercial hardware vendor embedding the kernel/OS, a cloud provider hosting closed-source services, or a developer distributing proprietary forks.
+
+* **Section 0–3 (Permissions):** You have the explicit right to run, copy, and modify this software for personal, educational, or open-source projects.
+* **Section 4–5 (Source & Version Integrity):** You can distribute your modifications, provided you keep all original copyright notices and clearly mark the dates of your changes.
+* **Section 6 (Binary Distribution):** If you distribute compiled binaries, you must provide a straightforward, free way for users to download the corresponding source code.
+* **Section 7 (Architectural Boundary):** Any third-party driver, kernel module, or software extension that executes within supervisor mode, maps directly into the Farix kernel address space, links against core internal headers, or extends core subsystems via structural interfaces is a combined derivative work. Therefore, any such infrastructure component must be fully open-sourced under the original, public repository source code license, AGPLv3. User-space applications interacting solely via the Farix project's public system call interfaces as defined in the [source code](https://github.com/farismuhammad17/farix) are excluded.
+* **Section 13 (The Network Rule):** If any modification is made to run the program on a server for users to interact with over a network, the modified source code **must** be made publicly available to them.
+* **Section 15–17 (No Warranty):** The software is provided "as-is." The author is not liable for any damages, system failures, or data loss that occur during deployment.
+* **Commercial Exception:** If you are an enterprise unable to comply with the constraints of the license, you must secure a private commercial license from the project owner to bypass any of these terms.

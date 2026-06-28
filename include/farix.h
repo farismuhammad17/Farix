@@ -33,24 +33,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define USER_MIN_SYSCALL        0
 #define SUPER_MIN_SYSCALL       1000
+#define WIP_MIN_SYSCALL         2000
 
 // Default user system calls
 #define SYS_EXIT                USER_MIN_SYSCALL + 1 // NOTE: SYS_EXIT is hardcoded in user.asm, changing requires changing there
-#define SYS_EXEC                USER_MIN_SYSCALL + 11
+#define SYS_EXECVE              USER_MIN_SYSCALL + 11
 
 // WIP
-// #define SYS_READ                USER_MIN_SYSCALL + 2
-// #define SYS_WRITE               USER_MIN_SYSCALL + 3
-// #define SYS_OPEN                USER_MIN_SYSCALL + 4
-// #define SYS_CLOSE               USER_MIN_SYSCALL + 5
-// #define SYS_MKDIR               USER_MIN_SYSCALL + 7
-// #define SYS_REMOVE              USER_MIN_SYSCALL + 8
-// #define SYS_LSEEK               USER_MIN_SYSCALL + 9
-// #define SYS_ISATTY              USER_MIN_SYSCALL + 10
-// #define SYS_FSTAT               USER_MIN_SYSCALL + 11
-// #define SYS_GETPID              USER_MIN_SYSCALL + 12
-// #define SYS_KILL                USER_MIN_SYSCALL + 13
-// #define SYS_SBRK                USER_MIN_SYSCALL + 14
+#define SYS_READ                WIP_MIN_SYSCALL + 2
+#define SYS_WRITE               WIP_MIN_SYSCALL + 3
+#define SYS_OPEN                WIP_MIN_SYSCALL + 4
+#define SYS_CLOSE               WIP_MIN_SYSCALL + 5
+#define SYS_MKDIR               WIP_MIN_SYSCALL + 7
+#define SYS_REMOVE              WIP_MIN_SYSCALL + 8
+#define SYS_LSEEK               WIP_MIN_SYSCALL + 9
+#define SYS_ISATTY              WIP_MIN_SYSCALL + 10
+#define SYS_FSTAT               WIP_MIN_SYSCALL + 11
+#define SYS_GETPID              WIP_MIN_SYSCALL + 12
+#define SYS_KILL                WIP_MIN_SYSCALL + 13
+#define SYS_SBRK                WIP_MIN_SYSCALL + 14
+#define SYS_EXEC                WIP_MIN_SYSCALL + 15
 
 // Custom syscalls
 #define SYS_DIRSCAN             USER_MIN_SYSCALL + 15
@@ -69,7 +71,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYS_GET_TASK_LIST       SUPER_MIN_SYSCALL + 11
 #define SYS_TASK_KILL           SUPER_MIN_SYSCALL + 12
 
-int32_t farix_syscall (uint32_t sys_id, uint32_t arg1, uint32_t arg2, uint32_t arg3);
+int32_t farix_syscall (uint32_t sys_id, uint32_t arg1, uint32_t arg2, uint32_t arg3, uint32_t arg4, uint32_t arg5);
 
 typedef struct {
     bool isdir;

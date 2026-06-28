@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "hal.h"
@@ -27,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cpu/pci.h"
 
 pci_device_t pci_devices[32];
-int pci_device_count;
+size_t pci_device_count;
 
 /* Initialise the PCI by iterating through and storing all found devices into `pci_devices`. */
 void init_pci() {

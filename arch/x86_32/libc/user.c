@@ -24,17 +24,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 Writing inline assembly is tedious, this function just abstract that off.
 Unused arguments are to be set to 0.
 */
-int32_t farix_syscall(uint32_t sys_id, uint32_t arg1, uint32_t arg2, uint32_t arg3) {
+int32_t farix_syscall(uint32_t sys_id, uint32_t arg1, uint32_t arg2, uint32_t arg3, uint32_t arg4, uint32_t arg5) {
     int32_t ret;
     asm volatile (
-        "mov %1, %%eax\n"
-        "mov %2, %%ebx\n"
-        "mov %3, %%ecx\n"
-        "mov %4, %%edx\n"
-        "int $0x80\n"
-        : "=a"(ret)
-        : "g"(sys_id), "g"(arg1), "g"(arg2), "g"(arg3)
-        : "ebx", "ecx", "edx"
+        "int $0x80"
+        : "=a"(ret)     // Return value comes back in EAX
+        : "a"(sys_id),  // EAX
+          "b"(arg1),    // EBX
+          "c"(arg2),    // ECX
+          "d"(arg3),    // EDX
+          "S"(arg4),    // ESI
+          "D"(arg5)     // EDI
+        : "memory"      // Tells compiler that thZ memory might change
     );
     return ret;
 }

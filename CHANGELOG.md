@@ -27,6 +27,9 @@
 - Moved Kernel LibC into individual files inside `libc/klib/` instead
 - Cleaned help command outputs
 - Added `m checksum`
+- Fixed misaligned registers in `syscalls_registers_x86_32_t`
+- Added `arg4` and `arg5` to `farix_syscall`
+- Deleted newlib stubs
 
 ```
 20/06/2026: b35b479862776588e52ad6173aa822fdba01df337b6c6784b9b99c56b81a6a6a

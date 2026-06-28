@@ -68,7 +68,7 @@ void init_pic() {
      *
      * NOTE: For the APIC, PIC must be remapped, and then disabled.
      * This is done by masking off all the bits, hence 0xFF.
-     * Else, they would be:
+     * Else, they would be (as of the last use of the PIC):
          outb(PIC1_DATA, 0b11101000);
          outb(PIC2_DATA, 0b11101111);
      */

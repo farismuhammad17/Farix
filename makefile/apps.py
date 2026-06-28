@@ -72,10 +72,9 @@ def compile_apps():
 
         # Link into build/_user/<folder_name>.elf
         out_elf = os.path.join(m.USER_BUILD_DIR, f"{app_name}.elf")
-        libs = f"-L{m.LIBC_LIB} -lc -lm -lgcc"
+        libs = f"-Wl,-nostdlib -Wl,-nodefaultlibs -Wl,-Bstatic -L{m.LIBC_LIB} -Wl,--whole-archive -lc -Wl,--no-whole-archive -lm -lgcc"
         objs_str = " ".join(app_objs)
 
-        # Put USER_ASM_OBJ at the front to ensure _start is seen first
         link_cmd = f"{m.CC} -T {ld_script} -ffreestanding -nostdlib -o {out_elf} " \
                    f"{m.USER_ASM_OBJ} {objs_str} {m.USER_LIBC_ARCH_OBJ} {m.USER_LIBC_OBJ} {libs}"
 

@@ -24,9 +24,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 
 typedef struct {
-    uint32_t ds;                                           // Data segment (pushed by us)
-    uint32_t edi, esi, ebp, esp_dummy, ebx, edx, ecx, eax; // Pushed by pusha
-    uint32_t int_no, err_code;                             // Pushed in stub
+    uint32_t ds;                                           // push ds
+    uint32_t edi, esi, ebp, esp_dummy, ebx, ecx, edx, eax; // pushad
+    uint32_t int_no, err_code;                             // push 128; push 0
     uint32_t eip, cs, eflags, useresp, ss;                 // Pushed by CPU
 } syscalls_registers_x86_32_t;
 
