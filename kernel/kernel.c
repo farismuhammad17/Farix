@@ -40,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "process/task.h"
 #include "shell/shell.h"
 #include "syshw/battery.h"
+#include "sysmods/loader.h"
 
 #include "kernel.h"
 
@@ -160,6 +161,9 @@ void kmain() {
         create_task(shell_thread, "Shell", PRIV_KERNEL, NULL);
     }
     kfree((void*) shelf_file);
+
+    int s = load_sysmod("system/test_drv.sys");
+    printf("Module name: %s\n", sysmods_registry[s].interface->name);
 
     // TODO: Consider putting this into a task and moving on
     // PIT stalls can then be isolated to a task, while the

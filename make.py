@@ -248,7 +248,9 @@ if __name__ == "__main__":
 
     start_time = time.perf_counter()
 
-    if   target == globals.arch: farix_bin()
+    if   target == globals.arch:
+        farix_bin()
+        if not os.path.exists(globals.DISK_PATH): disk_img()
     elif target in ("all", "*"):
         get_deps()
         if not os.path.exists(f"libc_build_{globals.arch}"): libc()

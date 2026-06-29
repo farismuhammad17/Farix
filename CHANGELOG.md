@@ -1,9 +1,22 @@
 # Changelog
 
-## Newlib to Musl porting
+## Kernel System Modules
 
 > [!NOTE]
-> WIP commit; changelog is not made perfect or organized thus (too lazy).
+> Since the previous update isn't fully completed, system calls do not function, and, hence, no application runs outside the kernel as of now. Everything else functions the same.
+
+- Implemented interface and loader for system modules
+- Make file creates `disk.img` by default now, and compiled all system modules to add to the `system` folder.
+- Makefile linter checks linker files too now
+
+```
+29/06/2026: 810f49dc06694d74d9b9a936f20e9424adae1f6e019993c6f533d8aaaf6de2d7
+```
+
+## Newlib to Musl porting (I)
+
+> [!NOTE]
+> This update continues later due to development roadblocks, and is, for now, left unfinished.
 
 - Removed Newlib
 - Removed most syscalls

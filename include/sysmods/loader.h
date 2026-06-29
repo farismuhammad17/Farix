@@ -1,4 +1,4 @@
-"""
+/*
 -----------------------------------------------------------------------
 Farix Operating System
 Copyright (C) 2026  Faris Muhammad
@@ -16,27 +16,27 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
-"""
+*/
 
-import os
-import shutil
-import subprocess
+#ifndef SYSMODS_LOADER_H
+#define SYSMODS_LOADER_H
 
-import makefile.sysmods
+#include "sysmods/interface.h"
 
-import makefile.globals as m
+#define MAX_LOADED_MODULES 16
 
-def disk_img():
-    if m.OS == "Darwin":
-        m.run(f"qemu-img create -f raw {m.DISK_PATH} 64M")
-        m.run(f'hdiutil create -size 64m -fs "MS-DOS FAT32" -volname "FARIX" -type UDIF -layout NONE {m.DISK_PATH}')
-        os.rename(f"{m.DISK_PATH}.dmg", m.DISK_PATH)
-    else:
-        m.run(f"qemu-img create -f raw {m.DISK_PATH} 64M")
-        m.run(f"mkfs.fat -F 32 -n FARIX {m.DISK_PATH}")
+typedef struct {
+    sysmod_t* interface;
+    void* base_address;     // Where the raw binary was loaded in RAM
+    uint32_t size;          // Memory footprint size
+    int is_active;
+} loaded_sysmod_t;
 
-    m.run(f"mmd -i {m.DISK_PATH} ::/system")
+extern loaded_sysmod_t sysmods_registry[MAX_LOADED_MODULES];
 
-    print(f"\x1b[32mCreated disk at {m.DISK_PATH}\x1b[0m")
+int load_sysmod(const char* path);
 
-    makefile.sysmods.build_sysmods()
+int load_sysmod_raw(void *raw_binary_buffer, unsigned int binary_size);
+int unload_sysmod(int slot_id);
+
+#endif

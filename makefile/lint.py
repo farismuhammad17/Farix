@@ -31,7 +31,7 @@ STRUCT_TYPEDEF_RE = re.compile(
 )
 
 root = Path.cwd()
-extns = ("c", "h", "s", "asm")
+extns = ("c", "h", "s", "asm", "ld")
 
 ignores = (
     "newlib-cygwin",
