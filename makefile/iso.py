@@ -19,31 +19,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-import shutil
 import subprocess
 
-import makefile.globals as m
+def farix_iso():
+    if not os.path.exists("bootloader/farix.bin"):
+        print("\x1b[31mfarix.bin not found\x1b[0m")
+        return
 
-def create_iso():
     if os.path.exists("farix.iso"):
         os.remove("farix.iso")
 
-    if not os.path.exists("farix.bin"):
-        print(f"\x1b[31mfarix.bin not found (use 'm')\x1b[0m")
-        return
+    cmd = [
+        "grub-mkrescue",
+        "-o", "farix.iso",
+        "bootloader"
+    ]
 
-    iso_dir = "build/iso_root"
-    os.makedirs(f"{iso_dir}/boot/grub", exist_ok=True)
-
-    shutil.copy("farix.bin", f"{iso_dir}/boot/farix.bin")
-    with open(f"{iso_dir}/boot/grub/grub.cfg", "w") as f:
-        f.write(
-            "set timeout=5\n"
-            "set default=0\n\n"
-            "menuentry 'Farix OS' {\n"
-            "    multiboot /boot/farix.bin\n"
-            "    boot\n"
-            "}\n"
-        )
-
-    subprocess.run(["grub-mkrescue", "-o", "farix.iso", iso_dir], check=True)
+    try:
+        subprocess.run(cmd, check=True)
+        print("\x1b[1;32mfarix.iso generated successfully!\x1b[0m")
+    except FileNotFoundError:
+        print("\x1b[31mError: 'grub-mkrescue' or 'xorriso' is not installed on your system.\x1b[0m")
+    except subprocess.CalledProcessError as e:
+        print(f"\x1b[31mISO Generation failed: {e}\x1b[0m")

@@ -30,7 +30,7 @@ _start:
     call main
 
     mov ebx, eax ; status code
-    mov eax, 1   ; SYS_EXIT
+    mov eax, 1   ; call SYS_EXIT
     int 0x80     ; yield
 
     jmp $        ; Not good to get here, kernel should've killed us by now

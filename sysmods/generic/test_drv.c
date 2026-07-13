@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "sysmods/interface.h"
 
-int test_drv_init() {
+int test_drv_init(kernel_api_t* api) {
     return 0;
 }
 

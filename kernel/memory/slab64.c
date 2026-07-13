@@ -26,8 +26,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "memory/pmm.h"
-#include "memory/slab.h"
 #include "memory/vmm.h"
+
+#include "memory/slab.h"
 
 static spinlock slab_lock = 0;
 
@@ -50,7 +51,7 @@ Slab64* create_slab64(uint16_t object_size) {
     slab->prev  = NULL;
     slab->magic = SLAB64_MAGIC;
 
-    slab->obj_shift = (object_size <= 1) ? 0 : (32 - __builtin_clz(object_size - 1));
+    slab->obj_shift = (object_size <= 1) ? 0 : (64 - __builtin_clzl((unsigned long)(object_size - 1)));
 
     uint32_t actual_capacity = (PAGE_SIZE - (uintptr_t) slab->data + (uintptr_t) slab) >> slab->obj_shift;
     if (actual_capacity > 64) actual_capacity = 64;
@@ -143,7 +144,7 @@ void* slab_alloc64(Slab64* head) {
 
 /* Free alloc-ed space in slab */
 void slab_free64(void* ptr) {
-    Slab64* slab = (Slab64*)((uintptr_t) ptr & 0xFFFFF000);
+    Slab64* slab = (Slab64*)((uintptr_t) ptr & ~(uintptr_t) 0xFFF);
 
     spin_lock(&slab_lock);
 

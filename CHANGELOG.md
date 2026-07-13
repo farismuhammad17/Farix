@@ -1,6 +1,15 @@
 # Changelog
 
-## Kernel System Modules
+## Porting to x86_64 (WIP)
+
+- Added x86_64 architecture support.
+- Project will eventually no longer support 32 bit architectures.
+
+```
+14/07/2026: 8acbc2c72ed0fc861a7161db95a37c38fd8cb53e7b3410658e980dcc9817f532
+```
+
+## Kernel System Modules (I)
 
 > [!NOTE]
 > Since the previous update isn't fully completed, system calls do not function, and, hence, no application runs outside the kernel as of now. Everything else functions the same.

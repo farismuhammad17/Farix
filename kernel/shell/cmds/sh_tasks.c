@@ -24,6 +24,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "process/task.h"
 
+#include "drivers/uart.h" // TODO REM
+
 #include "shell/commands.h"
 #include "shell/shell.h"
 
@@ -93,65 +95,67 @@ void cmd_tasks(UNUSED_ARG const char* args) {
 
 /* Kill task command */
 void cmd_kill(const char* args) {
-    if (unlikely(args[0] == '\0')) {
-        sh_print("Usage: kill <pid>\n");
-        return;
-    }
+    uart_print("NYI\n");
+    // if (unlikely(args[0] == '\0')) {
+    //     sh_print("Usage: kill <pid>\n");
+    //     return;
+    // }
 
-    uint32_t pid = atoi(args);
-    kill_task(pid);
+    // uint32_t pid = atoi(args);
+    // kill_task(pid);
 }
 
 /* View tasks in task list command */
 void cmd_tlist(const char* args) {
-    task_list* list = first_task_list;
+    uart_print("NYI\n");
+    // task_list* list = first_task_list;
 
-    if (args[0] == '\0') {
-        size_t list_id = 0;
+    // if (args[0] == '\0') {
+    //     size_t list_id = 0;
 
-        do {
-            sh_print("%d ", list_id);
+    //     do {
+    //         sh_print("%d ", list_id);
 
-            for (int i = TASKS_LIST_LEN - 1; i >= 0; i--) {
-                sh_print("%d", (list->mask >> i) & 1);
-                if (i > 0 && i % 8 == 0) sh_print(" ");
-            }
+    //         for (int i = TASKS_LIST_LEN - 1; i >= 0; i--) {
+    //             sh_print("%d", (list->mask >> i) & 1);
+    //             if (i > 0 && i % 8 == 0) sh_print(" ");
+    //         }
 
-            sh_print("\n");
-            list_id++;
+    //         sh_print("\n");
+    //         list_id++;
 
-            list = list->next;
-        } while (list != NULL);
-    } else {
-        size_t target = atoi(args);
+    //         list = list->next;
+    //     } while (list != NULL);
+    // } else {
+    //     size_t target = atoi(args);
 
-        for (size_t i = 0; i < target; i++) {
-            list = list->next;
+    //     for (size_t i = 0; i < target; i++) {
+    //         list = list->next;
 
-            if (list == NULL) {
-                sh_print("tlist: Only %d total lists\n", i + 1);
-                return;
-            }
-            else if (i == target) break;
-        }
+    //         if (list == NULL) {
+    //             sh_print("tlist: Only %d total lists\n", i + 1);
+    //             return;
+    //         }
+    //         else if (i == target) break;
+    //     }
 
-        for (int i = 0; i < TASKS_LIST_LEN; i++) {
-            if (list->mask & (1 << i)) {
-                task* t = list->tasks[i];
+    //     for (int i = 0; i < TASKS_LIST_LEN; i++) {
+    //         if (list->mask & (1 << i)) {
+    //             task* t = list->tasks[i];
 
-                char* state_str = "READY";
-                if (t->state == TASK_RUNNING) state_str = "RUNNING";
-                else if (t->state == TASK_SLEEPING) state_str = "SLEEPING";
-                else if (t->state == TASK_DEAD) state_str = "DEAD";
+    //             char* state_str = "READY";
+    //             if (t->state == TASK_RUNNING) state_str = "RUNNING";
+    //             else if (t->state == TASK_SLEEPING) state_str = "SLEEPING";
+    //             else if (t->state == TASK_DEAD) state_str = "DEAD";
 
-                sh_print("%-4ld%-10s%s\n",
-                    t->id,
-                    state_str,
-                    t->name
-                );
-            }
-        }
-    }
+    //             sh_print("%-4ld%-10s%s\n",
+    //                 t->id,
+    //                 state_str,
+    //                 t->name
+    //             );
+    //         }
+    //     }
+    // }
 }
 
 /* Clean task list command */

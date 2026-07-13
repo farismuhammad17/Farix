@@ -29,6 +29,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "drivers/storage/ata.h"
 
+#define ATA_LBA28_MAX 0x0FFFFFFFULL
+
 #define MAX_TIMEOUT_DURATION 1000000
 
 static BDLDevice bdl_ata_device = {
@@ -44,7 +46,7 @@ was doing, and is free.
 */
 static bool ata_wait_ready() {
     // 400ns delay for status to stabilize
-    for(int i = 0; i < 4; i++) inb(REG_STATUS);
+    for (int i = 0; i < 4; i++) inb(REG_STATUS);
 
     uint8_t status;
     uint32_t timeout = MAX_TIMEOUT_DURATION;
@@ -54,6 +56,7 @@ static bool ata_wait_ready() {
             err_print("ata_wait_ready: Bus floating/dead");
             return true;
         }
+        system_pause(); // Prevents fast 64-bit CPUs from burning through the timeout
     }
 
     if (unlikely(timeout == 0)) {
@@ -68,6 +71,7 @@ static bool ata_wait_ready() {
                      status, inb(REG_ERROR));
             return true;
         }
+        system_pause();
     }
 
     if (unlikely(timeout == 0)) {
@@ -145,8 +149,13 @@ void init_ata(pci_device_t* pci_ata_device) {
 Send a read command to the ATA to write the data at a given LBA into the given
 buffer.
 */
-void ata_read_sector(uint32_t lba, uint8_t* buffer) {
-    outb(REG_DRV_SEL, (uint8_t)((lba >> 24) | LBA_MASTER));
+void ata_read_sector(uint64_t lba, uint8_t* buffer) {
+    if (unlikely(lba > ATA_LBA28_MAX)) {
+        err_printf("ata_read_sector: LBA out of bounds for LBA28 (%x)", lba);
+        return;
+    }
+
+    outb(REG_DRV_SEL, (uint8_t)(((lba >> 24) & 0x0F) | LBA_MASTER));
     for(int i = 0; i < 4; i++) inb(REG_STATUS);
 
     outb(REG_SEC_CNT, 1);
@@ -169,8 +178,13 @@ void ata_read_sector(uint32_t lba, uint8_t* buffer) {
 Send a write command to the ATA to write the data to a given LBA from the given
 buffer.
 */
-void ata_write_sector(uint32_t lba, uint8_t* buffer) {
-    outb(REG_DRV_SEL, (uint8_t)((lba >> 24) | LBA_MASTER));
+void ata_write_sector(uint64_t lba, uint8_t* buffer) {
+    if (unlikely(lba > ATA_LBA28_MAX)) {
+        err_printf("ata_write_sector: LBA out of bounds for LBA28 (%x)", lba);
+        return;
+    }
+
+    outb(REG_DRV_SEL, (uint8_t)(((lba >> 24) & 0x0F) | LBA_MASTER));
     for(int i = 0; i < 4; i++) inb(REG_STATUS);
 
     outb(REG_SEC_CNT, 1);
@@ -189,5 +203,9 @@ void ata_write_sector(uint32_t lba, uint8_t* buffer) {
     for (int i = 0; i < 256; i++) outw(REG_DATA, ptr[i]);
 
     outb(REG_COMMAND, CMD_FLUSH);
-    while (inb(REG_STATUS) & SR_BSY);
+
+    // Safely spin for flush completion
+    while (inb(REG_STATUS) & SR_BSY) {
+        system_pause();
+    }
 }

@@ -32,8 +32,8 @@ typedef struct {
 } MouseEvent;
 
 extern MouseEvent mouse_buffer[16];
-extern volatile uint8_t buffer_head;
-extern volatile uint8_t buffer_tail;
+extern volatile uint32_t buffer_head;
+extern volatile uint32_t buffer_tail;
 
 void RARE_FUNC init_mouse();
 extern void mouse_handler();

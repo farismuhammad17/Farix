@@ -36,7 +36,7 @@ static spinlock slab_lock = 0;
 Slab8* create_slab8(uint16_t object_size) {
     void* phys = pmm_alloc_page();
     if (unlikely(!phys)) {
-        err_print("create_slab8: pmm_alloc_page failed\n");
+        err_print("create_slab8: pmm_alloc_page failed");
         return NULL;
     }
 
@@ -54,7 +54,7 @@ Slab8* create_slab8(uint16_t object_size) {
     slab->magic = SLAB8_MAGIC;
 
     // Slabs use powers of 2 for faster calculations
-    slab->obj_shift = (object_size <= 1) ? 0 : (32 - __builtin_clz(object_size - 1));
+    slab->obj_shift = (object_size <= 1) ? 0 : (64 - __builtin_clzl((unsigned long)(object_size - 1)));
 
     uint32_t actual_capacity = (PAGE_SIZE - (uintptr_t) slab->data + (uintptr_t) slab) >> slab->obj_shift;
     if (actual_capacity > 8) actual_capacity = 8;
@@ -133,7 +133,7 @@ void* slab_alloc8(Slab8* head) {
 
     if (unlikely(object_end > slab_limit)) {
         err_printf("slab_alloc8: Slab at %p, Object at %p extends to %p (Limit: %p)",
-                    curr, addr, object_end, slab_limit);
+                   curr, addr, object_end, slab_limit);
         spin_unlock(&slab_lock);
         return NULL;
     }
@@ -149,13 +149,13 @@ void* slab_alloc8(Slab8* head) {
 /* Free alloc-ed space in slab */
 void slab_free8(void* ptr) {
     // Jump to the start of the 4KB page this pointer lives in.
-    // This works because the PMM always gives us page-aligned memory.
-    Slab8* slab = (Slab8*)((uintptr_t) ptr & 0xFFFFF000);
+    // Handles 64-bit addresses safely by clearing the lower 12 bits.
+    Slab8* slab = (Slab8*)((uintptr_t) ptr & ~(uintptr_t) 0xFFF);
 
     spin_lock(&slab_lock);
 
     if (unlikely(slab->magic != SLAB8_MAGIC)) {
-        err_printf("slab_free8: Slab pointer %x has invalid magic", ptr);
+        err_printf("slab_free8: Slab pointer %p has invalid magic", ptr);
         spin_unlock(&slab_lock);
         return;
     }
@@ -164,7 +164,7 @@ void slab_free8(void* ptr) {
     int bit_index = ((uintptr_t) ptr - (uintptr_t) slab->data) >> slab->obj_shift;
 
     // One instruction to clear the bit
-    slab->mask &= ~(1U << bit_index);
+    slab->mask &= ~(1ULL << bit_index);
     slab->free_slots++;
 
     bool should_free_slab = (slab->free_slots == 8 && slab->prev != NULL);

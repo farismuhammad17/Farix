@@ -36,6 +36,7 @@ extns = ("c", "h", "s", "asm", "ld")
 ignores = (
     "newlib-cygwin",
     "libc_build_x86_32",
+    "libc_build_x86_64",
     "libc_build_arm32",
     "test",
     "acpi",

@@ -27,4 +27,8 @@ typedef struct {
     uint32_t exit_offset;
 } __attribute__((packed)) sysmod_t;
 
+typedef struct {
+    void (*printf)(const char* format, ...);
+} kernel_api_t;
+
 #endif

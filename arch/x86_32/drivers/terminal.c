@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 
 #include "klib/stdio.h"
+#include "klib/stdlib.h"
 #include "klib/string.h"
 
 #include "hal.h"
@@ -289,7 +290,7 @@ void cmd_history_up() {
     }
 
     printf("%s", cmd_current_line->command);
-    strcpy(last_line, cmd_current_line->command);
+    strcpy((char*) last_line, cmd_current_line->command);
 }
 
 void cmd_history_down() {
@@ -299,7 +300,7 @@ void cmd_history_down() {
 
     if (cmd_current_line != NULL) {
         printf("%s", cmd_current_line->command);
-        strcpy(last_line, cmd_current_line->command);
+        strcpy((char*) last_line, cmd_current_line->command);
     } else {
         last_line[0] = '\0';
     }

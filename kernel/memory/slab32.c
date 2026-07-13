@@ -54,7 +54,7 @@ Slab32* create_slab32(uint16_t object_size) {
     slab->magic = SLAB32_MAGIC;
 
     // Slabs use powers of 2 for faster calculations
-    slab->obj_shift = (object_size <= 1) ? 0 : (32 - __builtin_clz(object_size - 1));
+    slab->obj_shift = (object_size <= 1) ? 0 : (64 - __builtin_clzl((unsigned long)(object_size - 1)));
 
     uint32_t actual_capacity = (PAGE_SIZE - (uintptr_t) slab->data + (uintptr_t) slab) >> slab->obj_shift;
     if (actual_capacity > 32) actual_capacity = 32;
@@ -125,7 +125,7 @@ void* slab_alloc32(Slab32* head) {
         curr = curr->next;
     }
 
-    int slot = __builtin_ctz(~curr->mask);
+    int slot = __builtin_ctzll(~curr->mask);
 
     uintptr_t addr = (uintptr_t) curr->data + (slot << curr->obj_shift);
 
@@ -150,8 +150,8 @@ void* slab_alloc32(Slab32* head) {
 /* Free alloc-ed space in slab */
 void slab_free32(void* ptr) {
     // Jump to the start of the 4KB page this pointer lives in.
-    // This works because the PMM always gives us page-aligned memory.
-    Slab32* slab = (Slab32*)((uintptr_t) ptr & 0xFFFFF000);
+    // Handles 64-bit addresses safely by clearing the lower 12 bits.
+    Slab32* slab = (Slab32*)((uintptr_t) ptr & ~(uintptr_t) 0xFFF);
 
     spin_lock(&slab_lock);
 
@@ -164,7 +164,7 @@ void slab_free32(void* ptr) {
     int bit_index = ((uintptr_t) ptr - (uintptr_t) slab->data) >> slab->obj_shift;
 
     // One instruction to clear the bit
-    slab->mask &= ~(1U << bit_index);
+    slab->mask &= ~(1ULL << bit_index);
     slab->free_slots++;
 
     bool should_free_slab = (slab->free_slots == 32 && slab->prev != NULL);

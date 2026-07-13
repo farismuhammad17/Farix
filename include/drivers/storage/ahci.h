@@ -32,7 +32,7 @@ extern int HBA_PxCMD_CR;
 
 void RARE_FUNC init_ahci(pci_device_t* pci_ahci_device);
 
-void ahci_read_sector(uint32_t lba, uint8_t* buffer);
-void ahci_write_sector(uint32_t lba, uint8_t* buffer);
+void ahci_read_sector(uint64_t lba, uint8_t* buffer);
+void ahci_write_sector(uint64_t lba, uint8_t* buffer);
 
 #endif

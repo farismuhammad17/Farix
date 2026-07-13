@@ -35,7 +35,10 @@ extensions = (
     'Dockerfile',
     'CONTRIBUTING.md',
     'DOCUMENTATION.md',
-    'LICENSE'
+    'LICENSE',
+    'legal/ATTRIBUTIONS.txt',
+    'legal/CLA.md',
+    'legal/LICENSE_EXCEPTIONS.md'
 )
 
 def print_src_checksum():

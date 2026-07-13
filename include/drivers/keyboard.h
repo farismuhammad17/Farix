@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define KEYBOARD_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define KEY_UP   0x11
 #define KEY_DOWN 0x12
@@ -30,8 +31,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define KBD_BUFFER_LEN 1024
 
 extern char kbd_buffer[KBD_BUFFER_LEN];
-extern volatile int kbd_head;
-extern volatile int kbd_tail;
+extern volatile uint32_t kbd_head;
+extern volatile uint32_t kbd_tail;
 
 extern bool shift_pressed;
 extern unsigned char kbd[128];

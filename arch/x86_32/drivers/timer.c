@@ -27,7 +27,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "process/task.h"
 
 #define PIT_FREQ_HZ  1193182
-#define PIT_FREQ_MHZ 1.193
 
 static uint64_t system_ticks = 0;
 static uint64_t timer_freq   = -1;
@@ -61,7 +60,7 @@ uint64_t get_timer_uptime_microseconds() {
 void timer_stall(uint32_t microseconds) {
     if (microseconds <= 0) return;
 
-    uint32_t total_ticks = microseconds * PIT_FREQ_MHZ;
+    uint32_t total_ticks = (microseconds * PIT_FREQ_HZ) / 1000000;
     uint32_t elapsed_ticks = 0;
 
     // Latch and read the initial counter value

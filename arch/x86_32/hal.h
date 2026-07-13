@@ -31,13 +31,13 @@ typedef struct {
 } syscalls_registers_x86_32_t;
 
 /* Assembly outb */
-static inline void outb(uint32_t port, uint8_t val) {
-    asm volatile("outb %0, %1" : : "a"(val), "Nd"(port) );
+static inline void outb(uint16_t port, uint8_t val) {
+    asm volatile("outb %0, %1" : : "a"(val), "Nd"(port));
 }
 
 /* Assembly outw */
-static inline void outw(uint32_t port, uint16_t val) {
-    asm volatile("outw %0, %1" : : "a"(val), "Nd"(port) );
+static inline void outw(uint16_t port, uint16_t val) {
+    asm volatile("outw %0, %1" : : "a"(val), "Nd"(port));
 }
 
 /* Assembly outl */
@@ -46,16 +46,16 @@ static inline void outl(uint16_t port, uint32_t val) {
 }
 
 /* Assembly inb */
-static inline uint8_t inb(uint32_t port) {
+static inline uint8_t inb(uint16_t port) {
     uint8_t ret;
-    asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port) );
+    asm volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
 
 /* Assembly inw */
-static inline uint16_t inw(uint32_t port) {
+static inline uint16_t inw(uint16_t port) {
     uint16_t ret;
-    asm volatile("inw %1, %0" : "=a"(ret) : "Nd"(port) );
+    asm volatile("inw %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
 
@@ -136,5 +136,7 @@ static inline void restore_interrupts(uint32_t flags) {
         : : "r"(flags) : "memory", "cc"
     );
 }
+
+void FREQ_FUNC set_kernel_stack(uint32_t stack);
 
 #endif

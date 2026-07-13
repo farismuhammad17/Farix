@@ -36,19 +36,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define PRIV_USER     1 // User
 #define PRIV_SUPER    2 // Super user
 
-/*
-Ensure this is exactly 8, 16, 32, or 64 exactly; files that use this header will
-throw an error and will not compile if this requirement is not met.
-
-The higher this value, the more tasks one task_list can accomodate. Unfortunately,
-that also means if, while running, there aren't enough tasks to fill out a task
-list, then the space the array takes up is wasted with empty nothings.
-
-The lower this value, the less space the array takes up, but the more linked lists
-that are made, which would slow down traversals due to cache misses.
-
-This value must be properly tuned to required needs.
-*/
 #define TASKS_LIST_LEN 8
 
 #if TASKS_LIST_LEN == 8
@@ -67,13 +54,13 @@ typedef struct task {
     struct task* next;        // Next child task
     struct task* parent;      // Caller
     struct task* neighbor;    // Neighbor task in linked list
-    uint32_t id;              // Thread ID
-    uint32_t stack_pointer;   // Current ESP
-    uint32_t* page_directory; // 0 -> kernel_directory
-    uint32_t heap_break;      // Limit for malloc
-    uint32_t state;           // Running, Ready, etc.
-    uint32_t* stack_origin;   // Memory allocated for the stack
-    void (*entry_func)();
+    uint64_t id;              // Thread ID (Scaled to 64-bit)
+    uint64_t stack_pointer;   // Current RSP (Changed from uint32_t)
+    uint64_t* page_directory; // 0 -> kernel_directory PML4 (Changed from uint32_t*)
+    uint64_t heap_break;      // Limit for malloc (Changed from uint32_t)
+    uint64_t state;           // Running, Ready, etc. (Changed from uint32_t)
+    uint64_t* stack_origin;   // Memory allocated for the stack (Changed from uint32_t*)
+    void (*entry_func)(void* args);
     void* args;
     int privilege;
     const char* name;
@@ -81,24 +68,24 @@ typedef struct task {
 
 typedef struct task_list {
     task* tasks[TASKS_LIST_LEN];
-    task_list_mask_t mask; // uint16_t since 16 tasks per list
+    task_list_mask_t mask;
     struct task_list* next;
 } task_list;
 
 extern task* main_task;
 extern task* current_task;
-extern uint32_t next_pid;
+extern uint64_t next_pid;
 
 extern task_list* first_task_list;
 
 void RARE_FUNC init_multitasking();
 
 task* RARE_FUNC create_task(void (*entry_point)(void*), const char* name, const int privilege, void* args);
-void  RARE_FUNC kill_task(uint32_t id);
+void  RARE_FUNC kill_task(uint64_t id);
 
 void FREQ_FUNC schedule();
 
-task* RARE_FUNC get_task(uint32_t id);
+task* RARE_FUNC get_task(uint64_t id);
 
 size_t RARE_FUNC clean_task_lists();
 

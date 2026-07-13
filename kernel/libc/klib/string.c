@@ -23,11 +23,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
+#include "memory/heap.h"
+
 #include "klib/string.h"
 
 /* Copy src[0] to src[n-1] into dest[0] to dest[n-1] inclusive */
 void* memcpy(void* restrict dest, const void* restrict src, size_t n) {
-    volatile uint8_t* dst = (volatile uint8_t*) dest;
+    uint8_t* dst = (uint8_t*) dest;
     const uint8_t* s = (const uint8_t*) src;
     for (size_t i = 0; i < n; i++) dst[i] = s[i];
 
@@ -51,7 +53,7 @@ void* memmove(void* dest, const void* src, size_t n) {
     const uint8_t* s = (const uint8_t*) src;
 
     // If dest is in the range of source, copy backwards to avoid overwrites
-    if (d > s && d < s + n) {
+    if (d > s && (size_t)(d - s) < n) {
         for (size_t i = n; i > 0; i--) {
             d[i - 1] = s[i - 1];
         }
@@ -62,6 +64,20 @@ void* memmove(void* dest, const void* src, size_t n) {
     }
 
     return dest;
+}
+
+/* Compare bytes in two memory blocks */
+int memcmp(const void* s1, const void* s2, size_t n) {
+    const uint8_t* p1 = (const uint8_t*) s1;
+    const uint8_t* p2 = (const uint8_t*) s2;
+
+    for (size_t i = 0; i < n; i++) {
+        if (p1[i] != p2[i]) {
+            return (int) p1[i] - (int) p2[i];
+        }
+    }
+
+    return 0;
 }
 
 /* Duplicate string into new address */
@@ -78,11 +94,45 @@ char* strdup(const char* s) {
     return new_str;
 }
 
+/* Find last instance of character in string */
+char* strrchr(const char* s, int c) {
+    char* last = NULL;
+    char target = (char) c;
+
+    // Scan the entire string
+    while (*s != '\0') {
+        if (*s == target) {
+            last = (char*) s;
+        }
+        s++;
+    }
+
+    // Standard behavior: if looking for the null terminator, return a pointer to it
+    if (target == '\0') {
+        return (char*) s;
+    }
+
+    return last;
+}
+
 /* Compare strings */
 int strcmp(const char* s1, const char* s2) {
     while (*s1 != '\0' && *s1 == *s2) {
         s1++;
         s2++;
+    }
+
+    return (*(unsigned char*) s1 - *(unsigned char*) s2);
+}
+
+/* Compare at most n characters of two strings */
+int strncmp(const char* s1, const char* s2, size_t n) {
+    if (n == 0) return 0;
+
+    while (n > 1 && *s1 != '\0' && *s1 == *s2) {
+        s1++;
+        s2++;
+        n--;
     }
 
     return (*(unsigned char*) s1 - *(unsigned char*) s2);

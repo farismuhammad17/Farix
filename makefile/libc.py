@@ -22,6 +22,32 @@ import os
 
 import makefile.globals as m
 
+def libc_x86_64():
+    musl_src = "musl"
+    build_dir = "build/musl-x86_64-build"
+
+    os.makedirs(build_dir, exist_ok=True)
+
+    # Configure specifically for x86_64 bare-metal kernel compatibility
+    config_cmd = (
+        f"cd {build_dir} && "
+        f"../../{musl_src}/configure "
+        f"--target=x86_64-linux-gnu "
+        f"--prefix={m.LIBC_INSTALL_DIR} "
+        f"--disable-shared "
+        f"--disable-wrapper "
+        f"CC=\"{m.PREFIX}gcc\" "
+        f"CROSS_COMPILE=\"{m.PREFIX}\""
+    )
+
+    print("\x1b[1;33mBuilding Musl LibC for x86_64...\x1b[0m")
+
+    m.run(config_cmd, capture_output=False)
+    m.run(f"make -C {build_dir} -j$(nproc)", capture_output=False)
+    m.run(f"make -C {build_dir} install", capture_output=False)
+
+    print("\x1b[1;32mMusl x86_64 compilation completed!\x1b[0m")
+
 def libc_x86_32():
     musl_src = "musl"
     build_dir = "build/musl-x86_32-build"
@@ -49,5 +75,6 @@ def libc_arm32():
 
 def libc():
     match m.arch:
+        case "x86_64": libc_x86_64()
         case "x86_32": libc_x86_32()
         case "arm32": libc_arm32()

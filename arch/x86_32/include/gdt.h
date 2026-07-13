@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define GDT_ACCESS_CODE_DATA  0x10 // Must be 1 for code/data segments
 #define GDT_ACCESS_EXECUTABLE 0x08 // 1 for Code ; 0 for Data
 #define GDT_ACCESS_WRITABLE   0x02 // Readable for code, Writable for data
-#define GDT_ACCESS_ACCESSED   0x01  // Set by CPU when segment is used
+#define GDT_ACCESS_ACCESSED   0x01 // Set by CPU when segment is used
 
 #define GDT_GRAN_4K    0x80 // Limit is in 4KB blocks
 #define GDT_GRAN_32BIT 0x40 // 32-bit protected mode

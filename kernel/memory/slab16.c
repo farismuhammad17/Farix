@@ -54,7 +54,7 @@ Slab16* create_slab16(uint16_t object_size) {
     slab->magic = SLAB16_MAGIC;
 
     // Slabs use powers of 2 for faster calculations
-    slab->obj_shift = (object_size <= 1) ? 0 : (32 - __builtin_clz(object_size - 1));
+    slab->obj_shift = (object_size <= 1) ? 0 : (64 - __builtin_clzl((unsigned long)(object_size - 1)));
 
     uint32_t actual_capacity = (PAGE_SIZE - (uintptr_t) slab->data + (uintptr_t) slab) >> slab->obj_shift;
     if (actual_capacity > 16) actual_capacity = 16;
@@ -124,7 +124,7 @@ void* slab_alloc16(Slab16* head) {
         curr = curr->next;
     }
 
-    int slot = __builtin_ctz(~curr->mask);
+    int slot = __builtin_ctzll(~curr->mask);
 
     uintptr_t addr = (uintptr_t) curr->data + (slot << curr->obj_shift);
 
@@ -133,7 +133,7 @@ void* slab_alloc16(Slab16* head) {
 
     if (unlikely(object_end > slab_limit)) {
         err_printf("slab_alloc16: Slab at %p, Object at %p extends to %p (Limit: %p)",
-                    curr, addr, object_end, slab_limit);
+                   curr, addr, object_end, slab_limit);
         spin_unlock(&slab_lock);
         return NULL;
     }
@@ -149,13 +149,13 @@ void* slab_alloc16(Slab16* head) {
 /* Free alloc-ed space in slab */
 void slab_free16(void* ptr) {
     // Jump to the start of the 4KB page this pointer lives in.
-    // This works because the PMM always gives us page-aligned memory.
-    Slab16* slab = (Slab16*)((uintptr_t) ptr & 0xFFFFF000);
+    // Handles 64-bit addresses safely by clearing the lower 12 bits.
+    Slab16* slab = (Slab16*)((uintptr_t) ptr & ~(uintptr_t) 0xFFF);
 
     spin_lock(&slab_lock);
 
     if (unlikely(slab->magic != SLAB16_MAGIC)) {
-        err_printf("slab_free16: Slab pointer %x has invalid magic", ptr);
+        err_printf("slab_free16: Slab pointer %p has invalid magic", ptr);
         spin_unlock(&slab_lock);
         return;
     }
@@ -164,7 +164,7 @@ void slab_free16(void* ptr) {
     int bit_index = ((uintptr_t) ptr - (uintptr_t) slab->data) >> slab->obj_shift;
 
     // One instruction to clear the bit
-    slab->mask &= ~(1U << bit_index);
+    slab->mask &= ~(1ULL << bit_index);
     slab->free_slots++;
 
     bool should_free_slab = (slab->free_slots == 16 && slab->prev != NULL);

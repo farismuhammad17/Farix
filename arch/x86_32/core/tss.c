@@ -20,6 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include "klib/string.h"
+
+#include "hal.h"
+
 #include "gdt.h"
 
 #include "memory/heap.h"

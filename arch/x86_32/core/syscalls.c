@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
+#include "drivers/terminal.h"
 #include "drivers/uart.h"
 #include "fs/types/elf.h"
 #include "fs/vfs.h"
@@ -43,10 +44,6 @@ void syscall_handler(syscalls_registers_x86_32_t* regs) {
     uint32_t arg5 = regs->edi;
 
     switch (regs->eax) {
-        // case SYS_EXECVE: {
-
-        // }
-
         // TODO: Can be improved with fs_getall(path, count, offset)
         // Getting everything, including what we don't need, then freeing
         // them one-by-one is quite a waste.

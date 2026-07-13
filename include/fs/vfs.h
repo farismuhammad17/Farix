@@ -40,23 +40,23 @@ typedef struct FileNode {
 typedef struct {
     char name[8];
 
-    int       (*read)   (const char* name, void* buffer, size_t size, uint32_t offset);
-    int       (*write)  (const char* name, const void* buffer, size_t size, uint32_t offset);
+    int       (*read)   (const char* name, void* buffer, size_t size, uint64_t offset);
+    int       (*write)  (const char* name, const void* buffer, size_t size, uint64_t offset);
     int       (*create) (const char* name);
     int       (*mkdir)  (const char* name);
     int       (*remove) (const char* name);
     File*     (*get)    (const char* name);
     FileNode* (*getall) (const char* path);
 
-    int (*check_write_safety)(uint32_t lba);
+    int (*check_write_safety)(uint64_t lba);
 } VFS;
 
 extern VFS* current_vfs;
 
 void RARE_FUNC vfs_mount (VFS* ops);
 
-int       fs_read   (const char* name, void* buffer, size_t size, uint32_t offset);
-int       fs_write  (const char* name, const void* buffer, size_t size, uint32_t offset);
+int       fs_read   (const char* name, void* buffer, size_t size, uint64_t offset);
+int       fs_write  (const char* name, const void* buffer, size_t size, uint64_t offset);
 int       fs_create (const char* name);
 int       fs_mkdir  (const char* name);
 int       fs_remove (const char* name);

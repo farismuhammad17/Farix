@@ -32,5 +32,5 @@ def run_qemu(fullscreen=False):
 
     suffix = "-full-screen" if fullscreen else ""
 
-    cmd = f"{m.QEMU_BIN} -kernel farix.bin {m.QEMU_FLAGS} {suffix}"
+    cmd = f"{m.QEMU_BIN} -kernel bootloader/farix_elf32.bin {m.QEMU_FLAGS} {suffix}"
     os.system(cmd)

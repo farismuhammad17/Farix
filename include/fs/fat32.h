@@ -29,14 +29,14 @@ extern VFS fat32_vfs;
 
 void RARE_FUNC init_fat32();
 
-int       fat32_read   (const char* name, void* buffer, size_t size, uint32_t offset);
-int       fat32_write  (const char* name, const void* buffer, size_t size, uint32_t offset);
+int       fat32_read   (const char* name, void* buffer, size_t size, uint64_t offset);
+int       fat32_write  (const char* name, const void* buffer, size_t size, uint64_t offset);
 int       fat32_create (const char* name);
 int       fat32_mkdir  (const char* name);
 int       fat32_remove (const char* name);
 File*     fat32_get    (const char* name);
 FileNode* fat32_getall (const char* path);
 
-int fat32_check_write_safety(uint32_t lba);
+int fat32_check_write_safety(uint64_t lba);
 
 #endif

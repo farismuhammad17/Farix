@@ -62,11 +62,7 @@ static Slab8*  acpi_slab_head8  = NULL;
 
 // --- INITIALISATION ---
 
-/*
-Initialises the ACPICA by creating four slabs, each used for differently sized
-allocations, then finding the RSDP, i.e. the "Root System Description Pointer"
-*/
-ACPI_STATUS AcpiOsInitialize() {
+void init_acpi_slabs() {
     acpi_slab_head64 = create_slab64(ACPI_SLAB64_SIZE);
     acpi_slab_head32 = create_slab32(ACPI_SLAB32_SIZE);
     acpi_slab_head16 = create_slab16(ACPI_SLAB16_SIZE);
@@ -74,18 +70,20 @@ ACPI_STATUS AcpiOsInitialize() {
 
     if (unlikely(!acpi_slab_head64 || !acpi_slab_head32 || !acpi_slab_head16 || !acpi_slab_head8)) {
         err_print("AcpiOsInitialize: Failed to initialize slab pools");
-        return AE_NO_MEMORY;
     }
+}
 
+/*
+Initialises the ACPICA by creating four slabs, each used for differently sized
+allocations, then finding the RSDP, i.e. the "Root System Description Pointer"
+*/
+ACPI_STATUS AcpiOsInitialize() {
     AcpiRSDP = AcpiOsGetRootPointer();
 
     if (unlikely(AcpiRSDP == 0)) {
         err_print("AcpiOsInitialize: AcpiOsGetRootPointer: RSDP not found");
         return AE_NOT_FOUND;
     }
-
-    ACPI_PHYSICAL_ADDRESS found_rsdp = 0;
-    AcpiFindRootPointer(&found_rsdp);
 
     return AE_OK;
 }
@@ -152,14 +150,14 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
     if (likely(AcpiRSDP != 0)) return AcpiRSDP;
 
     // Scan the BIOS memory for "RSD PTR "
-    for (uint32_t addr = 0x000E0000; addr < 0x000FFFFF; addr += 16) {
+    for (ACPI_PHYSICAL_ADDRESS addr = 0x000E0000; addr < 0x000FFFFF; addr += 16) {
         char* signature = (char*) PHYSICAL_TO_VIRTUAL(addr);
 
         if (memcmp(signature, "RSD PTR ", 8) == 0) {
             uint8_t sum = 0;
             for (int i = 0; i < 20; i++) sum += signature[i];
 
-            if (sum == 0) return (ACPI_PHYSICAL_ADDRESS) addr;
+            if (sum == 0) return addr;
         }
     }
 
@@ -241,8 +239,9 @@ void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length) {
     for (uintptr_t page = base_page; page <= last_page; page += 0x1000) {
         void* virt_page = (void*) PHYSICAL_TO_VIRTUAL(page);
 
-        if (!vmm_is_mapped(kernel_directory, virt_page)) {
-            vmm_map_page(kernel_directory, (void*) page, virt_page, PAGE_PRESENT | PAGE_RW);
+        if (!vmm_is_mapped((uint64_t*) VIRTUAL_TO_PHYSICAL(kernel_directory), virt_page)) {
+            vmm_map_page((uint64_t*) VIRTUAL_TO_PHYSICAL(kernel_directory),
+                (void*) page, virt_page, PAGE_PRESENT | PAGE_RW);
         }
     }
 
@@ -318,8 +317,8 @@ ACPI subsystem.
 void AcpiOsFree(void *Memory) {
     if (unlikely(!Memory)) return;
 
-    // This works because every Slab header is at the very beginning of a PMM page.
-    uintptr_t page_base = (uintptr_t) Memory & 0xFFFFF000;
+    uintptr_t addr = (uintptr_t) Memory;
+    uintptr_t page_base = addr & ~(uintptr_t) 0xFFF;
 
     // Cast it to a generic Slab pointer to check the magic
     // We can use Slab8 as a template since magic is at the same offset in all of them
@@ -336,9 +335,9 @@ void AcpiOsFree(void *Memory) {
                 break;
         }
     }
-
-    // Not a slab
-    else kfree(Memory);
+    else {
+        kfree(Memory);
+    }
 }
 
 /*
@@ -673,7 +672,7 @@ This function provides formatted string output for ACPICA, similar to the standa
 format string and a variable number of arguments. It returns nothing (void). The OSL must direct this output
 to the appropriate kernel console, serial port, or log buffer for debugging and status reporting.
 */
-void ACPI_INTERNAL_VAR_XFACE AcpiOsPrintf(const char *Format, ...) {
+void AcpiOsPrintf(const char *Format, ...) {
     va_list Args;
     va_start(Args, Format);
     uart_vprintf(Format, Args);

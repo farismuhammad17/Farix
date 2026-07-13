@@ -21,14 +21,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
 
 #include "hal.h"
 
 #include "cpu/multicore.h"
-#include "memory/heap.h"
+#include "drivers/terminal.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
+
+#include "memory/heap.h"
+
+#define HEAP_INIT_SIZE_KB 512
 
 void* heap_start = (void*) PHYSICAL_TO_VIRTUAL(0x1000000);
 void* heap_end   = NULL;
@@ -38,14 +41,16 @@ static spinlock heap_lock = 0;
 
 /* Initialises heap by carving out the required memory */
 void init_heap() {
-    uint32_t initial_pages = HEAP_INIT_SIZE >> 2;
+    uint64_t initial_pages = (HEAP_INIT_SIZE_KB * 1024) / PAGE_SIZE;
 
-    for (uint32_t i = 0; i < initial_pages; i++) {
+    for (uint64_t i = 0; i < initial_pages; i++) {
         void* phys = pmm_alloc_page();
-        vmm_map_page(kernel_directory, phys, (void*)((uint32_t) heap_start + (i * PAGE_SIZE)), PAGE_PRESENT | PAGE_RW | PAGE_CACHE);
+        vmm_map_page((uint64_t*) VIRTUAL_TO_PHYSICAL(kernel_directory),
+            phys, (void*)((uint64_t) heap_start + (i * PAGE_SIZE)),
+            PAGE_PRESENT | PAGE_RW | PAGE_CACHE);
     }
 
-    heap_end = (void*)((uint32_t) heap_start + (initial_pages * PAGE_SIZE));
+    heap_end = (void*)((uint64_t) heap_start + (initial_pages * PAGE_SIZE));
 
     first_segment = (HeapSegment*) heap_start;
     first_segment->size    = (initial_pages * PAGE_SIZE) - sizeof(HeapSegment);
@@ -60,8 +65,8 @@ void init_heap() {
 void* kmalloc(size_t size) {
     if (unlikely(size == 0)) return NULL;
 
-    // Align size to 4 bytes
-    size = (size + 3) & ~3;
+    // Align size to 16 bytes
+    size = (size + 15) & ~(size_t) 15;
 
     spin_lock(&heap_lock);
 
@@ -69,11 +74,11 @@ void* kmalloc(size_t size) {
 
     while (current != NULL) {
         if (current->is_free && current->size >= size) {
-            // We need enough space for the requested size + a new header + at least 4 bytes of data
-            if (current->size > size + sizeof(HeapSegment) + 4) {
+            // We need enough space for the requested size + a new header + at least 16 bytes of data
+            if (current->size > size + sizeof(HeapSegment) + 16) {
                 size_t total_offset = sizeof(HeapSegment) + size;
-                total_offset = (total_offset + 3) & ~3;
-                HeapSegment* next_seg = (HeapSegment*) ((uint32_t) current + total_offset);
+                total_offset = (total_offset + 15) & ~(size_t) 15;
+                HeapSegment* next_seg = (HeapSegment*) ((uint64_t) current + total_offset);
 
                 next_seg->size = current->size - total_offset;
                 next_seg->is_free = true;
@@ -91,10 +96,10 @@ void* kmalloc(size_t size) {
             }
 
             current->is_free = false;
-            current->caller  = (uint32_t) __builtin_return_address(0);
+            current->caller  = (uint64_t) __builtin_return_address(0);
 
             spin_unlock(&heap_lock);
-            return (void*)((uint32_t) current + sizeof(HeapSegment));
+            return (void*)((uint64_t) current + sizeof(HeapSegment));
         }
 
         current = current->next;
@@ -113,10 +118,11 @@ void kfree(void* ptr) {
 
     spin_lock(&heap_lock);
 
-    HeapSegment* current = (HeapSegment*)((uint32_t) ptr - sizeof(HeapSegment));
+    HeapSegment* current = (HeapSegment*)((uint64_t) ptr - sizeof(HeapSegment));
 
-    // CRITICAL: Verify magic field within lock protection before reading/writing nodes
+    // Verify magic field within lock protection before reading/writing nodes
     if (unlikely(current->magic != HEAP_MAGIC)) {
+        err_printf("kfree: invalid magic field at %p\n", ptr);
         spin_unlock(&heap_lock);
         return;
     }
@@ -153,13 +159,15 @@ void kheap_expand(size_t size) {
     // Keep slow physical frame generation and page table mapping outside the spinlock range
     for (size_t i = 0; i < pages_to_alloc; i++) {
         void* phys = pmm_alloc_page();
-        vmm_map_page(kernel_directory, phys, (void*)((uint32_t) heap_end + (i * PAGE_SIZE)), PAGE_PRESENT | PAGE_RW | PAGE_CACHE);
+        vmm_map_page((uint64_t*) VIRTUAL_TO_PHYSICAL(kernel_directory),
+            phys, (void*)((uint64_t) heap_end + (i * PAGE_SIZE)),
+            PAGE_PRESENT | PAGE_RW | PAGE_CACHE);
     }
 
     spin_lock(&heap_lock);
 
     HeapSegment* new_seg = (HeapSegment*) heap_end;
-    heap_end = (void*)((uint32_t) heap_end + (pages_to_alloc * PAGE_SIZE));
+    heap_end = (void*)((uint64_t) heap_end + (pages_to_alloc * PAGE_SIZE));
 
     new_seg->size = (pages_to_alloc * PAGE_SIZE) - sizeof(HeapSegment);
     new_seg->is_free = true;
@@ -176,7 +184,7 @@ void kheap_expand(size_t size) {
     spin_unlock(&heap_lock);
 
     // Safely execute merge cleanup via kfree wrapper
-    kfree((void*)((uint32_t) new_seg + sizeof(HeapSegment)));
+    kfree((void*)((uint64_t) new_seg + sizeof(HeapSegment)));
 }
 
 /* Total used memory by heap */

@@ -36,7 +36,7 @@ extern loaded_sysmod_t sysmods_registry[MAX_LOADED_MODULES];
 
 int load_sysmod(const char* path);
 
-int load_sysmod_raw(void *raw_binary_buffer, unsigned int binary_size);
+int load_sysmod_raw(void* raw_binary_buffer, uint32_t binary_size);
 int unload_sysmod(int slot_id);
 
 #endif

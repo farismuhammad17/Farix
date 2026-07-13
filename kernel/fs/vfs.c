@@ -34,7 +34,7 @@ void vfs_mount(VFS* ops) {
 }
 
 /* Read file at absolute name into buffer from offset to offset+size */
-int fs_read(const char* name, void* buffer, size_t size, uint32_t offset) {
+int fs_read(const char* name, void* buffer, size_t size, uint64_t offset) {
     if (unlikely(!current_vfs || !current_vfs->read)) {
         err_print("fs_read: File operation not found");
         return 0;
@@ -44,7 +44,7 @@ int fs_read(const char* name, void* buffer, size_t size, uint32_t offset) {
 }
 
 /* Write to file at absolute name from buffer from offset to offset+size */
-int fs_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
+int fs_write(const char* name, const void* buffer, size_t size, uint64_t offset) {
     if (unlikely(!current_vfs || !current_vfs->write)) {
         err_print("fs_write: File operation not found");
         return 0;

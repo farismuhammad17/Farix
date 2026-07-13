@@ -24,33 +24,33 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdbool.h>
 #include <stdint.h>
 
-#define VMM_INIT_MAP_SIZE 32 // MB
+#define VMM_INIT_MAP_SIZE_MB 32
 
-#define PAGE_OFFSET    0xC0000000 // 3 GB
-#define USER_STACK_TOP 0xC0000000
+#define PAGE_OFFSET    0xFFFFFFFF80000000ULL
+#define USER_STACK_TOP 0x00007FFFFFFFF000ULL
 
-#define VIRTUAL_TO_PHYSICAL(addr) ((uintptr_t)(addr) - PAGE_OFFSET)
-#define PHYSICAL_TO_VIRTUAL(addr) ((void*)((uintptr_t)(addr) + PAGE_OFFSET))
+#define PHYSICAL_TO_VIRTUAL(addr) ((void*)((uint64_t)(addr) + PAGE_OFFSET))
+#define VIRTUAL_TO_PHYSICAL(addr) ((uint64_t)(uintptr_t)(addr) - PAGE_OFFSET)
 
-extern const uintptr_t PAGE_PRESENT;
-extern const uintptr_t PAGE_RW;
-extern const uintptr_t PAGE_USER;
-extern const uintptr_t PAGE_CACHE;
-extern const uintptr_t PAGE_PWT;
-extern const uintptr_t PAGE_PCD;
+extern const uint64_t PAGE_PRESENT;
+extern const uint64_t PAGE_RW;
+extern const uint64_t PAGE_USER;
+extern const uint64_t PAGE_CACHE;
+extern const uint64_t PAGE_PWT;
+extern const uint64_t PAGE_PCD;
 
-extern uint32_t* kernel_directory;
+extern uint64_t* kernel_directory;
 
 void RARE_FUNC init_vmm();
 
-void      vmm_map_page(uint32_t* pd_phys, void* phys, void* virt, uint32_t flags);
-uint32_t  vmm_unmap_page(void* virt);
+void     vmm_map_page(uint64_t* pd_phys, void* phys, void* virt, uint64_t flags);
+uint64_t vmm_unmap_page(void* virt);
 
-uint32_t* RARE_FUNC vmm_copy_kernel_directory();
-void      RARE_FUNC vmm_switch_directory(uint32_t* page_directory);
+uint64_t* RARE_FUNC vmm_copy_kernel_directory();
+void      RARE_FUNC vmm_switch_directory(uint64_t* page_directory);
 
-uint32_t* RARE_FUNC vmm_get_current_directory();
-uint32_t  RARE_FUNC vmm_get_phys(uint32_t* pd_phys, void* virt_addr);
-int       RARE_FUNC vmm_is_mapped(uint32_t* pd_phys, void* virt);
+uint64_t* RARE_FUNC vmm_get_current_directory();
+uintptr_t RARE_FUNC vmm_get_phys(uint64_t* pd_phys, void* virt_addr);
+int       RARE_FUNC vmm_is_mapped(uint64_t* pd_phys, void* virt);
 
 #endif

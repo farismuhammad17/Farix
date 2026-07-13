@@ -18,10 +18,59 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 """
 
-import os
 from concurrent.futures import ThreadPoolExecutor
 
 import makefile.globals as m
+
+def farix_bin_x86_64():
+    CRTI_SRC = "arch/x86_64/asm/boot/crti.asm"
+    CRTN_SRC = "arch/x86_64/asm/boot/crtn.asm"
+    BOOT_SRC = "arch/x86_64/boot.s"
+
+    CRTI_OBJ = "build/asm/boot/crti.o"
+    CRTN_OBJ = "build/asm/boot/crtn.o"
+
+    c_srcs, asm_srcs = m.get_sources()
+
+    c_objs = [m.get_obj_path(s) for s in c_srcs]
+    other_asm_srcs = [s for s in asm_srcs if "crti.asm" not in s and "crtn.asm" not in s]
+    other_asm_objs = [m.get_obj_path(s) for s in other_asm_srcs]
+
+    tasks = []
+    tasks.append((BOOT_SRC, m.BOOT_OBJ, f"{m.AS} {{src}} -o {{obj}}"))
+
+    tasks.append((CRTI_SRC, CRTI_OBJ, "nasm -f elf64 {src} -o {obj}"))
+    tasks.append((CRTN_SRC, CRTN_OBJ, "nasm -f elf64 {src} -o {obj}"))
+
+    for s, o in zip(other_asm_srcs, other_asm_objs):
+        tasks.append((s, o, "nasm -f elf64 {src} -o {obj}"))
+
+    for s, o in zip(c_srcs, c_objs):
+        if s.startswith(m.ACPICA_SRC) and not s.endswith("acpi_osl.c"):
+            tasks.append((s, o, f"{m.CC} -c {{src}} -o {{obj}} {m.ACPICA_CFLAGS}"))
+        else:
+            tasks.append((s, o, f"{m.CC} -c {{src}} -o {{obj}} {m.CFLAGS}"))
+
+    with ThreadPoolExecutor(max_workers=m.THREADS) as executor:
+        for t in tasks:
+            executor.submit(m.build_object, *t)
+
+    ld_flags = "-T arch/x86_64/linker.ld -ffreestanding -O2 -nostdlib -nodefaultlibs -no-pie"
+
+    all_objs = [m.BOOT_OBJ, CRTI_OBJ] + c_objs + other_asm_objs
+    objs = " ".join(all_objs)
+    libs = f"-L{m.LIBC_LIB} -lc -lm -lgcc"
+
+    cmd = f"{m.CC} {ld_flags} -o bootloader/farix.bin {objs} {libs} {CRTN_OBJ}"
+
+    print("\x1b[3;33mLinking farix.bin for x86_64...\x1b[0m")
+    m.run(cmd)
+
+    # TODO: Remove this workaround once the ISO is perfected; GRUB is annoying to work with
+    print("\x1b[33mNOTE: This is a temporary workaround for QEMU direct boot (will be removed in a future update)\x1b[0m")
+    m.run(f"{m.PREFIX}objcopy -I elf64-x86-64 -O elf32-i386 bootloader/farix.bin bootloader/farix_elf32.bin")
+
+    print("\x1b[1;32mProcess completed\x1b[0m")
 
 def farix_bin_x86_32():
     CRTBEGIN = m.run(f"{m.CC} {m.CFLAGS} -print-file-name=crtbegin.o")
@@ -106,5 +155,6 @@ def farix_bin_arm32():
 
 def farix_bin():
     match m.arch:
+        case "x86_64": farix_bin_x86_64()
         case "x86_32": farix_bin_x86_32()
-        case "arm32": farix_bin_arm32()
+        case "arm32":  farix_bin_arm32()

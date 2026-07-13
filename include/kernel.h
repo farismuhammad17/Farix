@@ -65,4 +65,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void RARE_FUNC early_kmain();
 void RARE_FUNC kmain();
 
+// ACPI
+void RARE_FUNC init_acpi_slabs();
+
 #endif

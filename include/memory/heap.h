@@ -21,8 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef HEAP_H
 #define HEAP_H
 
-#define HEAP_INIT_SIZE 512 // KB
-
 #define HEAP_MAGIC 0x12345678
 
 #include <stdbool.h>

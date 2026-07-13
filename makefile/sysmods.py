@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-import shutil
 from concurrent.futures import ThreadPoolExecutor
 
 import makefile.globals as m

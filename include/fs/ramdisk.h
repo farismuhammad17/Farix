@@ -29,8 +29,8 @@ extern VFS ramdisk_vfs;
 
 void RARE_FUNC init_ramdisk();
 
-int       ramdisk_read   (const char* name, void* buffer, size_t size, uint32_t offset);
-int       ramdisk_write  (const char* name, const void* buffer, size_t size, uint32_t offset);
+int       ramdisk_read   (const char* name, void* buffer, size_t size, uint64_t offset);
+int       ramdisk_write  (const char* name, const void* buffer, size_t size, uint64_t offset);
 int       ramdisk_create (const char* name);
 int       ramdisk_mkdir  (const char* name);
 int       ramdisk_remove (const char* name);

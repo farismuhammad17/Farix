@@ -18,4 +18,4 @@ For more documentation, refer the documentation, which details everything.
 
 ---
 
-*This project is dual-licensed under the **GNU AGPLv3** for open-source use, and a **Commercial License** for proprietary/enterprise use; see [LICENSE](LICENSE) and [LICENSE_EXCEPTIONS.md](LICENSE_EXCEPTIONS.md) for more information, or contact owner for details.*
+*This project is dual-licensed under the **GNU AGPLv3** for open-source use, and a **Commercial License** for proprietary use; see [LICENSE](LICENSE) and [LICENSE_EXCEPTIONS.md](legal/LICENSE_EXCEPTIONS.md) for more information, or contact owner for details.*

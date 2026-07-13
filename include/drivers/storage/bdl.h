@@ -24,15 +24,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 
 typedef struct {
-    void (*read)(uint32_t lba, uint8_t* buf);
-    void (*write)(uint32_t lba, uint8_t* buf);
+    void (*read)(uint64_t lba, uint8_t* buf);
+    void (*write)(uint64_t lba, uint8_t* buf);
 } BDLDevice;
 
 void RARE_FUNC init_storage();
 
 void RARE_FUNC bdl_mount(BDLDevice* dev);
 
-void bdl_read(uint32_t lba, void* buf);
-void bdl_write(uint32_t lba, void* buf);
+void bdl_read(uint64_t lba, void* buf);
+void bdl_write(uint64_t lba, void* buf);
 
 #endif

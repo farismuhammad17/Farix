@@ -19,8 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-import sys
-import subprocess
 
 import makefile.globals as m
 
@@ -28,7 +26,5 @@ def get_deps():
     if not os.path.exists("musl"):
         print("\x1b[33mInstalling musl...\x1b[0m")
         m.run("git clone --depth 1 https://github.com/hadean-mirrors/musl.git",
-            capture_output=False)
+              capture_output=False)
         print("\x1b[32mInstalled musl\x1b[0m")
-
-    print("\x1b[1;32mProcess completed.\x1b[0m")

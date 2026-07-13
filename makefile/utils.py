@@ -25,7 +25,7 @@ import makefile.globals as m
 
 JUNK = (
     "build",
-    "farix.bin",
+    "bootloader/farix.bin",
     "farix.iso",
 )
 

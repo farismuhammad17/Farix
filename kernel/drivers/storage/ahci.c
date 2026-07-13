@@ -225,7 +225,7 @@ typedef struct {
 } fis_reg_h2d_t;
 
 static volatile hba_mem_t* g_hba = NULL;
-static hba_port_t* active_drives[32] = {NULL};
+static volatile hba_port_t* active_drives[32] = {NULL};
 static size_t drives_found = 0;
 
 static uint8_t ahci_bounce[512] __attribute__((aligned(512)));
@@ -331,19 +331,17 @@ void init_ahci(pci_device_t* dev) {
     uint32_t  bar5 = pci_read(dev->bus, dev->device, dev->function, 0x24);
     uintptr_t phys = bar5 & 0xFFFFFFF0;
 
-    // Check for 64-bit BAR
+    // Check for 64-bit BAR and read upper 32 bits if present
     if (unlikely(((bar5 >> 1) & 0x03) == 0x02)) {
-        uint32_t upper = pci_read(dev->bus, dev->device, dev->function, 0x28);
-        if (unlikely(upper > 0)) {
-            err_print("AHCI: BAR5 above 4GB. 32-bit kernel cannot map this");
-            return;
-        }
+        uint64_t upper = pci_read(dev->bus, dev->device, dev->function, 0x28);
+        phys |= (upper << 32);
     }
 
-    uint32_t* pd = vmm_get_current_directory();
+    uint64_t* pd = vmm_get_current_directory();
     for (int i = 0; i < AHCI_HBA_PAGES; i++) {
-        vmm_map_page(pd, phys + (i * PAGE_SIZE), AHCI_BASE_VIRT + (i * PAGE_SIZE),
-                     PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
+        vmm_map_page(pd,
+            (void*)(phys + (i * PAGE_SIZE)), (void*)(AHCI_BASE_VIRT + (i * PAGE_SIZE)),
+            PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
     }
 
     g_hba = (volatile hba_mem_t*) AHCI_BASE_VIRT;
@@ -412,24 +410,25 @@ void init_ahci(pci_device_t* dev) {
                 }
             }
 
-            uint32_t port_phys = (uint32_t) pmm_alloc_page();
-            uint32_t port_virt = PHYSICAL_TO_VIRTUAL(port_phys);
+            uintptr_t port_phys = (uintptr_t) pmm_alloc_page();
+            uintptr_t port_virt = (uintptr_t) PHYSICAL_TO_VIRTUAL(port_phys);
 
             if (unlikely(!port_phys)) {
                 err_print("init_ahci: PMM out of memory");
                 continue;
             }
 
-            vmm_map_page(kernel_directory, (void*) port_phys, (void*) port_virt,
-                         PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
+            vmm_map_page((uint64_t*) VIRTUAL_TO_PHYSICAL(kernel_directory),
+                (void*) port_phys, (void*) port_virt,
+                PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
             memset((void*) port_virt, 0, PAGE_SIZE);
 
             port->clb  = (uint32_t)(port_phys & 0xFFFFFFFF);
             port->clbu = (uint32_t)(port_phys >> 32);
 
             // Each page can only fit 16 ports, we have 32, thus 2 pages
-            uint32_t cmd_tables_phys = (uint32_t) pmm_alloc_pages(2);
-            uint32_t cmd_tables_virt = PHYSICAL_TO_VIRTUAL(cmd_tables_phys);
+            uintptr_t cmd_tables_phys = (uintptr_t) pmm_alloc_pages(2);
+            uintptr_t cmd_tables_virt = (uintptr_t) PHYSICAL_TO_VIRTUAL(cmd_tables_phys);
 
             if (unlikely(!cmd_tables_phys)) {
                 err_print("init_ahci: 2 consecutive pages not found for cmd_table");
@@ -438,9 +437,9 @@ void init_ahci(pci_device_t* dev) {
 
             // Map the 2 pages
             for (int j = 0; j < 2; j++) {
-                vmm_map_page(kernel_directory,
-                    (void*) cmd_tables_phys + (PAGE_SIZE * j),
-                    (void*) cmd_tables_virt + (PAGE_SIZE * j),
+                vmm_map_page((uint64_t*) VIRTUAL_TO_PHYSICAL(kernel_directory),
+                    (void*)(cmd_tables_phys + (PAGE_SIZE * j)),
+                    (void*)(cmd_tables_virt + (PAGE_SIZE * j)),
                     PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
             }
 
@@ -449,7 +448,9 @@ void init_ahci(pci_device_t* dev) {
             hba_cmd_header_t* headers = (hba_cmd_header_t*) port_virt;
             for (int j = 0; j < 32; j++) {
                 // Each table is 256 bytes (0x100)
-                headers[j].ctba = cmd_tables_phys + (j * 256);
+                uint64_t ctba_val = cmd_tables_phys + (j * 256);
+                headers[j].ctba  = (uint32_t)(ctba_val & 0xFFFFFFFF);
+                headers[j].ctbau = (uint32_t)(ctba_val >> 32);
             }
 
             uint64_t fis_addr = port_phys + 1024;
@@ -489,7 +490,7 @@ Follows the Serial ATA AHCI: Specification, Rev. 1.3.1, to read port. A read
 command is sent to the AHCI, and we request it to write the data at a given
 LBA into the provided buffer.
 */
-void ahci_read_sector(uint32_t lba, uint8_t* buffer) {
+void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
     if (unlikely(!buffer)) {
         err_print("ahci_read_sector: Void buffer");
         return;
@@ -514,7 +515,9 @@ void ahci_read_sector(uint32_t lba, uint8_t* buffer) {
         return;
     }
 
-    hba_cmd_header_t* cmd = (hba_cmd_header_t*) PHYSICAL_TO_VIRTUAL(port->clb);
+    // Reconstruct full 64-bit physical command list base pointer
+    uint64_t clb_phys = ((uint64_t) port->clbu << 32) | port->clb;
+    hba_cmd_header_t* cmd = (hba_cmd_header_t*) PHYSICAL_TO_VIRTUAL(clb_phys);
     hba_cmd_header_t* header = &cmd[port_slot];
 
     header->cfl = 5;
@@ -522,7 +525,9 @@ void ahci_read_sector(uint32_t lba, uint8_t* buffer) {
     header->prdtl = 1;
     header->prdbc = 0;
 
-    hba_cmd_table_t* table = (hba_cmd_table_t*) PHYSICAL_TO_VIRTUAL(header->ctba);
+    // Reconstruct full 64-bit physical command table pointer
+    uint64_t ctba_phys = ((uint64_t) header->ctbau << 32) | header->ctba;
+    hba_cmd_table_t* table = (hba_cmd_table_t*) PHYSICAL_TO_VIRTUAL(ctba_phys);
     memset(table, 0, sizeof(hba_cmd_table_t));
 
     fis_reg_h2d_t* fis = (fis_reg_h2d_t*)(&table->cfis);
@@ -532,20 +537,25 @@ void ahci_read_sector(uint32_t lba, uint8_t* buffer) {
     fis->command = FIS_CMD_READ;
     fis->device  = FIS_SATA_LBA_MODE;
 
+    // Full 48-bit address mapping across the FIS registers
     fis->lba0 = (uint8_t) lba;
     fis->lba1 = (uint8_t)(lba >> 8);
     fis->lba2 = (uint8_t)(lba >> 16);
     fis->lba3 = (uint8_t)(lba >> 24);
-    fis->lba4 = 0;
-    fis->lba5 = 0;
+    fis->lba4 = (uint8_t)(lba >> 32);
+    fis->lba5 = (uint8_t)(lba >> 40);
 
     // TODO: This could be utilised to make everything faster
     // but requires ATA to comply with that too
     fis->countl = 1; // We want 1 sector
+    fis->counth = 0;
 
-    table->prdt_entry[0].dba = ahci_bounce; // Destination
-    table->prdt_entry[0].dbc = 511;           // 512 bytes - 1
-    table->prdt_entry[0].i   = 1;
+    // Convert the virtual bounce buffer pointer back to physical space and split it
+    uint64_t bounce_phys = (uint64_t) VIRTUAL_TO_PHYSICAL(ahci_bounce);
+    table->prdt_entry[0].dba  = (uint32_t)(bounce_phys & 0xFFFFFFFF);
+    table->prdt_entry[0].dbau = (uint32_t)(bounce_phys >> 32);
+    table->prdt_entry[0].dbc  = 511;                    // 512 bytes - 1
+    table->prdt_entry[0].i    = 1;
 
     header->cfl = sizeof(fis_reg_h2d_t) / sizeof(uint32_t); // FIS length in DWORDS (usually 5)
     header->prdtl = 1;                                      // We used 1 PRDT entry
@@ -582,9 +592,9 @@ Follows the Serial ATA AHCI: Specification, Rev. 1.3.1, to write to port.
 A write command is sent to the AHCI, and we request it to write the data
 to a given LBA from the provided buffer.
 */
-void ahci_write_sector(uint32_t lba, uint8_t* buffer) {
+void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
     if (unlikely(!buffer)) {
-        err_print("ahci_read_sector: Void buffer");
+        err_print("ahci_write_sector: Void buffer");
         return;
     }
 
@@ -607,9 +617,12 @@ void ahci_write_sector(uint32_t lba, uint8_t* buffer) {
         return;
     }
 
-    memcpy((void*) PHYSICAL_TO_VIRTUAL(ahci_bounce), buffer, 512);
+    // Since ahci_bounce is a static array, copy to its virtual location directly
+    memcpy(ahci_bounce, buffer, 512);
 
-    hba_cmd_header_t* cmd = (hba_cmd_header_t*) PHYSICAL_TO_VIRTUAL(port->clb);
+    // Reconstruct full 64-bit physical command list base pointer
+    uint64_t clb_phys = ((uint64_t) port->clbu << 32) | port->clb;
+    hba_cmd_header_t* cmd = (hba_cmd_header_t*) PHYSICAL_TO_VIRTUAL(clb_phys);
     hba_cmd_header_t* header = &cmd[port_slot];
 
     header->cfl = 5;
@@ -617,7 +630,9 @@ void ahci_write_sector(uint32_t lba, uint8_t* buffer) {
     header->prdtl = 1;
     header->prdbc = 0;
 
-    hba_cmd_table_t* table = (hba_cmd_table_t*) PHYSICAL_TO_VIRTUAL(header->ctba);
+    // Reconstruct full 64-bit physical command table pointer
+    uint64_t ctba_phys = ((uint64_t) header->ctbau << 32) | header->ctba;
+    hba_cmd_table_t* table = (hba_cmd_table_t*) PHYSICAL_TO_VIRTUAL(ctba_phys);
     memset(table, 0, sizeof(hba_cmd_table_t));
 
     fis_reg_h2d_t* fis = (fis_reg_h2d_t*)(&table->cfis);
@@ -627,18 +642,23 @@ void ahci_write_sector(uint32_t lba, uint8_t* buffer) {
     fis->command = FIS_CMD_WRITE;
     fis->device  = FIS_SATA_LBA_MODE;
 
+    // Full 48-bit address mapping across the FIS registers
     fis->lba0 = (uint8_t) lba;
     fis->lba1 = (uint8_t)(lba >> 8);
     fis->lba2 = (uint8_t)(lba >> 16);
     fis->lba3 = (uint8_t)(lba >> 24);
-    fis->lba4 = 0;
-    fis->lba5 = 0;
+    fis->lba4 = (uint8_t)(lba >> 32);
+    fis->lba5 = (uint8_t)(lba >> 40);
 
     fis->countl = 1; // We want 1 sector
+    fis->counth = 0;
 
-    table->prdt_entry[0].dba = ahci_bounce; // Destination
-    table->prdt_entry[0].dbc = 511;         // 512 bytes - 1
-    table->prdt_entry[0].i   = 1;
+    // Convert the virtual bounce buffer pointer back to physical space and split it
+    uint64_t bounce_phys = (uint64_t) VIRTUAL_TO_PHYSICAL(ahci_bounce);
+    table->prdt_entry[0].dba  = (uint32_t)(bounce_phys & 0xFFFFFFFF);
+    table->prdt_entry[0].dbau = (uint32_t)(bounce_phys >> 32);
+    table->prdt_entry[0].dbc  = 511;                    // 512 bytes - 1
+    table->prdt_entry[0].i    = 1;
 
     header->cfl = sizeof(fis_reg_h2d_t) / sizeof(uint32_t); // FIS length in DWORDS (usually 5)
     header->prdtl = 1;                                      // We used 1 PRDT entry

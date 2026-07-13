@@ -20,14 +20,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stddef.h>
 
+#include "klib/stdio.h"
+
 #include "drivers/terminal.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
+
+#include "drivers/uart.h" // TODO REM
 
 #include "sysmods/interface.h"
 #include "sysmods/loader.h"
 
 loaded_sysmod_t sysmods_registry[MAX_LOADED_MODULES];
+
+kernel_api_t sysmod_kernel_api = {
+    .printf = printf,
+};
 
 static int find_free_module_slot() {
     int slot = -1;
@@ -41,28 +49,34 @@ static int find_free_module_slot() {
 }
 
 int load_sysmod(const char* path) {
-    uint32_t size = 0;
-
     File* file_obj = fs_get(path);
     if (unlikely(!file_obj || file_obj->size == 0)) {
         err_printf("load_elf_file: File %s not found or empty", path);
-        return NULL;
+        return -1;
     }
 
     uint8_t* buffer = (uint8_t*) kmalloc(file_obj->size);
     if (unlikely(!buffer)) {
         err_print("load_elf_file: Out of memory");
-        return NULL;
+        return -1;
     }
 
     if (unlikely(!fs_read(path, buffer, file_obj->size, 0))) {
         err_print("load_elf_file: Failed to read file data");
         kfree(buffer);
-        return NULL;
+        return -1;
     }
 
+    size_t n = 5; // Change this to how many bytes you want to print
+
+    uart_printf("First %zu bytes of %s: ", n, path);
+    for (size_t i = 0; i < n; i++) {
+        uart_printf("%02X ", buffer[i]);
+    }
+    uart_printf("\n");
+
     // Pass the raw buffer into your tracking registry assignment loop
-    int slot = load_sysmod_raw((void*) buffer, size);
+    int slot = load_sysmod_raw((void*) buffer, file_obj->size);
     if (unlikely(slot == -1)) {
         err_print("sysmod_loader: System modules register full");
         kfree(buffer);
@@ -72,7 +86,7 @@ int load_sysmod(const char* path) {
     return slot;
 }
 
-int load_sysmod_raw(void *raw_binary_buffer, unsigned int binary_size) {
+int load_sysmod_raw(void* raw_binary_buffer, uint32_t binary_size) {
     sysmod_t* mod = (sysmod_t*) raw_binary_buffer;
     uint32_t base = (uint32_t)  raw_binary_buffer;
 
@@ -84,10 +98,9 @@ int load_sysmod_raw(void *raw_binary_buffer, unsigned int binary_size) {
     sysmods_registry[slot].size = binary_size;
     sysmods_registry[slot].is_active = 1;
 
-    if (mod->init_offset) {
-        // Absolute Address = Buffer base allocation + Compiled offset
-        int (*runtime_init)(void) = (int(*)(void))(base + mod->init_offset);
-        int result = runtime_init();
+    if (likely(mod->init_offset)) {
+        int (*runtime_init)(kernel_api_t*) = (int(*)(kernel_api_t*))(base + mod->init_offset);
+        int result = runtime_init(&sysmod_kernel_api);
         if (unlikely(result != 0)) {
             sysmods_registry[slot].is_active = 0;
             return -1;

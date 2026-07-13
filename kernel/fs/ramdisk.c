@@ -29,9 +29,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "fs/ramdisk.h"
 
-typedef struct {
+typedef struct RamdiskFile {
     File* file;
-    File* next;
+    struct RamdiskFile* next;
 } RamdiskFile;
 
 static RamdiskFile* files_table[RAMDISK_HASH_SIZE];
@@ -59,8 +59,8 @@ suffice here as well. The code does not rely on the workings of this specific
 hash, simply because I haven't spent the time to understand the hash to see
 if there are ways to utilise it any more than a mere hashing algorithm.
 */
-static unsigned long hash(const char* name) {
-    unsigned long hash = 5381;
+static uint32_t hash(const char* name) {
+    uint32_t hash = 5381;
     int c;
     while ((c = *name++)) {
         hash = ((hash << 5) + hash) + c;
@@ -75,7 +75,7 @@ with the File of the given name, if it's 1, then it returns the one before it,
 if 2, it returns the one two before it, and so on.
 */
 static RamdiskFile* get_ramfile(const char* name, size_t back) {
-    unsigned long index = hash(name) % RAMDISK_HASH_SIZE;
+    uint32_t index = hash(name) % RAMDISK_HASH_SIZE;
 
     RamdiskFile* t_ramfile = files_table[index];
     if (unlikely(!t_ramfile)) return NULL;
@@ -119,7 +119,7 @@ static File* create_new_ramdisk_file(const char* name) {
     RamdiskFile* new_ramfile = (RamdiskFile*) kmalloc(sizeof(RamdiskFile));
 
     if (unlikely(!new_ramfile)) {
-        err_printf("ramdisk_create: Out of memory for ramfile creating file %d", name);
+        err_printf("ramdisk_create: Out of memory for ramfile creating file %s", name);
         return NULL;
     }
 
@@ -141,7 +141,7 @@ static File* create_new_ramdisk_file(const char* name) {
     File* new_file = (File*) kmalloc(sizeof(File));
 
     if (unlikely(!new_file)) {
-        err_printf("ramdisk_create: Out of memory for file creating file %d", name);
+        err_printf("ramdisk_create: Out of memory for file creating file %s", name);
         return NULL;
     }
 
@@ -160,7 +160,7 @@ void init_ramdisk() {
 }
 
 /* Read file from offset to offset+size */
-int ramdisk_read(const char* name, void* buffer, size_t size, uint32_t offset) {
+int ramdisk_read(const char* name, void* buffer, size_t size, uint64_t offset) {
     File* file = ramdisk_get(name);
 
     if (unlikely(!file || !file->data || file->is_directory)) return -1;
@@ -179,7 +179,7 @@ int ramdisk_read(const char* name, void* buffer, size_t size, uint32_t offset) {
 }
 
 /* Write from offset to offset+size */
-int ramdisk_write(const char* name, const void* buffer, size_t size, uint32_t offset) {
+int ramdisk_write(const char* name, const void* buffer, size_t size, uint64_t offset) {
     File* file = ramdisk_get(name);
 
     if (unlikely(!file || file->is_directory)) return -1;

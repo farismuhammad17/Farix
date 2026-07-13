@@ -75,11 +75,12 @@ void bdl_mount(BDLDevice* dev) {
 }
 
 /* Reads from the given LBA and writes to the given buffer */
-void bdl_read(uint32_t lba, void* buf) {
+void bdl_read(uint64_t lba, void* buf) {
     spin_lock(&bdl_lock);
 
     if (unlikely(!current_bdl_dev || !current_bdl_dev->read)) {
         err_print("bdl_read: BDL operation not found");
+        spin_unlock(&bdl_lock);
         return;
     }
 
@@ -89,11 +90,12 @@ void bdl_read(uint32_t lba, void* buf) {
 }
 
 /* Writes the given buffer into the given LBA */
-void bdl_write(uint32_t lba, void* buf) {
+void bdl_write(uint64_t lba, void* buf) {
     spin_lock(&bdl_lock);
 
     if (unlikely(!current_bdl_dev || !current_bdl_dev->write)) {
         err_print("bdl_write: BDL operation not found");
+        spin_unlock(&bdl_lock);
         return;
     }
 
@@ -101,7 +103,8 @@ void bdl_write(uint32_t lba, void* buf) {
         int write_safety_res = current_vfs->check_write_safety(lba);
 
         if (unlikely(write_safety_res != 0)) {
-            err_printf("bdl_write: Error %d at LBA %d", write_safety_res, lba);
+            err_printf("bdl_write: Error %d at LBA %llu", write_safety_res, lba);
+            spin_unlock(&bdl_lock);
             return;
         }
     }

@@ -25,7 +25,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 
 #define PAGE_SIZE       4096
-#define PMM_BITMAP_SIZE 32768   // 32768 integers * 32 bits * 4096 bytes = 4GB of RAM management.
+
+// 64 bits per entry. To track 128 GB of RAM:
+// (128 * 1024 * 1024 * 1024) / 4096 bytes per page / 64 bits per entry = 524,288 entries
+#define PMM_BITMAP_SIZE 524288
 
 void RARE_FUNC init_pmm();
 

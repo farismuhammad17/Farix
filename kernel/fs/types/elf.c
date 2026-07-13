@@ -32,17 +32,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "fs/types/elf.h"
 
 // Defined boot.s
-extern uint32_t stack_top;
+extern uint64_t stack_top;
 
 // Defined in elf.asm
-void elf_user_trampoline_stub(uint32_t entry, uint32_t stack);
+void elf_user_trampoline_stub(uint64_t entry, uint64_t stack);
 
 /* ELF trampoline to execute the ELF, then halt after termination */
 void elf_user_trampoline() {
     task* t = current_task;
 
-    uint32_t entry_point = (uint32_t) t->entry_func;
-    uint32_t user_stack  = (uint32_t) t->stack_origin;
+    uint64_t entry_point = (uint64_t) t->entry_func;
+    uint64_t user_stack  = (uint64_t) t->stack_origin;
 
     elf_user_trampoline_stub(entry_point, user_stack);
 
@@ -54,7 +54,7 @@ Gets the ELF file and its contents, stored into a buffer, which gets returned.
 The function also verifies if the given file is also a valid ELF file, since
 an ELF file is to start with 0x7F, followed by the characters E, L, and F.
 */
-static uint8_t* load_elf_file(const char* path, uint32_t* out_size) {
+static uint8_t* load_elf_file(const char* path, uint64_t* out_size) {
     File* file_obj = fs_get(path);
     if (unlikely(!file_obj || file_obj->size == 0)) {
         err_printf("load_elf_file: File %s not found or empty", path);
@@ -81,6 +81,12 @@ static uint8_t* load_elf_file(const char* path, uint32_t* out_size) {
         return NULL;
     }
 
+    if (unlikely(header->e_ident[4] != ELFCLASS64)) {
+        err_print("load_elf_file: Not a 64-bit ELF executable");
+        kfree(buffer);
+        return NULL;
+    }
+
     if (out_size) {
         *out_size = file_obj->size;
     }
@@ -92,19 +98,19 @@ static uint8_t* load_elf_file(const char* path, uint32_t* out_size) {
 Allocates a page and writes the contents of the current page directory into
 it, marked with PAGE_USER.
 */
-static uint32_t* create_user_page_directory() {
-    uint32_t* user_pd_phys = (uint32_t*) pmm_alloc_page();
+static uint64_t* create_user_page_directory() {
+    uint64_t* user_pd_phys = (uint64_t*) pmm_alloc_page();
     if (unlikely(!user_pd_phys)) {
         err_print("create_user_page_directory: PMM failed to allocate");
         return NULL;
     }
 
-    uint32_t* current_pd_virt = (uint32_t*) PHYSICAL_TO_VIRTUAL(vmm_get_current_directory());
-    uint32_t* user_pd_virt    = (uint32_t*) PHYSICAL_TO_VIRTUAL(user_pd_phys);
+    uint64_t* current_pd_virt = (uint64_t*) PHYSICAL_TO_VIRTUAL(vmm_get_current_directory());
+    uint64_t* user_pd_virt    = (uint64_t*) PHYSICAL_TO_VIRTUAL(user_pd_phys);
 
-    for (int i = 0; i < 1024; i++) {
-        if (current_pd_virt[i] != 0) {
-            user_pd_virt[i] = current_pd_virt[i] | PAGE_USER;
+    for (int i = 0; i < 512; i++) {
+        if (i >= 256) {
+            user_pd_virt[i] = current_pd_virt[i];
         } else {
             user_pd_virt[i] = 0;
         }
@@ -119,40 +125,40 @@ page directory. It iterates through the program headers, aligns segment memory t
 4KB, and copies the binary's raw data into newly allocated physical frames while
 tracking the highest virtual address for future heap placement.
 */
-static uint32_t map_elf_segments(uint32_t* user_pd_phys, uint8_t* file_buffer) {
+static uint64_t map_elf_segments(uint64_t* user_pd_phys, uint8_t* file_buffer) {
     elf_header_t* header = (elf_header_t*) file_buffer;
     elf_program_header_t* phdr = (elf_program_header_t*)(file_buffer + header->e_phoff);
-    uint32_t highest_vaddr = 0;
+    uint64_t highest_vaddr = 0;
 
     system_int_off();
 
     for (int i = 0; i < header->e_phnum; i++) {
         if (phdr[i].p_type != PT_LOAD) continue;
 
-        uint32_t start_vaddr = phdr[i].p_vaddr & ~0xFFF;
-        uint32_t end_vaddr   = (phdr[i].p_vaddr + phdr[i].p_memsz + 0xFFF) & ~0xFFF;
+        uint64_t start_vaddr = phdr[i].p_vaddr & ~0xFFFULL;
+        uint64_t end_vaddr   = (phdr[i].p_vaddr + phdr[i].p_memsz + 0xFFFULL) & ~0xFFFULL;
 
         if (end_vaddr > highest_vaddr) {
             highest_vaddr = end_vaddr;
         }
 
-        for (uint32_t v = start_vaddr; v < end_vaddr; v += PAGE_SIZE) {
+        for (uint64_t v = start_vaddr; v < end_vaddr; v += PAGE_SIZE) {
             void* phys = pmm_alloc_page();
             vmm_map_page(user_pd_phys, phys, (void*) v, PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_CACHE);
 
             uint8_t* kernel_vaddr = (uint8_t*) PHYSICAL_TO_VIRTUAL(phys);
             memset(kernel_vaddr, 0, PAGE_SIZE);
 
-            uint32_t segment_start    = phdr[i].p_vaddr;
-            uint32_t segment_data_end = phdr[i].p_vaddr + phdr[i].p_filesz;
+            uint64_t segment_start    = phdr[i].p_vaddr;
+            uint64_t segment_data_end = phdr[i].p_vaddr + phdr[i].p_filesz;
 
-            uint32_t copy_start = (v > segment_start) ? v : segment_start;
-            uint32_t copy_end   = (v + PAGE_SIZE < segment_data_end) ? (v + PAGE_SIZE) : segment_data_end;
+            uint64_t copy_start = (v > segment_start) ? v : segment_start;
+            uint64_t copy_end   = (v + PAGE_SIZE < segment_data_end) ? (v + PAGE_SIZE) : segment_data_end;
 
             if (copy_start < copy_end) {
-                uint32_t offset_in_page = copy_start - v;
-                uint32_t offset_in_file = copy_start - segment_start;
-                uint32_t len = copy_end - copy_start;
+                uint64_t offset_in_page = copy_start - v;
+                uint64_t offset_in_file = copy_start - segment_start;
+                uint64_t len = copy_end - copy_start;
 
                 memcpy(kernel_vaddr + offset_in_page,
                        file_buffer + phdr[i].p_offset + offset_in_file,
@@ -177,25 +183,25 @@ task* exec_elf(const char* path) {
         return NULL;
     }
 
-    uint32_t* user_pd_phys = create_user_page_directory();
+    uint64_t* user_pd_phys = create_user_page_directory();
     if (unlikely(!user_pd_phys)) {
         kfree(file_buffer);
         return NULL;
     }
 
-    uint32_t highest_vaddr = map_elf_segments(user_pd_phys, file_buffer);
+    uint64_t highest_vaddr = map_elf_segments(user_pd_phys, file_buffer);
     elf_header_t* header = (elf_header_t*) file_buffer;
 
-    task* elf_task = create_task((void(*)()) header->e_entry, path, PRIV_USER, NULL);
+    task* elf_task = create_task((void(*)(void*)) header->e_entry, path, PRIV_USER, NULL);
     elf_task->page_directory = user_pd_phys;
     elf_task->heap_break     = highest_vaddr;
-    elf_task->stack_origin   = (uint32_t*) USER_STACK_TOP;
+    elf_task->stack_origin   = (uint64_t*) USER_STACK_TOP;
 
     void* stack_phys = pmm_alloc_page();
-    uint32_t stack_virt_addr = USER_STACK_TOP - PAGE_SIZE;
+    uint64_t stack_virt_addr = USER_STACK_TOP - PAGE_SIZE;
     vmm_map_page(user_pd_phys, stack_phys, (void*) stack_virt_addr, PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_CACHE);
 
-    uint32_t* stack_ptr = (uint32_t*) PHYSICAL_TO_VIRTUAL(stack_phys);
+    uint64_t* stack_ptr = (uint64_t*) PHYSICAL_TO_VIRTUAL(stack_phys);
     memset(stack_ptr, 0, PAGE_SIZE);
 
     kfree(file_buffer);
@@ -214,23 +220,23 @@ bool exec_elf_inplace(const char* path, task* t) {
         return false;
     }
 
-    uint32_t* user_pd_phys = create_user_page_directory();
+    uint64_t* user_pd_phys = create_user_page_directory();
     if (unlikely(!user_pd_phys)) {
         kfree(file_buffer);
         return false;
     }
 
-    uint32_t highest_vaddr = map_elf_segments(user_pd_phys, file_buffer);
+    uint64_t highest_vaddr = map_elf_segments(user_pd_phys, file_buffer);
     elf_header_t* header = (elf_header_t*) file_buffer;
 
     void* stack_phys = pmm_alloc_page();
-    uint32_t stack_virt_addr = USER_STACK_TOP - PAGE_SIZE;
+    uint64_t stack_virt_addr = USER_STACK_TOP - PAGE_SIZE;
     vmm_map_page(user_pd_phys, stack_phys, (void*) stack_virt_addr, PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_CACHE);
     memset(PHYSICAL_TO_VIRTUAL(stack_phys), 0, PAGE_SIZE);
 
     t->page_directory = user_pd_phys;
     t->heap_break     = highest_vaddr;
-    t->entry_func     = (void(*)()) header->e_entry;
+    t->entry_func     = (void(*)(void*)) header->e_entry;
 
     vmm_switch_directory(t->page_directory);
 
