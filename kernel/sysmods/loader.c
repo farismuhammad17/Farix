@@ -26,8 +26,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "fs/vfs.h"
 #include "memory/heap.h"
 
-#include "drivers/uart.h" // TODO REM
-
 #include "sysmods/interface.h"
 #include "sysmods/loader.h"
 
@@ -67,14 +65,6 @@ int load_sysmod(const char* path) {
         return -1;
     }
 
-    size_t n = 5; // Change this to how many bytes you want to print
-
-    uart_printf("First %zu bytes of %s: ", n, path);
-    for (size_t i = 0; i < n; i++) {
-        uart_printf("%02X ", buffer[i]);
-    }
-    uart_printf("\n");
-
     // Pass the raw buffer into your tracking registry assignment loop
     int slot = load_sysmod_raw((void*) buffer, file_obj->size);
     if (unlikely(slot == -1)) {
@@ -86,9 +76,9 @@ int load_sysmod(const char* path) {
     return slot;
 }
 
-int load_sysmod_raw(void* raw_binary_buffer, uint32_t binary_size) {
+int load_sysmod_raw(void* raw_binary_buffer, size_t binary_size) {
     sysmod_t* mod = (sysmod_t*) raw_binary_buffer;
-    uint32_t base = (uint32_t)  raw_binary_buffer;
+    uint64_t base = (uint64_t)  raw_binary_buffer;
 
     int slot = find_free_module_slot();
     if (unlikely(slot == -1)) return -1;
@@ -116,7 +106,7 @@ int unload_sysmod(int slot_id) {
     }
 
     loaded_sysmod_t* mod_track = &sysmods_registry[slot_id];
-    uint32_t base = (uint32_t) mod_track->base_address;
+    uint64_t base = (uint64_t) mod_track->base_address;
 
     // Fire the module's cleanup function using the relative offset
     if (mod_track->interface->exit_offset) {

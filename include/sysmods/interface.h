@@ -23,8 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 typedef struct {
     char name[32];
-    uint32_t init_offset; // relative offset of the function
-    uint32_t exit_offset;
+    uint64_t init_offset; // relative offset of the function
+    uint64_t exit_offset;
 } __attribute__((packed)) sysmod_t;
 
 typedef struct {

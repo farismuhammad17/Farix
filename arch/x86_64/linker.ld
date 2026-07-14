@@ -28,7 +28,7 @@ PHDRS
 
 SECTIONS
 {
-    /* 1. Early 32-bit Bootstrap Section (Physical address 1MB) */
+    /* Early 32-bit Bootstrap Section (Physical address 1MB) */
     . = 1M;
     _kernel_start = .; /* Literal physical start marker */
 
@@ -47,7 +47,7 @@ SECTIONS
     /* Align to page boundary before stepping into virtual space */
     . = ALIGN(4K);
 
-    /* 2. Higher-Half Virtual Address Space Initialization */
+    /* Higher-Half Virtual Address Space Initialization */
     . += 0xFFFFFFFF80000000;
     _kernel_virtual_start = .;
 

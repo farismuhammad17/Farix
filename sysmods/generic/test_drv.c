@@ -32,6 +32,6 @@ void test_drv_exit() {
 __attribute__((section(".text.prologue")))
 sysmod_t test_module_entry = {
     .name = "Test driver",
-    .init_offset = (uint32_t) test_drv_init,
-    .exit_offset = (uint32_t) test_drv_exit
+    .init_offset = (uint64_t) test_drv_init,
+    .exit_offset = (uint64_t) test_drv_exit
 };

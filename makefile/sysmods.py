@@ -48,7 +48,9 @@ def build_sysmods_x86():
         mod_out = f"build/sysmods/{mod_name}.sys"
         os.makedirs(os.path.dirname(mod_obj), exist_ok=True)
 
-        cc_flags = f"{m.CC} -c {mod_src} -o {mod_obj} {m.CFLAGS} -fPIC"
+        # Remove kernel-space models and ensure -fno-pic is set
+        clean_cflags = m.CFLAGS.replace("-mcmodel=kernel", "").replace("-fPIC", "")
+        cc_flags = f"{m.CC} -c {mod_src} -o {mod_obj} {clean_cflags} -fno-pic -mcmodel=small"
         tasks.append((mod_src, mod_obj, cc_flags))
 
         mod_link_data.append((mod_name, mod_obj, mod_out))
@@ -77,5 +79,5 @@ def build_sysmods_arm():
 
 def build_sysmods():
     match m.arch:
-        case "x86_32": build_sysmods_x86()
+        case "x86_64": build_sysmods_x86()
         case "arm32": build_sysmods_arm()
