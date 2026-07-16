@@ -71,7 +71,7 @@ void init_multitasking() {
     main_task->id    = next_pid++;
     main_task->state = TASK_READY;
     main_task->name  = "init";
-    main_task->page_directory = kernel_directory;
+    main_task->page_directory = (uint64_t*) VIRTUAL_TO_PHYSICAL(kernel_directory);
     main_task->stack_origin   = (uint64_t*) PHYSICAL_TO_VIRTUAL(&stack_bottom);
 
     main_task->next     = NULL;
@@ -100,7 +100,7 @@ task* create_task(void (*entry_point)(void*), const char* name, const int privil
     new_task->args           = args;
     new_task->name           = (char*) name;
     new_task->state          = TASK_READY;
-    new_task->page_directory = kernel_directory;
+    new_task->page_directory = (uint64_t*) VIRTUAL_TO_PHYSICAL(kernel_directory);
     new_task->heap_break     = 0;
     new_task->privilege      = privilege;
     new_task->parent         = current_task;
@@ -122,22 +122,28 @@ task* create_task(void (*entry_point)(void*), const char* name, const int privil
     }
 
     // Allocate page aligned 4KB execution stack space
-    uint64_t* stack = (uint64_t*) kmalloc(4096);
+    uint64_t* stack = (uint64_t*) kmalloc(PAGE_SIZE);
     uint64_t* rsp = stack + 512; // 512 * 8-bytes = 4096 (Top of stack boundary)
 
-    // Setup initial architecture frame context
-    *(--rsp) = (uint64_t) args; // Will be popped into RDI by switch_task
-
-    // Return anchor sequence alignment point
+    // Where the thread goes when task_trampoline returns (safety exit)
     *(--rsp) = 0;
 
+    // The address ret jumps to
     if (privilege == PRIV_KERNEL) {
         *(--rsp) = (uint64_t) task_trampoline;
     } else {
         *(--rsp) = (uint64_t) elf_user_trampoline;
     }
 
-    for (int i = 0; i < 15; i++) *(--rsp) = 0;
+    // Saved registers popped by switch_task (RBP, RBX, R12, R13, R14, R15)
+    *(--rsp) = 0; // RBP
+    *(--rsp) = 0; // RBX
+    *(--rsp) = 0; // R12
+    *(--rsp) = 0; // R13
+    *(--rsp) = 0; // R14
+
+    // We pass the task's argument block inside R15, which assembly will pass to RDI
+    *(--rsp) = (uint64_t) args; // R15
 
     new_task->stack_pointer = (uint64_t) rsp;
     new_task->stack_origin  = stack;

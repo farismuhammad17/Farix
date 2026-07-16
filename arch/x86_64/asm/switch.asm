@@ -31,19 +31,22 @@ switch_task:
     push r14
     push r15
 
-    ; RDI = uint64_t* old_stack_pointer  (pointer to where we save the old stack)
-    ; RSI = uint64_t  new_stack_pointer  (the raw stack address of the next task)
+    ; Save current RSP to old_stack_pointer stack tracking block
+    mov [rdi], rsp
+    ; Switch stack context pointers over to target thread
+    mov rsp, rsi
 
-    mov [rdi], rsp      ; Save the current task's stack pointer into last->stack_pointer
-    mov rsp, rsi        ; Load the next task's stack pointer into the RSP register
+    ; Pop new thread state off the fresh stack
+    pop r15 ; task args pointer
+    pop r14 ; 0
+    pop r13 ; 0
+    pop r12 ; 0
+    pop rbx ; 0
+    pop rbp ; 0
 
-    ; This section is running the new task
-    ; Pop its preserved state off the new stack in exact reverse order since its a stack.
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
-    pop rbp
+    ; Setup the 64-bit System V calling argument rule
+    ; We copy the argument pointer from R15 into RDI so task_trampoline can read it.
+    mov rdi, r15
 
+    ; Jump out directly into task_trampoline
     ret

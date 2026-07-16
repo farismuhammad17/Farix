@@ -262,12 +262,12 @@ uint64_t* vmm_copy_kernel_directory() {
 
 /* Switch a new directory given the physical address */
 void vmm_switch_directory(uint64_t* page_directory) {
-    if (unlikely(vmm_get_current_directory() != page_directory)) {
+    if (likely(vmm_get_current_directory() != page_directory)) {
         asm volatile("mov %0, %%cr3" : : "r"(page_directory) : "memory");
     }
 }
 
-/* Get the current directory */
+/* Get the current page directory as a physical address */
 uint64_t* vmm_get_current_directory() {
     uint64_t cr3;
     asm volatile("mov %%cr3, %0" : "=r"(cr3));

@@ -56,7 +56,7 @@ int log_index = 0;
 bool last_call_finished = false;
 
 /* Kernel shell main loop thread. */
-static inline void shell_thread() {
+static void shell_thread() {
     init_shell();
     while (1) {
         shell_update();
@@ -154,17 +154,17 @@ void kmain() {
 
     create_task((void(*)(void*)) handle_mouse, "Terminal mouse handler", PRIV_KERNEL, NULL);
 
-    // File* shelf_file = fs_get("system/shelf.elf");
-    // if (shelf_file && !BOOT_INTO_KSHELL) {
-    //     task* shelf_task = exec_elf("system/shelf.elf");
-    //     shelf_task->privilege = PRIV_SUPER;
-    // } else {
-    //     create_task((void(*)(void*)) shell_thread, "Shell", PRIV_KERNEL, NULL);
-    // }
-    // kfree((void*) shelf_file);
+    File* shelf_file = fs_get("system/shelf.elf");
+    if (shelf_file && !BOOT_INTO_KSHELL) {
+        task* shelf_task = exec_elf("system/shelf.elf");
+        shelf_task->privilege = PRIV_SUPER;
+    } else {
+        create_task((void(*)(void*)) shell_thread, "Shell", PRIV_KERNEL, NULL);
+    }
+    kfree((void*) shelf_file);
 
     int s = load_sysmod("system/test_drv.sys");
-    printf("Module name: %s\n", sysmods_registry[s].interface->name);
+    // printf("Module name: %s\n", sysmods_registry[s].interface->name);
 
     // TODO: Consider putting this into a task and moving on
     // PIT stalls can then be isolated to a task, while the

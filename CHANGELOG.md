@@ -6,10 +6,13 @@
 - Project will eventually no longer support 32 bit architectures.
 - 64-bit System module support
 - Linter now checks for full license
+- `vsnprintf` handles `*` format specifiers
+- Fixed task page directory virtual/physical address mismatch and register mismatch.
 
 ```
 14/07/2026: 8acbc2c72ed0fc861a7161db95a37c38fd8cb53e7b3410658e980dcc9817f532
 15/07/2026: 0f4486d404e8d61e86cfb6053b299d71cdef2cb9a6935145ae5ab7a67159f525
+16/07/2026: 77949508f4ea965b20bcf11efb92e41be54e48b52b197573a37fafa3b42a14a6
 ```
 
 ## Kernel System Modules (I)

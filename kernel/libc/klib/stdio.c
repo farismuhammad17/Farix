@@ -61,6 +61,20 @@ int vsnprintf(char* str, size_t size, const char* format, va_list args) {
             p++;
         }
 
+        if (*p == '*') {
+            width = va_arg(args, int);
+            if (width < 0) {
+                left_align = true;
+                width = -width;
+            }
+            p++;
+        } else {
+            while (*p >= '0' && *p <= '9') {
+                width = width * 10 + (*p - '0');
+                p++;
+            }
+        }
+
         if (unlikely(*p == '.')) {
             p++;
             precision = 0;
@@ -83,13 +97,36 @@ int vsnprintf(char* str, size_t size, const char* format, va_list args) {
                     s = "(null)";
                 }
 
-                // Keep copying until we hit '\0' or the explicit precision limit
-                for (int i = 0; s[i] != '\0' && (precision < 0 || i < precision); i++) {
+                // Pre-calculate string length up to precision boundary
+                int str_len = 0;
+                while (s[str_len] != '\0' && (precision < 0 || str_len < precision)) {
+                    str_len++;
+                }
+
+                // Right-aligned padding (spaces before string)
+                if (!left_align && width > str_len) {
+                    int pad = width - str_len;
+                    while (pad-- > 0) {
+                        if (likely(pos < size - 1)) str[pos] = ' ';
+                        pos++;
+                    }
+                }
+
+                // Output the string
+                for (int i = 0; i < str_len; i++) {
                     if (likely(pos < size - 1)) {
                         str[pos] = s[i];
                     }
-
                     pos++;
+                }
+
+                // Left-aligned padding (spaces after string)
+                if (left_align && width > str_len) {
+                    int pad = width - str_len;
+                    while (pad-- > 0) {
+                        if (likely(pos < size - 1)) str[pos] = ' ';
+                        pos++;
+                    }
                 }
 
                 break;
