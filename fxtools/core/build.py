@@ -60,6 +60,10 @@ def proc_run(cmd: str, check: bool = True, capture: bool = True) -> str:
 
         return result.stdout.strip() if capture and result.stdout else ""
 
+    except KeyboardInterrupt: # Exit CTRL+C cleanly
+        print()
+        sys.exit(0)
+
     except subprocess.CalledProcessError as e:
         printer.error("BUILD ERROR")
         printer.info("COMMAND", e.cmd)

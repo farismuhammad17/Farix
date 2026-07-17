@@ -132,6 +132,42 @@ int vsnprintf(char* str, size_t size, const char* format, va_list args) {
                 break;
             }
 
+            case 'u': {
+                uint64_t num;
+
+                if (long_modifier == 0) {
+                    num = va_arg(args, unsigned int);
+                } else if (long_modifier == 1) {
+                    num = va_arg(args, unsigned long);
+                } else if (long_modifier == 2) {
+                    num = va_arg(args, unsigned long long);
+                } else {
+                    err_print("vsnprintf: Unsupported long modifier for 'u'");
+                    return -1;
+                }
+
+                uint64_t power = 10000000000000000000ULL;
+                bool started = false;
+
+                while (likely(power > 0)) {
+                    int digit = num / power;
+
+                    if (digit > 0 || started || power == 1) {
+                        started = true;
+
+                        if (likely(pos < size - 1)) {
+                            str[pos] = digit + '0';
+                        }
+                        pos++;
+                    }
+
+                    num %= power;
+                    power /= 10;
+                }
+
+                break;
+            }
+
             case 'i':
             case 'd': {
                 int64_t  num;
@@ -175,6 +211,46 @@ int vsnprintf(char* str, size_t size, const char* format, va_list args) {
 
                     abs_num %= power;
                     power /= 10;
+                }
+
+                break;
+            }
+
+            case 'p': {
+                void* ptr = va_arg(args, void*);
+                uint64_t num = (uint64_t)(uintptr_t)ptr;
+
+                // Print the "0x" prefix
+                if (likely(pos < size - 1)) {
+                    str[pos] = '0';
+                }
+                pos++;
+                if (likely(pos < size - 1)) {
+                    str[pos] = 'x';
+                }
+                pos++;
+
+                uint64_t power = 0x1000000000000000ULL; // 16^15
+                bool started = false;
+
+                while (likely(power > 0)) {
+                    int digit = num / power;
+
+                    if (digit > 0 || started || power == 1) {
+                        started = true;
+
+                        if (likely(pos < size - 1)) {
+                            if (digit < 10) {
+                                str[pos] = digit + '0';
+                            } else {
+                                str[pos] = digit - 10 + 'a'; // Pointers traditionally use lowercase 'a'-'f'
+                            }
+                        }
+                        pos++;
+                    }
+
+                    num %= power;
+                    power /= 16;
                 }
 
                 break;

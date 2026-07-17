@@ -12,6 +12,7 @@
 - Boots into kernel shell by default
 - Removed shelf application
 - Fixed GRUB bootloader files
+- `vsnprintf` handles `p` and `u` formats now.
 - FXTools: New utility tool to replace Legacy MFuncs
   - Implemented:
     - `make`
@@ -34,6 +35,7 @@
 16/07/2026: 77949508f4ea965b20bcf11efb92e41be54e48b52b197573a37fafa3b42a14a6
 17/07/2026: b1dfdb831f14c7b1362397b3d7bc59ba26556212ed0fc74fbd416b61a1252b46
             b472947485e5015efa3b16ecf85f9818f368fefb2c76547a6ab7b0fa4d94bd65
+            7337ddc3f3e46941b302ab02222e73149e27a0d1923bf314d1b45cfcfda9fe6d
 ```
 
 ## Kernel System Modules (I)

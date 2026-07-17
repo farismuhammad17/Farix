@@ -25,6 +25,7 @@ SECTIONS
     .text : {
         *(.text.prologue)
         *(.text*)
+        *(.rodata*)
     }
     .data : { *(.data*) }
     .bss  : { *(.bss*) }

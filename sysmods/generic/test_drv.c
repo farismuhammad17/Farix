@@ -18,11 +18,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "sysmods/interface.h"
 
+static kernel_api_t* k_api = NULL;
+
 int test_drv_init(kernel_api_t* api) {
+    k_api = api;
+
+    k_api->printf("Hello!\n");
+
     return 0;
 }
 

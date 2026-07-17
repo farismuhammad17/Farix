@@ -119,7 +119,7 @@ static inline void dump_multitasking_info() {
     panic_err_printf("--- Multitasking ---\n");
     panic_err_printf("Name:  %s (ID:%u)\n", current_task->name, current_task->id);
     panic_err_printf("Stack: 0x%016llx -> 0x%016llx\n", (uint64_t) current_task->stack_origin, current_task->stack_pointer);
-    panic_err_printf("Page:  %p (PRIVILEGE:%u)\n", (void*) current_task->page_directory, (uint32_t) current_task->privilege);
+    panic_err_printf("Page:  %p (PRIVILEGE:%u)\n", (void*) current_task->page_directory, current_task->privilege);
 }
 
 /* Dumps call log upon crash */

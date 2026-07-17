@@ -122,8 +122,8 @@ def compile_x86_64():
         os.makedirs(os.path.dirname(mod_obj), exist_ok=True)
 
         # Remove kernel-space models and ensure -fno-pic is set
-        clean_cflags = c.CFLAGS.replace("-mcmodel=kernel", "").replace("-fPIC", "")
-        cc_flags = f"{TOOLS['CC']} -c {mod_src} -o {mod_obj} {clean_cflags} -fno-pic -mcmodel=small"
+        clean_cflags = c.CFLAGS.replace("-mcmodel=kernel", "").replace("-fno-pic", "")
+        cc_flags = f"{TOOLS['CC']} -c {mod_src} -o {mod_obj} {clean_cflags} -fPIC"
         tasks.append((mod_src, mod_obj, cc_flags))
 
         mod_link_data.append((mod_name, mod_obj, mod_out))

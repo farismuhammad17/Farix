@@ -77,7 +77,8 @@ def run(no_fs: bool = False, storage_device: str = "ahci"):
         printer.error(f"Disk image not found: {emulation.DISK_PATH} (run 'fx disk')")
         return
 
-    proc_run(f"{qemu} -cdrom farix.iso {flags} {suffix}")
+    proc_run(f"{qemu} -cdrom farix.iso {flags} {suffix}",
+        capture=False)
 
 def help():
     return {
