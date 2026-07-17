@@ -180,11 +180,13 @@ user stack, and returns the new task pointer.
 task* exec_elf(const char* path) {
     uint8_t* file_buffer = load_elf_file(path, NULL);
     if (unlikely(!file_buffer)) {
+        err_printf("exec_elf: Failed to load ELF file %s", path);
         return NULL;
     }
 
     uint64_t* user_pd_phys = create_user_page_directory();
     if (unlikely(!user_pd_phys)) {
+        err_printf("exec_elf: Failed to create user page directory for ELF file %s", path);
         kfree(file_buffer);
         return NULL;
     }

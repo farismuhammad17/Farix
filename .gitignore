@@ -4,6 +4,9 @@
 # 3. Folders (Deepest nested to highest)
 # 4. Files (Deepest nested to highest)
 
+# WIP
+/arch/x86_64/libc
+
 # System & IDEs
 __pycache__/
 .vscode/
@@ -15,12 +18,12 @@ __pycache__/
 
 # Build
 *.bin
-*.iso
-*.img
 /libc_build*/
 /build/
 /musl/
 build.log
+disk.img
+farix.iso
 
 # Emulation
 bochsout.txt
@@ -32,7 +35,7 @@ bochsrc.txt
 /hidden/
 
 # Makefile
-make.conf.json
+fx.state.json
 build.log
 
 # Misc
@@ -40,6 +43,3 @@ refs/
 journal/
 TODO.md
 README-UNFINISHED.md
-
-# WIP
-/arch/x86_64/libc/

@@ -5,18 +5,22 @@ Attributions (Third Party Notices)
 All entries adhere to the following syntax, separated by 80 dashes, and wrapped
 to fit within the 80-character line width:
 
-[Project Name] (Status (Active/Legacy))
+[Project Name]
   [License Name]
   [Copyright Notice]
 
 Please keep legacy entries below active entries in a structured order.
 
 --- ACTIVE ---------------------------------------------------------------------
-ACPICA (ACPI Component Architecture) (Active)
+ACPICA (ACPI Component Architecture)
   BSD 3-Clause / Intel Proprietary
   (c) 1999 - 2025, Intel Corporation.
+--------------------------------------------------------------------------------
+GNU GRUB (stage2_eltorito)
+  GNU GPL v2 or later
+  Copyright (C) 1999-2005 Free Software Foundation, Inc.
 --- LEGACY ---------------------------------------------------------------------
-Newlib (Legacy)
+Newlib
   BSD, MIT, and others (per component)
   (c) 1995-2024, Red Hat, Inc. and others.
 --------------------------------------------------------------------------------

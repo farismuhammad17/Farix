@@ -71,7 +71,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYS_GET_TASK_LIST       SUPER_MIN_SYSCALL + 11
 #define SYS_TASK_KILL           SUPER_MIN_SYSCALL + 12
 
-int32_t farix_syscall (uint32_t sys_id, uint32_t arg1, uint32_t arg2, uint32_t arg3, uint32_t arg4, uint32_t arg5);
+int64_t farix_syscall(uint64_t sys_id, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5);
 
 typedef struct {
     bool isdir;

@@ -32,7 +32,7 @@ def compile_apps():
     tasks = []
     tasks.append((m.USER_LIBC_ARCH, m.USER_LIBC_ARCH_OBJ, f"{m.CC} -c {{src}} -o {{obj}} {m.USER_CFLAGS}"))
     tasks.append((m.USER_LIBC, m.USER_LIBC_OBJ, f"{m.CC} -c {{src}} -o {{obj}} {m.USER_CFLAGS}"))
-    tasks.append((m.USER_ASM, m.USER_ASM_OBJ, f"nasm -f elf32 {{src}} -o {{obj}}"))
+    tasks.append((m.USER_ASM, m.USER_ASM_OBJ, "nasm -f elf64 {src} -o {obj}"))
 
     # Iterate through every folder in /apps
     app_link_data = []
@@ -53,12 +53,16 @@ def compile_apps():
                     tasks.append((f_path, obj_path, f"{m.CC} -c {{src}} -o {{obj}} {m.USER_CFLAGS}"))
                     app_objs.append(obj_path)
                 elif f.endswith(".s") or f.endswith(".asm"):
-                    tasks.append((f_path, obj_path, f"nasm -f elf32 {{src}} -o {{obj}}"))
+                    tasks.append((f_path, obj_path, "nasm -f elf64 {src} -o {obj}"))
                     app_objs.append(obj_path)
                 elif f == "linker.ld":
                     ld_script = f_path
 
         app_link_data.append((app_name, app_objs, ld_script))
+
+    # Ensure parent directories for all target objects exist
+    for _, obj_path, _ in tasks:
+        os.makedirs(os.path.dirname(obj_path), exist_ok=True)
 
     # Execute the threads in parallel
     with ThreadPoolExecutor(max_workers=m.THREADS) as executor:
@@ -70,9 +74,8 @@ def compile_apps():
 
         ld_script = ld_script or os.path.join(m.USER_LIBC_DIR, "linker.ld")
 
-        # Link into build/_user/<folder_name>.elf
         out_elf = os.path.join(m.USER_BUILD_DIR, f"{app_name}.elf")
-        libs = f"-Wl,-nostdlib -Wl,-nodefaultlibs -Wl,-Bstatic -L{m.LIBC_LIB} -Wl,--whole-archive -lc -Wl,--no-whole-archive -lm -lgcc"
+        libs = f"-nodefaultlibs -Wl,-Bstatic -L{m.LIBC_LIB} -Wl,--whole-archive -lc -Wl,--no-whole-archive -lm -lgcc"
         objs_str = " ".join(app_objs)
 
         link_cmd = f"{m.CC} -T {ld_script} -ffreestanding -nostdlib -o {out_elf} " \

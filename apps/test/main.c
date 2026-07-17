@@ -18,28 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <string.h>
+#include <stdio.h>
 
-#include "funcs/cmds.h"
-
-void full_path_to(const char* filename, char* path_buffer) {
-    // Absolute
-    if (filename[0] == '/') {
-        strcpy(path_buffer, filename + 1);
-        return;
-    }
-
-    char* dir = shell_directory;
-    if (dir[0] == '/') dir++;
-
-    // Root directory
-    if (dir[0] == '\0') {
-        strcpy(path_buffer, filename);
-        return;
-    }
-
-    // dir + "/" + filename
-    strcpy(path_buffer, dir);
-    strcat(path_buffer, "/");
-    strcat(path_buffer, filename);
+int main() {
+    return 0;
 }

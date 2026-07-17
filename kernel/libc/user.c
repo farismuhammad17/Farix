@@ -27,17 +27,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // Custom user functions
 
 int fx_dirscan(char* path, FileData* buffer, size_t count) {
-    return farix_syscall(SYS_DIRSCAN, (uint32_t) path, (uint32_t) buffer, (uint32_t) count, 0, 0);
+    return farix_syscall(SYS_DIRSCAN, (uint64_t) path, (uint64_t) buffer, (uint64_t) count, 0, 0);
 }
 
 // Super User functions
 
-int UART_PUTS(const char *data) {
-    return farix_syscall(SYS_UART_PUT, (uint32_t) data, 0, 0, 0, 0);
+int UART_PUTS(const char* data) {
+    return farix_syscall(SYS_UART_PUT, (uint64_t) data, 0, 0, 0, 0);
 }
 
 int GET_HEAP_DATA(HeapData* buffer, int max_count) {
-    return farix_syscall(SYS_GET_HEAP, (uint32_t) buffer, (uint32_t) max_count, 0, 0, 0);
+    return farix_syscall(SYS_GET_HEAP, (uint64_t) buffer, (uint64_t) max_count, 0, 0, 0);
 }
 
 int GET_HEAP_SEG_SIZE() {
@@ -52,8 +52,8 @@ int GET_HEAP_END() {
     return farix_syscall(SYS_GET_HEAP_END, 0, 0, 0, 0, 0);
 }
 
-int HEAP_AUDIT(int *fault_addr) {
-    return farix_syscall(SYS_HEAP_AUDIT, (uint32_t) fault_addr, 0, 0, 0, 0);
+int HEAP_AUDIT(int* fault_addr) {
+    return farix_syscall(SYS_HEAP_AUDIT, (uint64_t) fault_addr, 0, 0, 0, 0);
 }
 
 int SYSTEM_INT_EXEC(int int_id) {
@@ -69,13 +69,13 @@ int SYSTEM_INT_OFF() {
 }
 
 int GET_TASK_DATA(int pid, TaskData* buffer) {
-    return farix_syscall(SYS_GET_TASK_INFO, (uint32_t) pid, (uint32_t) buffer, 0, 0, 0);
+    return farix_syscall(SYS_GET_TASK_INFO, (uint64_t) pid, (uint64_t) buffer, 0, 0, 0);
 }
 
 int GET_TASK_LIST(int list_id, TaskListData* buffer) {
-    return farix_syscall(SYS_GET_TASK_LIST, (uint32_t) list_id, (uint32_t) buffer, 0, 0, 0);
+    return farix_syscall(SYS_GET_TASK_LIST, (uint64_t) list_id, (uint64_t) buffer, 0, 0, 0);
 }
 
 int TASK_KILL(int pid) {
-    return farix_syscall(SYS_TASK_KILL, (uint32_t) pid, 0, 0, 0, 0);
+    return farix_syscall(SYS_TASK_KILL, (uint64_t) pid, 0, 0, 0, 0);
 }

@@ -8,11 +8,30 @@
 - Linter now checks for full license
 - `vsnprintf` handles `*` format specifiers
 - Fixed task page directory virtual/physical address mismatch and register mismatch.
+- Architectures store `ARCH_NAME`
+- Boots into kernel shell by default
+- Removed shelf application
+- Fixed GRUB bootloader files
+- FXTools: New utility tool to replace Legacy MFuncs
+  - Implemented:
+    - `make`
+    - `clear`
+    - `disk`
+    - `qemu`
+    - `help`
+    - `init`
+    - `checksum`
+  - Significantly more modular
+  - Internal caching system
+  - Native chaining system with `+`
+  - Uses GRUB bootloader instead of relying on QEMU's built-in emulation.
+  - Arch independant, OS independant.
 
 ```
 14/07/2026: 8acbc2c72ed0fc861a7161db95a37c38fd8cb53e7b3410658e980dcc9817f532
 15/07/2026: 0f4486d404e8d61e86cfb6053b299d71cdef2cb9a6935145ae5ab7a67159f525
 16/07/2026: 77949508f4ea965b20bcf11efb92e41be54e48b52b197573a37fafa3b42a14a6
+17/07/2026: b1dfdb831f14c7b1362397b3d7bc59ba26556212ed0fc74fbd416b61a1252b46
 ```
 
 ## Kernel System Modules (I)
