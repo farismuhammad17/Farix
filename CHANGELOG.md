@@ -21,6 +21,7 @@
     - `help`
     - `init`
     - `checksum`
+    - `defs`
   - Significantly more modular
   - Internal caching system
   - Native chaining system with `+`
@@ -32,6 +33,7 @@
 15/07/2026: 0f4486d404e8d61e86cfb6053b299d71cdef2cb9a6935145ae5ab7a67159f525
 16/07/2026: 77949508f4ea965b20bcf11efb92e41be54e48b52b197573a37fafa3b42a14a6
 17/07/2026: b1dfdb831f14c7b1362397b3d7bc59ba26556212ed0fc74fbd416b61a1252b46
+            b472947485e5015efa3b16ecf85f9818f368fefb2c76547a6ab7b0fa4d94bd65
 ```
 
 ## Kernel System Modules (I)
