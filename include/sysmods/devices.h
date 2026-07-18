@@ -18,27 +18,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stddef.h>
-#include <stdint.h>
+#ifndef DEVICES_H
+#define DEVICES_H
 
-#include "sysmods/interface.h"
+// DEVELOPER NOTE:
+// Every device struct MUST have a next pointer
+// to itself placed at the start of the struct.
 
-static kernel_api_t* k_api = NULL;
+typedef enum {
+    DEV_OUTPUT
+} dev_type_t;
 
-int test_drv_init(kernel_api_t* api) {
-    k_api = api;
+typedef struct output_dev_t {
+    struct output_dev_t* next;
+    uint8_t id;
 
-    k_api->printf("Hello!\n");
+    void (*printf)(const char* format, ...);
+} output_dev_t;
 
-    return 0;
-}
+extern output_dev_t* output_dev_head;
 
-void test_drv_exit() {
-}
+void register_device(dev_type_t type, void* device);
+void unregister_device(dev_type_t type, void* device);
 
-__attribute__((section(".text.prologue")))
-sysmod_t test_module_entry = {
-    .name = "Test driver",
-    .init_offset = (uint64_t) test_drv_init,
-    .exit_offset = (uint64_t) test_drv_exit
-};
+#endif

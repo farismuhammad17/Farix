@@ -22,8 +22,10 @@ ENTRY(sysmod_entry)
 SECTIONS
 {
     . = 0x0;
+    .sysmod_header : { *(.sysmod_header) }
+    . = ALIGN(16);
+
     .text : {
-        *(.text.prologue)
         *(.text*)
         *(.rodata*)
     }

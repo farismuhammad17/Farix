@@ -1,6 +1,25 @@
 # Changelog
 
-## Porting to x86_64 (WIP)
+## Kernel System Modules (II) - *WIP: 18th July, 2026*
+
+- System Modules
+  - Extended kernel api to include:-
+    - `vsnprintf`
+    - `outb`, `outw`, `outl`, `inb`, `inw`, `inl`
+    - `kmalloc` and `kfree`
+    - `register_device` and `unregister_device`
+  - Implemented `uart.sys`
+  - Special `sysmod_header` region in linker
+  - Renamed `loader.c` to `sysmods.c`
+- FXTools
+  - Added `QEMU_FULLSCREEN` to `statejson`
+  - `make` does not continue to next step if an error occurred.
+
+```
+18/07/2026: 82b2d1d0bf9296761c7ae9a5bf27ba37a6b0513588e466178837c090e91cc42e
+```
+
+## Porting to x86_64 - *17th July, 2026*
 
 - Added x86_64 architecture support.
 - Project will eventually no longer support 32 bit architectures.
@@ -38,7 +57,7 @@
             7337ddc3f3e46941b302ab02222e73149e27a0d1923bf314d1b45cfcfda9fe6d
 ```
 
-## Kernel System Modules (I)
+## Kernel System Modules (I) - *29th June, 2026*
 
 > [!NOTE]
 > Since the previous update isn't fully completed, system calls do not function, and, hence, no application runs outside the kernel as of now. Everything else functions the same.
@@ -51,7 +70,7 @@
 29/06/2026: 810f49dc06694d74d9b9a936f20e9424adae1f6e019993c6f533d8aaaf6de2d7
 ```
 
-## Newlib to Musl porting (I)
+## Newlib to Musl porting (I) - *20th June, 2026*
 
 > [!NOTE]
 > This update continues later due to development roadblocks, and is, for now, left unfinished.

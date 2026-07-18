@@ -31,6 +31,7 @@ DEFAULT_SCHEME = {
     "THREADS": 4,
     "BOOT_USB_PATH": None,
     "RUNTIME_CORES": 4,
+    "QEMU_FULLSCREEN": True
 }
 
 # Use a cache to make the state loading efficient

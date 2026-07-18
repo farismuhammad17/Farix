@@ -22,10 +22,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "klib/stdio.h"
 
+#include "hal.h"
+
 #include "drivers/terminal.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
+#include "memory/vmm.h"
 
+#include "sysmods/devices.h"
 #include "sysmods/interface.h"
 #include "sysmods/loader.h"
 
@@ -33,6 +37,20 @@ loaded_sysmod_t sysmods_registry[MAX_LOADED_MODULES];
 
 kernel_api_t sysmod_kernel_api = {
     .printf = printf,
+    .vsnprintf = vsnprintf,
+
+    .outb = outb,
+    .outw = outw,
+    .outl = outl,
+    .inb = inb,
+    .inw = inw,
+    .inl = inl,
+
+    .kmalloc = kmalloc,
+    .kfree = kfree,
+
+    .register_device = register_device,
+    .unregister_device = unregister_device,
 };
 
 static int find_free_module_slot() {
@@ -89,8 +107,9 @@ int load_sysmod_raw(void* raw_binary_buffer, size_t binary_size) {
     sysmods_registry[slot].is_active = 1;
 
     if (likely(mod->init_offset)) {
-        int (*runtime_init)(kernel_api_t*) = (int(*)(kernel_api_t*))(base + mod->init_offset);
-        int result = runtime_init(&sysmod_kernel_api);
+        int (*runtime_init)(kernel_api_t*, uint64_t) = (int(*)(kernel_api_t*, uint64_t))(base + mod->init_offset);
+
+        int result = runtime_init(&sysmod_kernel_api, base);
         if (unlikely(result != 0)) {
             sysmods_registry[slot].is_active = 0;
             return -1;

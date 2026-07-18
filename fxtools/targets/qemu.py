@@ -30,6 +30,7 @@ from fxtools.vars import emulation
 
 data = statejson.get()
 cores = data["RUNTIME_CORES"]
+fullscreen = data["QEMU_FULLSCREEN"]
 
 def get_qemu_flags_x86_64(storage_dev: str):
     QEMU_BIN = "qemu-system-x86_64"
@@ -65,7 +66,7 @@ def get_qemu_flags_x86_64(storage_dev: str):
 
     return QEMU_BIN, QEMU_FLAGS
 
-def run(no_fs: bool = False, storage_device: str = "ahci"):
+def run(no_fs: bool = not fullscreen, storage_device: str = "ahci"):
     if env.is_in_docker():
         print("\x1b[31mCannot emulate QEMU in docker. Run on native machine instead.\x1b[0m")
         return

@@ -21,14 +21,36 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef SYSMODS_INTERFACE_H
 #define SYSMODS_INTERFACE_H
 
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "sysmods/devices.h"
+
+#define SYSMOD_ENTRY __attribute__((section(".sysmod_header"), used))
+
 typedef struct {
-    char name[32];
-    uint64_t init_offset; // relative offset of the function
-    uint64_t exit_offset;
+    char name[16];        // 16 bytes
+    uint64_t init_offset; // 8 bytes
+    uint64_t exit_offset; // 8 bytes = 32 bytes
 } __attribute__((packed)) sysmod_t;
 
 typedef struct {
     void (*printf)(const char* format, ...);
+    int (*vsnprintf)(char* str, size_t size, const char* format, va_list args);
+
+    void (*outb)(uint16_t port, uint8_t val);
+    void (*outw)(uint16_t port, uint16_t val);
+    void (*outl)(uint16_t port, uint32_t val);
+    uint8_t (*inb)(uint16_t port);
+    uint16_t (*inw)(uint16_t port);
+    uint32_t (*inl)(uint16_t port);
+
+    void* (*kmalloc)(size_t size);
+    void (*kfree)(void* ptr);
+
+    void (*register_device)(dev_type_t dev_type, void* device);
+    void (*unregister_device)(dev_type_t dev_type, void* device);
 } kernel_api_t;
 
 #endif

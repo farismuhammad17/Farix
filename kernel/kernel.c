@@ -40,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "process/task.h"
 #include "shell/shell.h"
 #include "syshw/battery.h"
+#include "sysmods/devices.h"
 #include "sysmods/loader.h"
 
 #include "kernel.h"
@@ -152,14 +153,18 @@ void kmain() {
     create_task((void(*)(void*)) handle_mouse, "Terminal mouse handler", PRIV_KERNEL, NULL);
     create_task((void(*)(void*)) shell_thread, "Shell", PRIV_KERNEL, NULL);
 
-    int s = load_sysmod("system/test_drv.sys");
-    printf("Module name: %s\n", sysmods_registry[s].interface->name);
+    // --- KERNEL SYSTEM MODULE TESTING ---
 
-    // TODO: Consider putting this into a task and moving on
-    // PIT stalls can then be isolated to a task, while the
-    // rest of the OS can keep booting, but of course, this
-    // may lead to problems; turning on multiple cores while
-    // other things are getting initialised.
+    int s = load_sysmod("system/uart.sys");
+    printf("Module name: %s\n", sysmods_registry[s].interface->name);
+    printf("UART ID: %d\n", output_dev_head->id);
+
+    // Testing
+    output_dev_head->printf("Hello there!\n");
+    output_dev_head->printf("Who are you?\n");
+
+    // --- KERNEL SYSTEM MODULE TESTING END ---
+
     // init_multicore();
 
     while (1) system_halt();

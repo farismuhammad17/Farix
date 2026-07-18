@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, FIRST_EXCEPTION, wait
 
 from fxtools.core import build
 from fxtools.core import tools
@@ -60,7 +60,6 @@ def compile_x86_64():
 
     tasks = []
     tasks.append((BOOT_SRC, BOOT_OBJ, f"{TOOLS['AS']} {{src}} -o {{obj}}"))
-
     tasks.append((CRTI_SRC, CRTI_OBJ, "nasm -f elf64 {src} -o {obj}"))
     tasks.append((CRTN_SRC, CRTN_OBJ, "nasm -f elf64 {src} -o {obj}"))
 
@@ -74,8 +73,14 @@ def compile_x86_64():
             tasks.append((s, o, f"{TOOLS['CC']} -c {{src}} -o {{obj}} {c.CFLAGS}"))
 
     with ThreadPoolExecutor(max_workers=threads) as executor:
-        for t in tasks:
-            executor.submit(build.build_object, *t)
+        futures = {executor.submit(build.build_object, *t): t for t in tasks}
+
+        # Wait for all to finish OR any one to fail
+        done, not_done = wait(futures, return_when=FIRST_EXCEPTION)
+
+        # Check for any exceptions that occurred
+        for future in done:
+            future.result() # Re-raises exception if the task failed
 
     ld_flags = "-T arch/x86_64/linker.ld -ffreestanding -O2 -nostdlib -nodefaultlibs -no-pie"
 
@@ -100,16 +105,10 @@ def compile_x86_64():
     printer.wait("Finding System Modules...")
 
     search_dirs = ["sysmods/x86", "sysmods/generic"]
-    src_files = []
+    src_files = [os.path.join(s_dir, item) for s_dir in search_dirs if os.path.exists(s_dir)
+                 for item in os.listdir(s_dir) if item.endswith(".c")]
 
-    for s_dir in search_dirs:
-        if not os.path.exists(s_dir):
-            continue
-        for item in os.listdir(s_dir):
-            if item.endswith(".c"):
-                src_files.append(os.path.join(s_dir, item))
-
-    tasks = []
+    mod_tasks = []
     mod_link_data = []
 
     # Map files and queue object compilation tasks
@@ -123,40 +122,34 @@ def compile_x86_64():
 
         # Remove kernel-space models and ensure -fno-pic is set
         clean_cflags = c.CFLAGS.replace("-mcmodel=kernel", "").replace("-fno-pic", "")
-        cc_flags = f"{TOOLS['CC']} -c {mod_src} -o {mod_obj} {clean_cflags} -fPIC"
-        tasks.append((mod_src, mod_obj, cc_flags))
-
+        cc_flags = f"{TOOLS['CC']} -c {mod_src} -o {mod_obj} {clean_cflags} -mcmodel=large -fno-pie -fno-pic"
+        mod_tasks.append((mod_src, mod_obj, cc_flags))
         mod_link_data.append((mod_name, mod_obj, mod_out))
 
     with ThreadPoolExecutor(max_workers=threads) as executor:
-        for t in tasks:
-            executor.submit(build.build_object, *t)
+        futures = {executor.submit(build.build_object, *t): t for t in mod_tasks}
+        done, _ = wait(futures, return_when=FIRST_EXCEPTION)
+        for future in done:
+            future.result()
 
     # Process linking and target disk deployment
     for mod_name, mod_obj, mod_out in mod_link_data:
         print(f"\n\x1b[1;35mBuilding System Module: {mod_name}\x1b[0m")
 
         ld_flags = "-T sysmods/linker.ld -ffreestanding -nostdlib -O2 -Wl,--oformat=binary"
-        ld_cmd = f"{TOOLS['CC']} {ld_flags} {mod_obj} -o {mod_out}"
-
-        print(f"\x1b[3;33mLinking {mod_out}...\x1b[0m")
-        proc_run(ld_cmd)
-
+        proc_run(f"{TOOLS['CC']} {ld_flags} {mod_obj} -o {mod_out}")
         print(f"\x1b[33mDeploying {mod_name}.sys to {emulation.DISK_PATH}/system/\x1b[0m")
         proc_run(f"mcopy -D o -i {emulation.DISK_PATH} {mod_out} ::/system/{mod_name}.sys")
-
-    # Setup Kernel System Modules
-    iso_stage_dir = "bootloader/x86"
 
     # Create farix.iso
     printer.wait("Packaging final bootable ISO...")
 
     proc_run(
         "xorriso -as mkisofs "
-        "-R -b boot/grub/stage2_eltorito " # Relative to iso_stage_dir
+        "-R -b boot/grub/stage2_eltorito " # Relative to bootloader/x86
         "-no-emul-boot -boot-load-size 4 -boot-info-table "
         "-untranslated-filenames "
-        f"-o farix.iso {iso_stage_dir}",
+        "-o farix.iso bootloader/x86",
         check=True)
 
     printer.success("Process completed")
