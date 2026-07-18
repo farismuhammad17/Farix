@@ -24,7 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "cpu/multicore.h"
 #include "drivers/terminal.h"
-#include "drivers/uart.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
 

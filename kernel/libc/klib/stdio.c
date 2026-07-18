@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "drivers/output.h"
 #include "drivers/terminal.h"
 
 #include "klib/stdio.h"
@@ -330,5 +331,11 @@ void printf(const char* format, ...) {
 
     if (likely(len > 0)) {
         echo_raw(buf, (size_t) len);
+
+        output_dev_t* curr = output_dev_head;
+        while (curr != NULL) {
+            curr->printf(buf);
+            curr = curr->next;
+        }
     }
 }

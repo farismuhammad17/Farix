@@ -21,13 +21,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdarg.h>
 #include <stdint.h>
 
+#include "klib/stdio.h"
 #include "klib/string.h"
 
 #include "hal.h"
 
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
-#include "drivers/uart.h"
 #include "memory/vmm.h"
 #include "process/task.h"
 
@@ -96,7 +96,6 @@ static void panic_err_printf(const char* format, ...) {
     va_end(args);
 
     if (len > 0) {
-        uart_print(buffer);
         echo_raw(buffer, len);
     }
 }

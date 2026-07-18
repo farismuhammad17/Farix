@@ -18,42 +18,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef UART_H
-#define UART_H
+#ifndef OUTPUT_H
+#define OUTPUT_H
 
-#include <stdarg.h>
+#include <stdint.h>
 
-#include "klib/stdio.h"
+typedef struct output_dev_t {
+    struct output_dev_t* next;
+    uint8_t id;
 
-void init_uart();
+    void (*printf)(const char* format, ...);
+} output_dev_t;
 
-int  is_uart_transmit_empty();
-int  is_uart_received();
-char uart_getc();
-void uart_putc(char c);
-
-static inline void uart_print(const char* data) {
-    while (*data) {
-        if (*data == '\n') {
-            uart_putc('\r');
-        }
-
-        uart_putc(*data++);
-    }
-}
-
-static inline void uart_vprintf(const char* format, va_list args) {
-    char buffer[256];
-    int len = vsnprintf(buffer, sizeof(buffer), format, args);
-
-    if (len > 0) uart_print(buffer);
-}
-
-static inline void uart_printf(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    uart_vprintf(format, args);
-    va_end(args);
-}
+extern output_dev_t* output_dev_head;
 
 #endif

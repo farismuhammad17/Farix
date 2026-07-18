@@ -21,22 +21,32 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef DEVICES_H
 #define DEVICES_H
 
+#include <stdint.h> // TODO REM When timer device is moved out
+
+#define UART_DEV_ID          1
+#define PIT_DEV_ID           2
+
 // DEVELOPER NOTE:
 // Every device struct MUST have a next pointer
 // to itself placed at the start of the struct.
 
 typedef enum {
-    DEV_OUTPUT
+    DEV_OUTPUT,
+    DEV_INPUT,
+    DEV_TIMER
 } dev_type_t;
 
-typedef struct output_dev_t {
-    struct output_dev_t* next;
+typedef struct timer_dev_t {
+    struct timer_dev_t* next;
     uint8_t id;
 
-    void (*printf)(const char* format, ...);
-} output_dev_t;
+    uint64_t (*get_timer_uptime_microseconds)();
+    void (*timer_stall)(uint64_t microseconds);
 
-extern output_dev_t* output_dev_head;
+    void (*interrupt_handler)();
+} timer_dev_t;
+
+extern timer_dev_t* timer_dev_head;
 
 void register_device(dev_type_t type, void* device);
 void unregister_device(dev_type_t type, void* device);

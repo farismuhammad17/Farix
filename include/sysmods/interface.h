@@ -36,9 +36,11 @@ typedef struct {
 } __attribute__((packed)) sysmod_t;
 
 typedef struct {
+    // Output
     void (*printf)(const char* format, ...);
     int (*vsnprintf)(char* str, size_t size, const char* format, va_list args);
 
+    // Assembly
     void (*outb)(uint16_t port, uint8_t val);
     void (*outw)(uint16_t port, uint16_t val);
     void (*outl)(uint16_t port, uint32_t val);
@@ -46,9 +48,17 @@ typedef struct {
     uint16_t (*inw)(uint16_t port);
     uint32_t (*inl)(uint16_t port);
 
+    // Memory Mangement
     void* (*kmalloc)(size_t size);
     void (*kfree)(void* ptr);
 
+    // IRQ
+    void (*irq_send_eoi)();
+
+    // Tasks
+    void (*schedule)();
+
+    // Device controllers
     void (*register_device)(dev_type_t dev_type, void* device);
     void (*unregister_device)(dev_type_t dev_type, void* device);
 } kernel_api_t;

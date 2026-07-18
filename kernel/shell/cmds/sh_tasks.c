@@ -24,8 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "process/task.h"
 
-#include "drivers/uart.h" // TODO REM
-
 #include "shell/commands.h"
 #include "shell/shell.h"
 
@@ -95,7 +93,6 @@ void cmd_tasks(UNUSED_ARG const char* args) {
 
 /* Kill task command */
 void cmd_kill(const char* args) {
-    uart_print("NYI\n");
     // if (unlikely(args[0] == '\0')) {
     //     sh_print("Usage: kill <pid>\n");
     //     return;
@@ -107,7 +104,6 @@ void cmd_kill(const char* args) {
 
 /* View tasks in task list command */
 void cmd_tlist(const char* args) {
-    uart_print("NYI\n");
     // task_list* list = first_task_list;
 
     // if (args[0] == '\0') {

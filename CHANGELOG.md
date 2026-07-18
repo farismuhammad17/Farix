@@ -2,6 +2,7 @@
 
 ## Kernel System Modules (II) - *WIP: 18th July, 2026*
 
+- Reordered kernel boot sequence
 - System Modules
   - Extended kernel api to include:-
     - `vsnprintf`
@@ -17,6 +18,7 @@
 
 ```
 18/07/2026: 82b2d1d0bf9296761c7ae9a5bf27ba37a6b0513588e466178837c090e91cc42e
+            23251a9505c8903fc9316c1e3961b794124efe3b0126e5701fc6f285b806bcd4
 ```
 
 ## Porting to x86_64 - *17th July, 2026*

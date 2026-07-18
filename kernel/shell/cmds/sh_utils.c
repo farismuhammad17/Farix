@@ -22,10 +22,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 
+#include "klib/stdio.h"
+
 #include "hal.h"
 
 #include "drivers/terminal.h"
-#include "drivers/uart.h"
 #include "memory/heap.h"
 
 #include "shell/commands.h"
@@ -55,11 +56,16 @@ void cmd_echo(const char* args) {
 void cmd_secho(const char* args) {
     if (unlikely(!args)) return;
 
-    uart_print(args);
+    // TODO (Undone since WIP)
+    // Iterate through output devices
+    // Find device with UART_DEV_ID
+    // Print using.
 
-    // Always terminate with a fresh line on the serial side
-    uart_putc('\r');
-    uart_putc('\n');
+    // uart_print(args);
+
+    // // Always terminate with a fresh line on the serial side
+    // uart_putc('\r');
+    // uart_putc('\n');
 }
 
 /* Heap usage command */
@@ -155,7 +161,6 @@ void cmd_heapstat(UNUSED_ARG const char* args) {
 void cmd_int(const char *args) {
     // TODO: x86 only, use HAL
 
-    uart_print("NYI\n");
     // #define CASE(n)   case n: asm volatile("int %0" :: "i"(n)); break;
     // #define REP2(n)   CASE(n) CASE(n+1)
     // #define REP4(n)   REP2(n) REP2(n+2)

@@ -31,7 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/mouse.h"
 #include "drivers/storage/bdl.h"
 #include "drivers/terminal.h"
-#include "drivers/uart.h"
+#include "drivers/output.h"
 #include "fs/fat32.h"
 #include "fs/ramdisk.h"
 #include "fs/types/elf.h"
@@ -69,12 +69,9 @@ function rely on nothing other than everything before itself, since, at this sta
 nothing exists. It initialises the following:
 
 - terminal_clear_phys: Clears out the terminal trash the BIOS might leave
-- init_uart: Debugging needs it
 */
 void early_kmain() {
     terminal_clear_phys();
-
-    init_uart();
 }
 
 /*
@@ -122,6 +119,16 @@ performing work when required.
 void kmain() {
     init_interrupts();
     init_heap();
+
+    init_storage();
+
+    system_int_on();
+
+    init_ramdisk();
+    init_fat32();
+
+    vfs_mount(&fat32_vfs);
+
     init_terminal();
 
     init_acpi_slabs();
@@ -139,31 +146,12 @@ void kmain() {
     init_keyboard();
     init_mouse();
 
-    init_storage();
-
-    system_int_on();
-
-    init_ramdisk();
-    init_fat32();
-
-    vfs_mount(&fat32_vfs);
-
     init_battery();
 
     create_task((void(*)(void*)) handle_mouse, "Terminal mouse handler", PRIV_KERNEL, NULL);
     create_task((void(*)(void*)) shell_thread, "Shell", PRIV_KERNEL, NULL);
 
-    // --- KERNEL SYSTEM MODULE TESTING ---
-
-    int s = load_sysmod("system/uart.sys");
-    printf("Module name: %s\n", sysmods_registry[s].interface->name);
-    printf("UART ID: %d\n", output_dev_head->id);
-
-    // Testing
-    output_dev_head->printf("Hello there!\n");
-    output_dev_head->printf("Who are you?\n");
-
-    // --- KERNEL SYSTEM MODULE TESTING END ---
+    load_sysmod("system/uart.sys");
 
     // init_multicore();
 

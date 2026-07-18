@@ -24,10 +24,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
+#include "cpu/irq.h"
 #include "drivers/terminal.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
+#include "process/task.h"
 
 #include "sysmods/devices.h"
 #include "sysmods/interface.h"
@@ -48,6 +50,10 @@ kernel_api_t sysmod_kernel_api = {
 
     .kmalloc = kmalloc,
     .kfree = kfree,
+
+    .irq_send_eoi = irq_send_eoi,
+
+    .schedule = schedule,
 
     .register_device = register_device,
     .unregister_device = unregister_device,

@@ -27,7 +27,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cpu/pci.h"
 #include "cpu/timer.h"
 #include "drivers/terminal.h"
-#include "drivers/uart.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
 #include "memory/pmm.h"
@@ -675,7 +674,7 @@ to the appropriate kernel console, serial port, or log buffer for debugging and 
 void AcpiOsPrintf(const char *Format, ...) {
     va_list Args;
     va_start(Args, Format);
-    uart_vprintf(Format, Args);
+    // uart_vprintf(Format, Args);
     va_end(Args);
 }
 
@@ -685,5 +684,5 @@ It takes a format string and a va_list of arguments. It returns nothing (void). 
 to pass pre-processed argument lists from various internal diagnostic routines to the host's output hardware.
 */
 void AcpiOsVprintf(const char *Format, va_list Args) {
-    uart_vprintf(Format, Args);
+    // uart_vprintf(Format, Args);
 }

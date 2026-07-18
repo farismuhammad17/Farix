@@ -25,7 +25,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "hal.h"
 
 #include "drivers/terminal.h"
-#include "drivers/uart.h"
 #include "fs/types/elf.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
@@ -87,9 +86,14 @@ void syscall_handler(syscalls_registers_x86_64_t* regs) {
                 break;
             }
 
-            uart_print((const char*) arg1);
-            regs->rax = SYS_DONE;
-            break;
+            // TODO (Undone since WIP)
+            // Iterate through output devices
+            // Find device with UART_DEV_ID
+            // print using it.
+
+            // uart_print((const char*) arg1);
+            // regs->rax = SYS_DONE;
+            // break;
         }
 
         case SYS_GET_HEAP: {

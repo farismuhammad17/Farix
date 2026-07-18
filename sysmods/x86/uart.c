@@ -24,12 +24,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "sysmods/devices.h"
 #include "sysmods/interface.h"
 
-#define DEVICE_ID 1
+#include "drivers/output.h"
 
 #define PORT 0x3F8 // COM1
 
-static kernel_api_t* k_api;
-static output_dev_t* dev;
+static kernel_api_t* k_api = NULL;
+static output_dev_t* dev = NULL;
 
 static char buffer[256];
 
@@ -61,6 +61,7 @@ static inline void uart_print(const char* data) {
     }
 }
 
+// TODO Reuse buffer if size is too big to support any length of strings
 static inline void uart_vprintf(const char* format, va_list args) {
     int len = k_api->vsnprintf(buffer, sizeof(buffer), format, args);
     if (len > 0) uart_print(buffer);
@@ -85,7 +86,8 @@ int init_uart(kernel_api_t* api, uint64_t base_addr) {
     api->outb(PORT + 4, 0x0B);    // IRQs enabled, RTS/DSR set
 
     dev = k_api->kmalloc(sizeof(output_dev_t));
-    dev->id = DEVICE_ID;
+    dev->id = UART_DEV_ID;
+
     dev->printf = (void*)((uint64_t) uart_printf + base_addr);
 
     api->register_device(DEV_OUTPUT, (void*) dev);
@@ -100,8 +102,6 @@ void exit_uart() {
 
     k_api->unregister_device(DEV_OUTPUT, (void*) dev);
 
-    // This must be at the end, else you free the memory holding
-    // this very function.
     k_api->kfree(dev);
 }
 

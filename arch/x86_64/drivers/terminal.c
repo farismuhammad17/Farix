@@ -31,7 +31,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "drivers/keyboard.h"
 #include "drivers/mouse.h"
-#include "drivers/uart.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
 #include "process/task.h"
@@ -429,9 +428,6 @@ void t_print(const char* data) {
 }
 
 void err_print(const char* data) {
-    uart_print(data);
-    uart_putc('\n');
-
     uint16_t* err_print_vga_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(VGA_MEMORY);
     for (int i = 0; data[i] != '\0'; i++) {
         err_print_vga_buffer[(cursor_y * WIDTH) + i] = (uint16_t) data[i] | (uint16_t) 0x0C << 8;
@@ -458,7 +454,6 @@ void err_printf(const char* format, ...) {
                 while (*s) {
                     char c = *s++;
                     err_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) c | (uint16_t) ERROR_PRINT_COLOR << 8;
-                    uart_putc(c);
                 }
             }
             else if (format[i] == 'd' || format[i] == 'x') {
@@ -479,17 +474,14 @@ void err_printf(const char* format, ...) {
                 while (p > 0) {
                     char c = buffer[--p];
                     err_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) c | (uint16_t) ERROR_PRINT_COLOR << 8;
-                    uart_putc(c);
                 }
             }
         } else {
             err_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) format[i] | (uint16_t) ERROR_PRINT_COLOR << 8;
-            uart_putc(format[i]);
         }
     }
 
     va_end(args);
-    uart_putc('\n');
 
     cursor_y++;
     update_cursor(cursor_x, cursor_y);
