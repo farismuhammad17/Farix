@@ -23,6 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "sysmods/devices.h"
 #include "sysmods/interface.h"
 
+#include "cpu/timer.h"
+
 #define PIT_FREQ_HZ  1193182
 #define FREQUENCY_HZ 100
 
@@ -44,7 +46,7 @@ uint64_t get_timer_uptime_microseconds() {
     return (system_ticks * 1000000ULL) / FREQUENCY_HZ;
 }
 
-void timer_stall(uint64_t microseconds) {
+void stall(uint64_t microseconds) {
     if (unlikely(microseconds == 0)) return;
 
     uint64_t total_ticks = (microseconds * PIT_FREQ_HZ) / 1000000;
@@ -86,11 +88,14 @@ int init_pit(kernel_api_t* api, uint64_t base_addr) {
     dev = k_api->kmalloc(sizeof(timer_dev_t));
     dev->id = PIT_DEV_ID;
 
-    dev->get_timer_uptime_microseconds = (void*)((uint64_t) get_timer_uptime_microseconds + base_addr);
-    dev->timer_stall = (void*)((uint64_t) timer_stall + base_addr);
-    dev->interrupt_handler = (void*)((uint64_t) interrupt_handler + base_addr);
+    dev->get_timer_uptime_microseconds = (void*) SYSMOD_TO_KERNEL(get_timer_uptime_microseconds);
+    dev->stall = (void*) SYSMOD_TO_KERNEL(stall);
 
     api->register_device(DEV_TIMER, (void*) dev);
+
+    api->register_interrupt(32, (void*) SYSMOD_TO_KERNEL(interrupt_handler));
+
+    return 0;
 }
 
 void exit_pit() {
@@ -98,6 +103,8 @@ void exit_pit() {
     k_api->outb(0x43, 0x36);
     k_api->outb(0x40, 0xFF); // Set a very slow frequency
     k_api->outb(0x40, 0xFF);
+
+    k_api->unregister_interrupt(32);
 
     k_api->unregister_device(DEV_TIMER, dev);
 

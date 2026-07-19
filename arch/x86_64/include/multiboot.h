@@ -18,8 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef MULTIBOOT_H
-#define MULTIBOOT_H
+#ifndef X86_64_MULTIBOOT_H
+#define X86_64_MULTIBOOT_H
 
 #include <stdint.h>
 

@@ -30,4 +30,7 @@ void set_interrupt_kernel (uint8_t vector, void* handler);
 void set_interrupt_user   (uint8_t vector, void* handler);
 void clear_interrupt      (uint8_t vector);
 
+void register_interrupt(uint8_t vector, void* handler);
+void unregister_interrupt(uint8_t vector);
+
 #endif

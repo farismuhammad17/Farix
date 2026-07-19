@@ -22,49 +22,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
-#include "cpu/irq.h"
-#include "drivers/terminal.h"
+#include "cpu/timer.h"
+#include "memory/heap.h"
+#include "sysmods/devices.h"
 
-#include "process/task.h"
+#include "initboot.h"
 
 #define PIT_FREQ_HZ  1193182
+#define FREQUENCY_HZ 100
 
-static uint64_t system_ticks = 0;
-static uint64_t timer_freq   = 0;
-static uint64_t divisor      = 65535;
+static const uint64_t INITBOOT_DAT_SECTION divisor = PIT_FREQ_HZ / FREQUENCY_HZ;
 
-void timer_handler() {
-    system_ticks++;
+static uint64_t INITBOOT_DAT_SECTION system_ticks = 0;
 
-    irq_send_eoi();
-    schedule(); // Swap tasks
+uint64_t INITBOOT_TXT_SECTION get_timer_uptime_microseconds() {
+    return (system_ticks * 1000000ULL) / FREQUENCY_HZ;
 }
 
-// TODO: Remove magic numbers
-void init_timer(uint64_t frequency) {
-    if (unlikely(frequency == 0)) {
-        err_print("init_timer: Frequency set to 0");
-        return;
-    }
-
-    divisor = PIT_FREQ_HZ / frequency;
-    timer_freq = frequency;
-
-    outb(0x43, 0x36);
-
-    uint8_t low  = (uint8_t) (divisor & 0xFF);
-    uint8_t high = (uint8_t) ((divisor >> 8) & 0xFF);
-
-    outb(0x40, low);
-    outb(0x40, high);
-}
-
-uint64_t get_timer_uptime_microseconds() {
-    if (unlikely(timer_freq == 0)) return 0;
-    return (system_ticks * 1000000ULL) / timer_freq;
-}
-
-void timer_stall(uint64_t microseconds) {
+void INITBOOT_TXT_SECTION timer_stall(uint64_t microseconds) {
     if (unlikely(microseconds == 0)) return;
 
     uint64_t total_ticks = (microseconds * PIT_FREQ_HZ) / 1000000;
@@ -90,4 +65,20 @@ void timer_stall(uint64_t microseconds) {
         last_value = current_value;
         asm volatile("pause");
     }
+}
+
+static timer_dev_t INITBOOT_DAT_SECTION bootstrap_timer_dev = {
+    .id = PIT_DEV_ID,
+    .get_timer_uptime_microseconds = get_timer_uptime_microseconds,
+    .stall = timer_stall
+};
+
+void INITBOOT_TXT_SECTION initboot_timer() {
+    outb(0x43, 0x36);
+    uint8_t low  = (uint8_t) (divisor & 0xFF);
+    uint8_t high = (uint8_t) ((divisor >> 8) & 0xFF);
+    outb(0x40, low);
+    outb(0x40, high);
+
+    register_device(DEV_TIMER, &bootstrap_timer_dev);
 }

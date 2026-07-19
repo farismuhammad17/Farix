@@ -18,8 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef TSS_H
-#define TSS_H
+#ifndef X86_64_TSS_H
+#define X86_64_TSS_H
 
 #include <stdint.h>
 

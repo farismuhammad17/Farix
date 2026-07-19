@@ -18,8 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef PIC_H
-#define PIC_H
+#ifndef X86_64_PIC_H
+#define X86_64_PIC_H
 
 #define PIC1    		0x20
 #define PIC1_COMMAND	PIC1

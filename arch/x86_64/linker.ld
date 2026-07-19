@@ -68,6 +68,16 @@ SECTIONS
     } : kernel
     . = ALIGN(4K);
 
+    .initboot : AT(ADDR(.initboot) - 0xFFFFFFFF80000000)
+    {
+        _initboot_start = .;
+        *(.initboot.text)
+        *(.initboot.data)
+        *(.initboot.rodata)
+        . = ALIGN(4K);
+        _initboot_end = .;
+    } : kernel
+
     .bss : AT(ADDR(.bss) - 0xFFFFFFFF80000000)
     {
         *(COMMON)

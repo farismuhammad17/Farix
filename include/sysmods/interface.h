@@ -29,6 +29,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define SYSMOD_ENTRY __attribute__((section(".sysmod_header"), used))
 
+#define SYSMOD_TO_KERNEL(s) ((uint64_t)(s) + base_addr)
+
 typedef struct {
     char name[16];        // 16 bytes
     uint64_t init_offset; // 8 bytes
@@ -38,6 +40,8 @@ typedef struct {
 typedef struct {
     // Output
     void (*printf)(const char* format, ...);
+    void (*err_printf)(const char* format, ...);
+    void (*err_print)(const char* data);
     int (*vsnprintf)(char* str, size_t size, const char* format, va_list args);
 
     // Assembly
@@ -53,6 +57,8 @@ typedef struct {
     void (*kfree)(void* ptr);
 
     // IRQ
+    void (*register_interrupt)(uint8_t, void*);
+    void (*unregister_interrupt)(uint8_t);
     void (*irq_send_eoi)();
 
     // Tasks

@@ -31,7 +31,6 @@ ShellCommand command_table[] = {
     {"memstat", cmd_memstat, "Memory statistics"},
     {"heapstat", cmd_heapstat, "Verify heap health"},
     {"int", cmd_int, "Jump to given interrupt"},
-    {"grep", cmd_grep, "Searches text for matching patterns"},
 
     // fs
     {"cd", cmd_cd, "Change directory"},

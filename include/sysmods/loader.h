@@ -28,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 typedef struct {
     sysmod_t* interface;
     void* base_address;     // Where the raw binary was loaded in RAM
-    size_t size;          // Memory footprint size
+    size_t size;            // Memory footprint size
     int is_active;
 } loaded_sysmod_t;
 

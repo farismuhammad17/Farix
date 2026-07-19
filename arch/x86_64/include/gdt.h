@@ -18,8 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef GDT_H
-#define GDT_H
+#ifndef X86_64_GDT_H
+#define X86_64_GDT_H
 
 #include <stdint.h>
 

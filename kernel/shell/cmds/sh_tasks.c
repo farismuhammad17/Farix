@@ -20,12 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdlib.h>
 
+#include "klib/stdio.h"
+
 #include "hal.h"
 
 #include "process/task.h"
 
 #include "shell/commands.h"
-#include "shell/shell.h"
 
 /* List task tree command */
 void cmd_tasks(UNUSED_ARG const char* args) {
@@ -42,8 +43,8 @@ void cmd_tasks(UNUSED_ARG const char* args) {
         else if (curr->state == TASK_SLEEPING) state_str = "SLEEPING";
         else if (curr->state == TASK_DEAD) state_str = "DEAD";
 
-        for (int i = 0; i < indent * PER_INDENT_SIZE; i++) sh_print(" ");
-        sh_print("%s (%ld) - %s\n",
+        for (int i = 0; i < indent * PER_INDENT_SIZE; i++) printf(" ");
+        printf("%s (%ld) - %s\n",
             curr->name,
             curr->id,
             state_str
@@ -94,7 +95,7 @@ void cmd_tasks(UNUSED_ARG const char* args) {
 /* Kill task command */
 void cmd_kill(const char* args) {
     // if (unlikely(args[0] == '\0')) {
-    //     sh_print("Usage: kill <pid>\n");
+    //     printf("Usage: kill <pid>\n");
     //     return;
     // }
 
@@ -110,14 +111,14 @@ void cmd_tlist(const char* args) {
     //     size_t list_id = 0;
 
     //     do {
-    //         sh_print("%d ", list_id);
+    //         printf("%d ", list_id);
 
     //         for (int i = TASKS_LIST_LEN - 1; i >= 0; i--) {
-    //             sh_print("%d", (list->mask >> i) & 1);
-    //             if (i > 0 && i % 8 == 0) sh_print(" ");
+    //             printf("%d", (list->mask >> i) & 1);
+    //             if (i > 0 && i % 8 == 0) printf(" ");
     //         }
 
-    //         sh_print("\n");
+    //         printf("\n");
     //         list_id++;
 
     //         list = list->next;
@@ -129,7 +130,7 @@ void cmd_tlist(const char* args) {
     //         list = list->next;
 
     //         if (list == NULL) {
-    //             sh_print("tlist: Only %d total lists\n", i + 1);
+    //             printf("tlist: Only %d total lists\n", i + 1);
     //             return;
     //         }
     //         else if (i == target) break;
@@ -144,7 +145,7 @@ void cmd_tlist(const char* args) {
     //             else if (t->state == TASK_SLEEPING) state_str = "SLEEPING";
     //             else if (t->state == TASK_DEAD) state_str = "DEAD";
 
-    //             sh_print("%-4ld%-10s%s\n",
+    //             printf("%-4ld%-10s%s\n",
     //                 t->id,
     //                 state_str,
     //                 t->name
@@ -157,5 +158,5 @@ void cmd_tlist(const char* args) {
 /* Clean task list command */
 void cmd_cltlist(UNUSED_ARG const char* args) {
     size_t tlists_cleaned = clean_task_lists();
-    sh_print("Deleted %d task lists\n", tlists_cleaned);
+    printf("Deleted %d task lists\n", tlists_cleaned);
 }

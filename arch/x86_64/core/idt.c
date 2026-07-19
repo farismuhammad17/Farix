@@ -18,9 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "cpu/ints.h"
+#include "cpu/irq.h"
 
 #define IDT_GATE_KERNEL 0x8E  // 1000 1110: Present, Ring 0, Interrupt Gate
 #define IDT_GATE_USER   0xEE  // 1110 1110: Present, Ring 3, Interrupt Gate
@@ -58,6 +60,8 @@ void isr28(); void isr29(); void isr30(); void isr31();
 
 static idt_entry idt[256];
 static idt_ptr   idtp;
+
+static void* volatile dispatch_table[256] = { 0 };
 
 /* Set IDT gate at index `num` with given 64-bit function, selector, and flags */
 static void idt_set_gate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags) {
@@ -156,4 +160,25 @@ which is for handling "Unknown interrupts".
 */
 void clear_interrupt(uint8_t vector) {
     idt_set_gate(vector, (uint64_t) isr15, 0x08, IDT_GATE_KERNEL);
+}
+
+/* Called by idt.asm inside each stub to dynamically edit the IDT from sysmods */
+void interrupt_dispatcher(uint8_t vector) {
+    void* handler = dispatch_table[vector];
+
+    if (handler != NULL) {
+        ((void(*)(void)) handler)();
+    } else {
+        irq_send_eoi();
+    }
+}
+
+/* Register a handler for a specific interrupt vector. */
+void register_interrupt(uint8_t vector, void* handler) {
+    dispatch_table[vector] = handler;
+}
+
+/* Unregister a handler by setting its entry back to NULL. */
+void unregister_interrupt(uint8_t vector) {
+    dispatch_table[vector] = NULL;
 }

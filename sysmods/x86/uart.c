@@ -67,7 +67,7 @@ static inline void uart_vprintf(const char* format, va_list args) {
     if (len > 0) uart_print(buffer);
 }
 
-void uart_printf(const char* format, ...) {
+static void uart_printf(const char* format, ...) {
     va_list args;
     va_start(args, format);
     uart_vprintf(format, args);
@@ -88,7 +88,7 @@ int init_uart(kernel_api_t* api, uint64_t base_addr) {
     dev = k_api->kmalloc(sizeof(output_dev_t));
     dev->id = UART_DEV_ID;
 
-    dev->printf = (void*)((uint64_t) uart_printf + base_addr);
+    dev->printf = (void*) SYSMOD_TO_KERNEL(uart_printf);
 
     api->register_device(DEV_OUTPUT, (void*) dev);
 

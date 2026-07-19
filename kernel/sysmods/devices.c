@@ -22,19 +22,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "drivers/terminal.h"
 
+#include "cpu/timer.h"
 #include "drivers/output.h"
 
 #include "sysmods/devices.h"
 
 output_dev_t* output_dev_head = NULL;
-timer_dev_t*  timer_dev_head  = NULL;
+timer_dev_t*  timer_dev       = NULL;
 
 void register_device(dev_type_t type, void* device) {
     void** head_ptr = NULL;
 
     switch (type) {
         case DEV_OUTPUT : head_ptr = (void**) &output_dev_head; break;
-        case DEV_TIMER  : head_ptr = (void**) &timer_dev_head; break;
+
+        case DEV_TIMER  : timer_dev = (timer_dev_t*) device; return;
 
         default:
             err_printf("Unknown device type: %d", type);
@@ -50,7 +52,8 @@ void unregister_device(dev_type_t type, void* device) {
 
     switch (type) {
         case DEV_OUTPUT : head_ptr = (void**) &output_dev_head; break;
-        case DEV_TIMER  : head_ptr = (void**) &timer_dev_head; break;
+
+        case DEV_TIMER  : timer_dev = NULL; return;
 
         default:
             err_printf("Unknown device type: %d", type);

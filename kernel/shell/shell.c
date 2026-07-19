@@ -38,14 +38,9 @@ char shell_directory[MAX_DIRECTORY_PATH_LEN];
 char shell_buffer[MAX_SHELL_BUFFER_LEN];
 bool shell_buffer_ready = false;
 
-char  last_cmd_output[MAX_LAST_CMD_OUTPUT_LEN] = {0};
-char* pipe_buffer = NULL;
-bool  is_piping = false;
-
-static char shell_output_buffer[8192];
-static size_t shell_output_ptr = 0;
-
 static size_t shell_buffer_size = 0;
+
+static void shell_parse(const char* input);
 
 static char* trim(char* s) {
     if (unlikely(s == NULL)) return NULL;
@@ -107,14 +102,6 @@ void shell_update() {
 
     if (shell_buffer_ready) {
         if (shell_buffer_size != 0) {
-            // TODO: This causes heap corruptions,
-            // will be implemented later, it's literally
-            // 1:27 am as I write this.
-            //
-            // This is like a month old, I am still lazy
-            // to fix this some day.
-            //
-            // save_cmd_to_history(shell_buffer.c_str());
             shell_parse(shell_buffer);
         }
 
@@ -130,110 +117,30 @@ void shell_update() {
 Takes in the input text, matches it with the list of valid commands, and once
 a command is found, it execute that command's function.
 */
-void shell_parse(const char* input) {
+static void shell_parse(const char* input) {
     if (unlikely(input == NULL || input[0] == '\0')) return;
 
-    char* segments[2];
-    size_t num_segments = 0;
-    char* pipe_ptr = strchr((char*) input, '|');
+    char buffer[MAX_SHELL_BUFFER_LEN];
+    strncpy(buffer, input, MAX_SHELL_BUFFER_LEN - 1);
+    buffer[MAX_SHELL_BUFFER_LEN - 1] = '\0';
 
-    if (pipe_ptr != NULL) {
-        *pipe_ptr = '\0';
-        segments[0] = (char*) input;
-        segments[1] = pipe_ptr + 1;
-        num_segments = 2;
+    char* cmd_name = trim(buffer);
+    char* args = strchr(cmd_name, ' ');
+
+    if (args != NULL) {
+        *args = '\0';
+        args = trim(args + 1);
     } else {
-        segments[0] = (char*) input;
-        num_segments = 1;
+        args = "";
     }
 
-    last_cmd_output[0] = '\0';
-
-    for (size_t i = 0; i < num_segments; i++) {
-        char* segment = trim(segments[i]);
-        if (unlikely(segment[0] == '\0')) continue;
-
-        is_piping = (i < num_segments - 1);
-        shell_output_ptr = 0; // Clear buffer for this segment's output
-
-        char* cmd_name = segment;
-        char* args = strchr(segment, ' ');
-        if (args != NULL) {
-            *args = '\0';
-            args = trim(args + 1);
-        } else {
-            args = "";
-        }
-
-        bool found = false;
-        for (int j = 0; command_table[j].name != NULL; j++) {
-            if (strcmp(cmd_name, command_table[j].name) == 0) {
-                command_table[j].function(args);
-                found = true;
-                break;
-            }
-        }
-
-        if (unlikely(!found)) {
-            printf("Command not found: %s\n", cmd_name);
-            is_piping = false;
+    // Execute command
+    for (int j = 0; command_table[j].name != NULL; j++) {
+        if (strcmp(cmd_name, command_table[j].name) == 0) {
+            command_table[j].function(args);
             return;
         }
-
-        // Capture output for next pipe stage
-        strncpy(last_cmd_output, shell_output_buffer, MAX_LAST_CMD_OUTPUT_LEN - 1);
     }
 
-    // Final output to screen
-    shell_flush();
-    is_piping = false;
-}
-
-/* Custom print function to buffer text before printing for speed */
-void sh_print(const char* format, ...) {
-    // TODO IMP: Memory fragile, messes the terminal up if
-    // it has to flush or print too much
-
-    static char local_buf[1024];
-    va_list args;
-    va_start(args, format);
-    int len = vsnprintf(local_buf, sizeof(local_buf), format, args);
-    va_end(args);
-
-    if (len <= 0) return;
-
-    char* src = local_buf;
-    int remaining = len;
-
-    while (remaining > 0) {
-        size_t space_left = sizeof(shell_output_buffer) - shell_output_ptr - 1;
-
-        if (space_left == 0) {
-            shell_flush();
-            space_left = sizeof(shell_output_buffer) - 1;
-        }
-
-        size_t to_copy = (remaining < (int) space_left) ? (size_t) remaining : space_left;
-
-        memcpy(shell_output_buffer + shell_output_ptr, src, to_copy);
-
-        shell_output_ptr += to_copy;
-        shell_output_buffer[shell_output_ptr] = '\0';
-
-        src += to_copy;
-        remaining -= to_copy;
-
-        if (shell_output_ptr >= sizeof(shell_output_buffer) - 1) {
-            shell_flush();
-        }
-    }
-}
-
-/* Flush the text buffer and empty it */
-void shell_flush() {
-    if (shell_output_ptr > 0) {
-        printf("%s", shell_output_buffer);
-        shell_output_ptr = 0;
-        shell_output_buffer[0] = '\0';
-    }
+    printf("Command not found: %s\n", cmd_name);
 }

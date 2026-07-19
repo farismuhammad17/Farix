@@ -35,7 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 /* Help command */
 void cmd_help(UNUSED_ARG const char* args) {
     for (size_t i = 0; command_table[i].name != NULL; i++) {
-        sh_print("%-*s %s\n",
+        printf("%-*s %s\n",
                 INDENT_LEN * 2, // *2 because some commands are longer than 4 characters
                 command_table[i].name,
                 command_table[i].help_text);
@@ -49,7 +49,7 @@ void cmd_clear(UNUSED_ARG const char* args) {
 
 /* Echo to terminal command */
 void cmd_echo(const char* args) {
-    sh_print("%s\n", args);
+    printf("%s\n", args);
 }
 
 /* Echo through UART command */
@@ -74,10 +74,10 @@ void cmd_memstat(UNUSED_ARG const char* args) {
     // switching tasks while we use the heap.
     system_int_off();
 
-    sh_print("Heap Start: %p | End: %p\n", heap_start, heap_end);
-    sh_print("----------------------------------------------------------------------\n");
-    sh_print("Address    | Size      | Status | Caller Address\n");
-    sh_print("----------------------------------------------------------------------\n");
+    printf("Heap Start: %p | End: %p\n", heap_start, heap_end);
+    printf("----------------------------------------------------------------------\n");
+    printf("Address    | Size      | Status | Caller Address\n");
+    printf("----------------------------------------------------------------------\n");
 
     size_t total_kb  = 0;
     size_t heap_used = 0;
@@ -107,14 +107,14 @@ void cmd_memstat(UNUSED_ARG const char* args) {
 
     int usage_pct = (total_kb > 0) ? (int)((used_kb * 100) / total_kb) : 0;
 
-    sh_print("----------------------------------------------------------------------\n");
-    sh_print("Total Used: %lu bytes\n", heap_used);
-    sh_print("----------------------------------------------------------------------\n");
+    printf("----------------------------------------------------------------------\n");
+    printf("Total Used: %lu bytes\n", heap_used);
+    printf("----------------------------------------------------------------------\n");
 
-    sh_print("Total memory: %4lu KiB\n", total_kb);
-    sh_print("Used memory:  %4lu KiB [%d%%]\n", used_kb, usage_pct);
-    sh_print("Free memory:  %4lu KiB\n", free_kb);
-    sh_print("Total segments: %d\n", total_segs);
+    printf("Total memory: %4lu KiB\n", total_kb);
+    printf("Used memory:  %4lu KiB [%d%%]\n", used_kb, usage_pct);
+    printf("Free memory:  %4lu KiB\n", free_kb);
+    printf("Total segments: %d\n", total_segs);
 
     system_int_on();
 }
@@ -127,24 +127,24 @@ void cmd_heapstat(UNUSED_ARG const char* args) {
     while (current != NULL) {
         // Magic Check
         if (unlikely(current->magic != HEAP_MAGIC)) {
-            sh_print("HEAP CORRUPTION: Bad Magic at %p (Val: %lx)\n", current, current->magic);
+            printf("HEAP CORRUPTION: Bad Magic at %p (Val: %lx)\n", current, current->magic);
             return;
         }
 
         // Alignment Check
         if (unlikely(((uint32_t) current & 0x3) != 0)) {
-            sh_print("HEAP CORRUPTION: Unaligned segment pointer %p\n", current);
+            printf("HEAP CORRUPTION: Unaligned segment pointer %p\n", current);
             return;
         }
 
         // Pointer Check
         if (current->next != NULL) {
             if (unlikely(current->next <= current)) {
-                sh_print("HEAP CORRUPTION: Circular or backwards link at %p -> %p\n", current, current->next);
+                printf("HEAP CORRUPTION: Circular or backwards link at %p -> %p\n", current, current->next);
                 return;
             }
             if (unlikely(current->next->prev != current)) {
-                sh_print("HEAP CORRUPTION: Broken backlink! %p->next is %p, but that block's prev is %p\n",
+                printf("HEAP CORRUPTION: Broken backlink! %p->next is %p, but that block's prev is %p\n",
                         current, current->next, current->next->prev);
                 return;
             }
@@ -154,7 +154,7 @@ void cmd_heapstat(UNUSED_ARG const char* args) {
         count++;
     }
 
-    sh_print("Heap status is OK; %d segments verified, no corruption detected.\n", count);
+    printf("Heap status is OK; %d segments verified, no corruption detected.\n", count);
 }
 
 /* Run given interrupt command */
@@ -185,36 +185,4 @@ void cmd_int(const char *args) {
     // #undef REP64
     // #undef REP128
     // #undef REP256
-}
-
-/* Grep command */
-void cmd_grep(const char* args) {
-    if (unlikely(last_cmd_output[0] == '\0')) {
-        sh_print("grep: No input to search.\n");
-        return;
-    } else if (unlikely(args == NULL || args[0] == '\0')) {
-        sh_print("grep: Usage: <command> | grep <pattern>\n");
-        return;
-    }
-
-    char* start = last_cmd_output;
-    char* end = strchr(start, '\n');
-
-    while (end != NULL) {
-        char saved_char = *end;
-        *end = '\0';
-
-        if (strstr(start, args) != NULL) {
-            sh_print("%s\n", start);
-        }
-
-        *end = saved_char;
-        start = end + 1;
-
-        end = strchr(start, '\n');
-    }
-
-    if (*start != '\0' && strstr(start, args) != NULL) {
-        sh_print("%s\n", start);
-    }
 }

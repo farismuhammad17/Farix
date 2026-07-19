@@ -23,9 +23,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
-void RARE_FUNC init_timer(uint64_t frequency);
+typedef struct {
+    uint8_t id;
 
-uint64_t get_timer_uptime_microseconds();
-void timer_stall(uint64_t microseconds);
+    uint64_t (*get_timer_uptime_microseconds)();
+    void (*stall)(uint64_t microseconds);
+} timer_dev_t;
+
+extern timer_dev_t* timer_dev;
 
 #endif

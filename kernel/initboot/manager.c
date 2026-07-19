@@ -18,25 +18,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef DEVICES_H
-#define DEVICES_H
+#include "memory/pmm.h"
+#include "memory/vmm.h"
 
-#define UART_DEV_ID          1
-#define PIT_DEV_ID           2
+#include "sysmods/devices.h"
 
-// DEVELOPER NOTE:
-// Every device struct MUST have a next pointer
-// to itself placed at the start of the struct,
-// except in devices where only one need to be
-// at a time (eg. timer, storage device, etc.)
+#include "initboot.h"
 
-typedef enum {
-    DEV_OUTPUT,
-    DEV_INPUT,
-    DEV_TIMER
-} dev_type_t;
+// From linker.ld
+extern uint64_t _initboot_start;
+extern uint64_t _initboot_end;
 
-void register_device(dev_type_t type, void* device);
-void unregister_device(dev_type_t type, void* device);
+void initboot() {
+    initboot_timer();
+}
 
-#endif
+void kill_bootstrap() {
+    uint64_t start = (uint64_t) &_initboot_start;
+    uint64_t end   = (uint64_t) &_initboot_end;
+
+    // Convert to physical addresses
+    uint64_t phys_start = VIRTUAL_TO_PHYSICAL(start);
+    uint64_t phys_end   = VIRTUAL_TO_PHYSICAL(end);
+
+    // Free every page in the range
+    for (uint64_t addr = phys_start; addr < phys_end; addr += PAGE_SIZE) {
+        pmm_free_page((void*) addr);
+    }
+}

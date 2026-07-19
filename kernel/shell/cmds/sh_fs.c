@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 
+#include "klib/stdio.h"
+
 #include "drivers/terminal.h"
 #include "fs/types/elf.h"
 #include "fs/vfs.h"
@@ -93,7 +95,7 @@ void cmd_cd(const char* args) {
                     // Immediate validation
                     File* f = fs_get(work_path + 1); // Skip initial root slash
                     if (unlikely(!f || !f->is_directory)) {
-                        sh_print("cd: %s is not a directory\n", component);
+                        printf("cd: %s is not a directory\n", component);
                         return; // Exit immediately on failure
                     }
                 }
@@ -115,7 +117,7 @@ void cmd_cat(const char* args) {
     #define MAX_BUFFER_SIZE 1024
 
     if (unlikely(args == NULL || args[0] == '\0')) {
-        sh_print("Usage: cat <filename>\n");
+        printf("Usage: cat <filename>\n");
         return;
     }
 
@@ -123,18 +125,18 @@ void cmd_cat(const char* args) {
     File* f = fs_get(filename);
 
     if (unlikely(!f)) {
-        sh_print("cat: %s: No such file\n", args);
+        printf("cat: %s: No such file\n", args);
         return;
     }
 
     if (unlikely(f->size == 0)) {
-        sh_print("cat: Empty file\n");
+        printf("cat: Empty file\n");
         return;
     }
 
     char* buffer = (char*) kmalloc(MAX_BUFFER_SIZE + 1);
     if (unlikely(!buffer)) {
-        sh_print("cat: Out of memory\n");
+        printf("cat: Out of memory\n");
         return;
     }
 
@@ -153,17 +155,17 @@ void cmd_cat(const char* args) {
         if (likely(bytes_read > 0)) {
             // Explicitly ensure the chunk is null-terminated before printing
             buffer[bytes_read] = '\0';
-            sh_print("%s", buffer);
+            printf("%s", buffer);
 
             // Advance the file offset position
             offset += bytes_read;
         } else {
-            sh_print("\n\ncat: Error reading %s (%d)\n", filename, bytes_read);
+            printf("\n\ncat: Error reading %s (%d)\n", filename, bytes_read);
             break;
         }
     }
 
-    sh_print("\n");
+    printf("\n");
     kfree(buffer);
 
     #undef MAX_BUFFER_SIZE
@@ -171,36 +173,36 @@ void cmd_cat(const char* args) {
 
 /* Write to file command */
 void cmd_write(const char* args) {
-    if (unlikely(args == NULL || args[0] == '\0')) return;
-
-    const char* content = NULL;
-    char filename[MAX_FILENAME_LEN];
-    memset(filename, 0, MAX_FILENAME_LEN);
-
-    // Find space to separate filename from inline content
-    char* first_space = (char*) strchr(args, ' ');
-
-    if (first_space == NULL) {
-        if (last_cmd_output[0] == '\0') return;
-
-        strncpy(filename, args, MAX_FILENAME_LEN - 1);
-        content = last_cmd_output;
-    } else {
-        size_t name_len = first_space - args;
-        if (name_len >= MAX_FILENAME_LEN) name_len = MAX_FILENAME_LEN - 1;
-
-        strncpy(filename, args, name_len);
-        filename[name_len] = '\0';
-
-        if (last_cmd_output[0] == '\0') {
-            content = first_space + 1; // Inline content starts after the space
-        } else {
-            content = last_cmd_output; // Prioritize piped output if it exists
-        }
+    if (unlikely(args == NULL || args[0] == '\0')) {
+        printf("Usage: write <filename> <content>\n");
+        return;
     }
 
-    if (unlikely(!fs_write(full_path_to(filename), (uint8_t*) content, strlen(content), 0))) {
-        sh_print("write: Could not write to file %s\n", filename);
+    char filename[MAX_FILENAME_LEN];
+    const char* content = strchr(args, ' ');
+
+    if (content == NULL) {
+        printf("write: Missing content\n");
+        return;
+    }
+
+    // Copy filename
+    size_t name_len = content - args;
+    if (name_len >= MAX_FILENAME_LEN) name_len = MAX_FILENAME_LEN - 1;
+    strncpy(filename, args, name_len);
+    filename[name_len] = '\0';
+
+    // Move content pointer to the first character after the space
+    content++;
+
+    // Perform the write
+    // Note: Use a local buffer or pass the path directly to avoid static path_buffer issues
+    char full_path[MAX_DIRECTORY_PATH_LEN];
+    // Assuming you refactor full_path_to to take an output buffer:
+    // get_full_path(filename, full_path, sizeof(full_path));
+
+    if (unlikely(!fs_write(full_path_to(filename), (uint8_t*)content, strlen(content), 0))) {
+        printf("write: Could not write to file %s\n", filename);
     }
 }
 
@@ -234,9 +236,9 @@ void cmd_ls(const char* args) {
 
     while (head) {
         if (head->file.is_directory) {
-            sh_print("\033[36m%s\033[0m\n", head->file.name);
+            printf("\033[36m%s\033[0m\n", head->file.name);
         } else {
-            sh_print("%s\n", head->file.name);
+            printf("%s\n", head->file.name);
         }
 
         temp = head->next;

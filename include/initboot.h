@@ -18,25 +18,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef DEVICES_H
-#define DEVICES_H
+#ifndef INITBOOT_H
+#define INITBOOT_H
 
-#define UART_DEV_ID          1
-#define PIT_DEV_ID           2
+#include <stdint.h>
 
-// DEVELOPER NOTE:
-// Every device struct MUST have a next pointer
-// to itself placed at the start of the struct,
-// except in devices where only one need to be
-// at a time (eg. timer, storage device, etc.)
+#define INITBOOT_TXT_SECTION __attribute__((section(".initboot.text")))
+#define INITBOOT_DAT_SECTION __attribute__((section(".initboot.data")))
 
-typedef enum {
-    DEV_OUTPUT,
-    DEV_INPUT,
-    DEV_TIMER
-} dev_type_t;
+void initboot();
+void kill_bootstrap();
 
-void register_device(dev_type_t type, void* device);
-void unregister_device(dev_type_t type, void* device);
+void initboot_timer();
 
 #endif

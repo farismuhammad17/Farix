@@ -179,7 +179,7 @@ ACPI_THREAD_ID AcpiOsGetThreadId() {
 
 /* ACPICA calls this for waits too short to deserve a task switch */
 void AcpiOsStall(UINT32 Microseconds) {
-    timer_stall((uint32_t) Microseconds);
+    timer_dev->stall((uint32_t) Microseconds);
 }
 
 /*
@@ -194,7 +194,7 @@ void AcpiOsSleep(UINT64 time) { // Comes in Milliseconds
         time -= OS_SLEEP_MAX_MICROSECONDS;
     }
 
-    timer_stall((uint32_t) time);
+    timer_dev->stall((uint32_t) time);
 }
 
 /*
@@ -217,7 +217,7 @@ void AcpiOsWaitEventsComplete() {
 
 /* Wants per 100-nanosecond as unit */
 UINT64 AcpiOsGetTimer() {
-    return get_timer_uptime_microseconds() * 10;
+    return timer_dev->get_timer_uptime_microseconds() * 10;
 }
 
 // --- MEMORY ---

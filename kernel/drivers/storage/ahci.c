@@ -286,7 +286,7 @@ static hba_port_t* ahci_find_free_port(size_t max_retry_attempts) {
             }
         }
 
-        timer_stall(1000); // 1 ms
+        timer_dev->stall(1000); // 1 ms
     }
 
     return NULL;
@@ -371,7 +371,7 @@ void init_ahci(pci_device_t* dev) {
 
     // Global Reset
     g_hba->ghc |= GHC_AE;    // Ensure AE (AHCI Enable) is set
-    timer_stall(1000);       // 1ms
+    timer_dev->stall(1000);       // 1ms
     g_hba->ghc |= GHC_HR;    // Set HR
 
     timeout = MAX_TIMEOUT_DURATION;
@@ -384,7 +384,7 @@ void init_ahci(pci_device_t* dev) {
     }
 
     g_hba->ghc |= GHC_AE;    // Re-enable AHCI mode after reset
-    timer_stall(1000);       // 1ms
+    timer_dev->stall(1000);       // 1ms
     g_hba->ghc |= GHC_IE;    // Enable Interrupts
 
     if (unlikely(!(g_hba->ghc & GHC_AE))) {
@@ -467,7 +467,7 @@ void init_ahci(pci_device_t* dev) {
 
             port->cmd |= PX_CMD_ST;
 
-            timer_stall(1000); // 1ms
+            timer_dev->stall(1000); // 1ms
 
             // Check if a device is present (0x3 means present and communication established)
             if ((port->ssts & 0x0F) == 0x03) {

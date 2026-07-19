@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
+#include "cpu/ints.h"
 #include "cpu/irq.h"
 #include "drivers/terminal.h"
 #include "fs/vfs.h"
@@ -39,6 +40,8 @@ loaded_sysmod_t sysmods_registry[MAX_LOADED_MODULES];
 
 kernel_api_t sysmod_kernel_api = {
     .printf = printf,
+    .err_printf = err_printf,
+    .err_print = err_print,
     .vsnprintf = vsnprintf,
 
     .outb = outb,
@@ -51,6 +54,8 @@ kernel_api_t sysmod_kernel_api = {
     .kmalloc = kmalloc,
     .kfree = kfree,
 
+    .register_interrupt = register_interrupt,
+    .unregister_interrupt = unregister_interrupt,
     .irq_send_eoi = irq_send_eoi,
 
     .schedule = schedule,
@@ -73,18 +78,18 @@ static int find_free_module_slot() {
 int load_sysmod(const char* path) {
     File* file_obj = fs_get(path);
     if (unlikely(!file_obj || file_obj->size == 0)) {
-        err_printf("load_elf_file: File %s not found or empty", path);
+        err_printf("load_sysmod: File %s not found or empty", path);
         return -1;
     }
 
     uint8_t* buffer = (uint8_t*) kmalloc(file_obj->size);
     if (unlikely(!buffer)) {
-        err_print("load_elf_file: Out of memory");
+        err_print("load_sysmod: Out of memory");
         return -1;
     }
 
     if (unlikely(!fs_read(path, buffer, file_obj->size, 0))) {
-        err_print("load_elf_file: Failed to read file data");
+        err_print("load_sysmod: Failed to read file data");
         kfree(buffer);
         return -1;
     }
@@ -92,7 +97,7 @@ int load_sysmod(const char* path) {
     // Pass the raw buffer into your tracking registry assignment loop
     int slot = load_sysmod_raw((void*) buffer, file_obj->size);
     if (unlikely(slot == -1)) {
-        err_print("sysmod_loader: System modules register full");
+        err_print("load_sysmod: System module failed or register full");
         kfree(buffer);
         return -1;
     }
@@ -118,6 +123,7 @@ int load_sysmod_raw(void* raw_binary_buffer, size_t binary_size) {
         int result = runtime_init(&sysmod_kernel_api, base);
         if (unlikely(result != 0)) {
             sysmods_registry[slot].is_active = 0;
+            err_printf("load_sysmod_raw: Module returned %d", result);
             return -1;
         }
     }

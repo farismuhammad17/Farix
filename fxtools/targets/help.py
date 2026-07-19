@@ -35,7 +35,7 @@ INFO = {
         "init": "Fetches dependencies and sets up the build requirements",
         "disk": "Create and format the disk.img file",
         "qemu": "Launch the kernel in a QEMU emulator",
-        "checksum": "Compute a unique hash of the entire project tree",
+        "lint": "Verify code cleanliness and compute a unique hash of the entire project tree",
         "defs": "Launch an interactive program to help find function documentation",
     },
 

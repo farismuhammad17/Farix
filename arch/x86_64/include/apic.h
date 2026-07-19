@@ -18,8 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef APIC_H
-#define APIC_H
+#ifndef X86_64_APIC_H
+#define X86_64_APIC_H
 
 #include <stdint.h>
 

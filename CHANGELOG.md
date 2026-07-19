@@ -1,24 +1,38 @@
 # Changelog
 
-## Kernel System Modules (II) - *WIP: 18th July, 2026*
+## x86_64 Kernel System Modules (II) - *WIP: 19th July, 2026*
 
 - Reordered kernel boot sequence
+- IDT
+  - Added `register_interrupt` and `unregister_interrupt`
+  - Assembly stubs can now call `interrupt_dispatcher`
 - System Modules
   - Extended kernel api to include:-
     - `vsnprintf`
     - `outb`, `outw`, `outl`, `inb`, `inw`, `inl`
     - `kmalloc` and `kfree`
     - `register_device` and `unregister_device`
-  - Implemented `uart.sys`
+  - Implemented:-
+    - `uart.sys`
+    - `timer.sys`
   - Special `sysmod_header` region in linker
   - Renamed `loader.c` to `sysmods.c`
+- Initboot: Set of functions the kernel keeps in memory until `kmain` is finished execution that mimics the system module device.
+  - Added PIT with init and stall functions.
+- Shell
+  - Removed (Redundant for future):-
+    - `sh_print` and `shell_flush` functions
+    - `grep` command
+    - Piping feature
 - FXTools
   - Added `QEMU_FULLSCREEN` to `statejson`
   - `make` does not continue to next step if an error occurred.
+  - Repurposed `checksum` to `lint`
 
 ```
 18/07/2026: 82b2d1d0bf9296761c7ae9a5bf27ba37a6b0513588e466178837c090e91cc42e
             23251a9505c8903fc9316c1e3961b794124efe3b0126e5701fc6f285b806bcd4
+19/07/2026: 4f9a4c13e4f3872b23587d22f51a91295475c97a8578ad854ae01985ff0c7e5f
 ```
 
 ## Porting to x86_64 - *17th July, 2026*
@@ -59,7 +73,7 @@
             7337ddc3f3e46941b302ab02222e73149e27a0d1923bf314d1b45cfcfda9fe6d
 ```
 
-## Kernel System Modules (I) - *29th June, 2026*
+## x86_64 Kernel System Modules (I) - *29th June, 2026*
 
 > [!NOTE]
 > Since the previous update isn't fully completed, system calls do not function, and, hence, no application runs outside the kernel as of now. Everything else functions the same.

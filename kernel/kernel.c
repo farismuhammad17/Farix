@@ -29,9 +29,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/acpi/acpi.h"
 #include "drivers/keyboard.h"
 #include "drivers/mouse.h"
+#include "drivers/output.h"
 #include "drivers/storage/bdl.h"
 #include "drivers/terminal.h"
-#include "drivers/output.h"
 #include "fs/fat32.h"
 #include "fs/ramdisk.h"
 #include "fs/types/elf.h"
@@ -42,6 +42,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "syshw/battery.h"
 #include "sysmods/devices.h"
 #include "sysmods/loader.h"
+
+#include "initboot.h"
 
 #include "kernel.h"
 
@@ -120,6 +122,8 @@ void kmain() {
     init_interrupts();
     init_heap();
 
+    initboot();
+
     init_storage();
 
     system_int_on();
@@ -131,6 +135,8 @@ void kmain() {
 
     init_terminal();
 
+    load_sysmod("system/uart.sys");
+
     init_acpi_slabs();
     AcpiInitializeSubsystem();
     AcpiInitializeTables(NULL, 16, FALSE);
@@ -141,7 +147,7 @@ void kmain() {
     init_irq_controller();
 
     init_multitasking();
-    init_timer(THREAD_HZ);
+    load_sysmod("system/timer.sys");
 
     init_keyboard();
     init_mouse();
@@ -151,9 +157,9 @@ void kmain() {
     create_task((void(*)(void*)) handle_mouse, "Terminal mouse handler", PRIV_KERNEL, NULL);
     create_task((void(*)(void*)) shell_thread, "Shell", PRIV_KERNEL, NULL);
 
-    load_sysmod("system/uart.sys");
-
     // init_multicore();
+
+    kill_bootstrap();
 
     while (1) system_halt();
 }

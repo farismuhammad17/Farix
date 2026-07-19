@@ -54,9 +54,9 @@ void init_multicore() {
 
     // Reset all application processors simultaneously
     broadcast_init_ipi();
-    timer_stall(10000); // 10 ms flat delay for the whole system
+    timer_dev->stall(10000); // 10 ms flat delay for the whole system
 
     // Wake all application processors up to hit the 0x8000 trampoline
     broadcast_startup_ipi(TRAMPOLINE_PAGE_VECTOR);
-    timer_stall(1000);  // 1 ms flat delay for the whole system
+    timer_dev->stall(1000);  // 1 ms flat delay for the whole system
 }

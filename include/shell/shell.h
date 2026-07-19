@@ -36,16 +36,7 @@ extern char shell_directory[MAX_DIRECTORY_PATH_LEN];
 extern char shell_buffer[MAX_SHELL_BUFFER_LEN];
 extern bool shell_buffer_ready;
 
-extern char  last_cmd_output[MAX_LAST_CMD_OUTPUT_LEN];
-extern char* pipe_buffer;
-extern bool  is_piping;
-
 void init_shell();
 void shell_update();
-
-void shell_parse(const char* input);
-
-void sh_print(const char* format, ...);
-void shell_flush();
 
 #endif
