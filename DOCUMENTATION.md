@@ -1,7 +1,7 @@
 # Documentation
 
 > [!NOTE]
-> Documentation is still work in progress.
+> This file is obsolete, and was never fully finished. It will be replaced later for a more cleaner documentation style inside the FXTools.
 
 * Programming the Kernel
   * [Code Separation](#code-separation)

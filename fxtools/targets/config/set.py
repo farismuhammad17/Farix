@@ -28,7 +28,7 @@ def run(field: str, to: str):
         printer.error(f"'{field}' is not a valid field")
         return
 
-    data[field] = to
+    data[field] = eval(to)
 
     statejson.save(data)
     statejson.flush()
