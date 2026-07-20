@@ -25,7 +25,18 @@
     - `grep` command
     - Piping feature
 - FXTools
-  - Added `QEMU_FULLSCREEN` to `statejson`
+  - Can now structure functions inside `targets` folder for more organisation and cleanliness of code
+  - Added commands:
+    - `config`: Manage the state JSON file
+    - `sign`: Manage the cryptographic signatures for commits and files to suppress paranoia
+    - `commit`: Structures the commit messages
+  - Added to state JSON:
+    - `QEMU_FULLSCREEN`
+    - `USER_NAME`
+    - `USER_EMAIL`
+    - `USER_SIGN_FILES`
+  - Core:
+    - state JSON `update` function
   - `make` does not continue to next step if an error occurred.
   - Repurposed `checksum` to `lint`
 

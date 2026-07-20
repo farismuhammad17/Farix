@@ -18,40 +18,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 """
 
-import os
-import shutil
-
 from fxtools.core import printer
+from fxtools.core import statejson
 
-JUNK = (
-    "build",
-    "bootloader/x86/boot/farix.bin",
-    "bootloader/x86/boot/farix_elf32.bin",
-    "farix.iso",
-    "disk.img",
-)
+def run(field: str, to: str):
+    data = statejson.get()
 
-USER_BUILD_DIR = "build/apps"
+    if not data[field]:
+        printer.error(f"'{field}' is not a valid field")
+        return
 
-def run(apps_only: bool = False):
-    global JUNK
+    data[field] = to
 
-    if apps_only:
-        JUNK = (USER_BUILD_DIR,)
-
-    for path in JUNK:
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-            printer.info("Removed directory:", path)
-        elif os.path.exists(path):
-            os.remove(path)
-            printer.info("Removed file:     ", path)
+    statejson.save(data)
+    statejson.flush()
 
 def help():
     return {
-        "USAGE": "fx clean <--apps-only>",
-        "ARGS": {
-            "--apps-only": "Removes only the build artifacts of the apps."
-        },
-        "DESCRIPTION": "Removes the build artifacts from the project."
+        "USAGE": "fx config <-field> <-to>",
+        "DESCRIPTION": "Set a field in the current state JSON file"
     }

@@ -18,40 +18,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 """
 
-import os
-import shutil
+from fxtools.core import statejson
+from fxtools.core.build import proc_run
 
-from fxtools.core import printer
+def run():
+    data = statejson.get()
 
-JUNK = (
-    "build",
-    "bootloader/x86/boot/farix.bin",
-    "bootloader/x86/boot/farix_elf32.bin",
-    "farix.iso",
-    "disk.img",
-)
+    found_name = proc_run("git config --global user.name", check=False)
+    found_email = proc_run("git config --global user.email", check=False)
 
-USER_BUILD_DIR = "build/apps"
+    if not found_name:
+        found_name = input("Name > ")
 
-def run(apps_only: bool = False):
-    global JUNK
+    if not found_email:
+        found_email = input("Mail (Optional) > ")
+    if not found_email: # User entered nothing
+        found_email = None
 
-    if apps_only:
-        JUNK = (USER_BUILD_DIR,)
+    data["USER_NAME"] = found_name
+    data["USER_EMAIL"] = found_email
 
-    for path in JUNK:
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-            printer.info("Removed directory:", path)
-        elif os.path.exists(path):
-            os.remove(path)
-            printer.info("Removed file:     ", path)
+    statejson.save(data)
+    statejson.flush()
 
 def help():
     return {
-        "USAGE": "fx clean <--apps-only>",
-        "ARGS": {
-            "--apps-only": "Removes only the build artifacts of the apps."
-        },
-        "DESCRIPTION": "Removes the build artifacts from the project."
+        "USAGE": "fx config setup-profile",
+        "DESCRIPTION": "Uses git config to acquire name and email (if found) and sets to state JSON file."
     }

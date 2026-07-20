@@ -37,6 +37,16 @@ INFO = {
         "qemu": "Launch the kernel in a QEMU emulator",
         "lint": "Verify code cleanliness and compute a unique hash of the entire project tree",
         "defs": "Launch an interactive program to help find function documentation",
+        "commit": "Commit changes to git",
+        "sign setup": "Initialise public and private keys",
+        "sign file": "Create a signature file",
+        "sign changes": "Get signature for generated project checksum",
+        "sign verify file": "Check file signature against public key",
+        "sign verify commit": "Check commit signature against public key",
+        "config list": "Current values in state JSON",
+        "config set": "Set value of given field in state JSON",
+        "config setup-profile": "Setup user specific fields",
+        "config update": "Update current state JSON for new fields in default scheme"
     },
 
     "Supported Architectures": {

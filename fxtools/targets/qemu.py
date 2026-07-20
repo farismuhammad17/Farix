@@ -83,7 +83,7 @@ def run(no_fs: bool = not fullscreen, storage_device: str = "ahci"):
 
 def help():
     return {
-        "USAGE": "fx qemu [fx:bool]",
+        "USAGE": "fx qemu <--no_fs>",
         "DESCRIPTION": "Emulate on QEMU",
         "ARGS": {
             "no_fs": "A boolean flag to disable full-screen mode, since, by default, it is enabled.",

@@ -31,7 +31,11 @@ DEFAULT_SCHEME = {
     "THREADS": 4,
     "BOOT_USB_PATH": None,
     "RUNTIME_CORES": 4,
-    "QEMU_FULLSCREEN": True
+    "QEMU_FULLSCREEN": True,
+
+    "USER_NAME": None,
+    "USER_EMAIL": None,
+    "USER_SIGN_FILES": None
 }
 
 # Use a cache to make the state loading efficient
@@ -85,3 +89,16 @@ def flush():
             json.dump(_state_cache, f, indent=4)
     except IOError:
         printer.error(f"Failed to write state out to '{STATE_JSON_FILE}'.")
+
+def update():
+    """Updates the current state json file to add in any new variables of the default scheme"""
+
+    global _state_cache
+    if _state_cache is None:
+        load()
+
+    merged_state = DEFAULT_SCHEME.copy()
+    merged_state.update(_state_cache)
+    _state_cache = merged_state
+
+    flush()

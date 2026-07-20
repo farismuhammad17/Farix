@@ -2,25 +2,37 @@
 Attributions (Third Party Notices)
 ================================================================================
 
-All entries adhere to the following syntax, separated by 80 dashes, and wrapped
-to fit within the 80-character line width:
+Third party software that is present within the farix.iso file is mentioned in
+this file. All entries must adhere to the syntax, separated by 80 dashes, and
+wrapped to fit within the 80-character line width, as given below:
 
 [Project Name]
   [License Name]
   [Copyright Notice]
+  [Usage]
 
 Please keep legacy entries below active entries in a structured order.
 
 --- ACTIVE ---------------------------------------------------------------------
+
 ACPICA (ACPI Component Architecture)
   BSD 3-Clause / Intel Proprietary
   (c) 1999 - 2025, Intel Corporation.
+  Used to manage the ACPI hardware component in the kernel, to help access more
+  peripherals than those the standard PCI supports.
+
 --------------------------------------------------------------------------------
+
 GNU GRUB (stage2_eltorito)
   GNU GPL v2 or later
   Copyright (C) 1999-2005 Free Software Foundation, Inc.
+  Absent from the actual kernel binary, it is used for the GRUB bootloader in
+  the ISO file, used if you are booting off CD-ROM in the x86 architecture.
+
 --- LEGACY ---------------------------------------------------------------------
+
 Newlib
   BSD, MIT, and others (per component)
   (c) 1995-2024, Red Hat, Inc. and others.
+
 --------------------------------------------------------------------------------

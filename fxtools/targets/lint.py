@@ -278,7 +278,7 @@ def lint() -> dict:
 
     return results
 
-def print_checksum():
+def get_checksum() -> str:
     try:
         # Query git using -z to get raw, unquoted paths separated by null bytes (\0)
         result = subprocess.run(
@@ -342,7 +342,7 @@ def print_checksum():
                 normalized_chunk = chunk.replace(b'\r\n', b'\n')
                 hasher.update(normalized_chunk)
 
-    print(hasher.hexdigest())
+    return hasher.hexdigest()
 
 def run():
     print()
@@ -414,7 +414,7 @@ def run():
     print(f"Total lines: {stats['total_lines']}")
     print()
 
-    print_checksum()
+    print(get_checksum())
     print()
 
 def help():

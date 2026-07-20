@@ -163,7 +163,7 @@ def run(arch: str = arch):
 
 def help():
     return {
-        "USAGE": "fx make [arch]",
+        "USAGE": "fx make <-arch>",
         "ARGS": {
             "arch": "Architecture to build for."
         },
