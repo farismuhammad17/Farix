@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, FIRST_EXCEPTION, wait
 
 from fxtools.core import build
@@ -28,10 +28,10 @@ from fxtools.core import statejson
 from fxtools.core import printer
 from fxtools.core.build import proc_run
 
-from fxtools.vars import c
 from fxtools.vars import acpica
-from fxtools.vars import libc
+from fxtools.vars import c
 from fxtools.vars import emulation
+from fxtools.vars import libc
 
 from fxtools.targets import disk
 
@@ -76,7 +76,7 @@ def compile_x86_64():
         futures = {executor.submit(build.build_object, *t): t for t in tasks}
 
         # Wait for all to finish OR any one to fail
-        done, not_done = wait(futures, return_when=FIRST_EXCEPTION)
+        done, _ = wait(futures, return_when=FIRST_EXCEPTION)
 
         # Check for any exceptions that occurred
         for future in done:
@@ -105,8 +105,12 @@ def compile_x86_64():
     printer.wait("Finding System Modules...")
 
     search_dirs = ["sysmods/x86", "sysmods/generic"]
-    src_files = [os.path.join(s_dir, item) for s_dir in search_dirs if os.path.exists(s_dir)
-                 for item in os.listdir(s_dir) if item.endswith(".c")]
+    src_files = []
+
+    for s_dir in search_dirs:
+        if os.path.exists(s_dir):
+            for mod_src in Path(s_dir).rglob("*.c"):
+                src_files.append(str(mod_src))
 
     mod_tasks = []
     mod_link_data = []

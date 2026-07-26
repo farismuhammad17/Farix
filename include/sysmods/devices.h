@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define UART_DEV_ID          1
 #define PIT_DEV_ID           2
 #define KEYBOARD_PS2_ID      3
+#define MOUSE_PS2_ID         4
 
 // DEVELOPER NOTE:
 // Every device struct MUST have a next pointer

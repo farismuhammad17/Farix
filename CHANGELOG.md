@@ -5,6 +5,12 @@
 - Moved keyboard from kernel to system module: `keyboard.sys`
 - Removed panic shell
 - Renamed `SYSMOD_ENTRY` to `SYSMOD_HEADER`
+- Deleted old MFuncs completely
+- Sysmods:
+  - Moved keyboard into input folder
+  - Moved UART into output folder
+- FXTools:
+  - Made `make` recursively find all sysmods
 
 ## x86_64 Kernel System Modules (II) - *19th July, 2026*
 

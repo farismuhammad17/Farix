@@ -29,7 +29,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #define SYSMOD_HEADER __attribute__((section(".sysmod_header"), used))
 
-#define SYSMOD_TO_KERNEL(s) ((uint64_t)(s) + base_addr)
+// Kernel System Module internal macros
+#define SYSMOD_TO_KERNEL(s)    ((uint64_t)(s) + base_addr)
+#define SYS_ICALL(func, ...)   ((__typeof__(func)*) SYSMOD_TO_KERNEL(func))(__VA_ARGS__)
 
 typedef struct {
     char name[16];        // 16 bytes

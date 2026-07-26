@@ -74,16 +74,16 @@ static void stall(uint64_t microseconds) {
     }
 }
 
-int init_pit(kernel_api_t* api, uint64_t base_addr) {
+static int init_pit(kernel_api_t* api, uint64_t base_addr) {
     k_api = api;
 
-    api->outb(0x43, 0x36);
+    k_api->outb(0x43, 0x36);
 
     uint8_t low  = (uint8_t) (divisor & 0xFF);
     uint8_t high = (uint8_t) ((divisor >> 8) & 0xFF);
 
-    api->outb(0x40, low);
-    api->outb(0x40, high);
+    k_api->outb(0x40, low);
+    k_api->outb(0x40, high);
 
     dev = k_api->kmalloc(sizeof(timer_dev_t));
     dev->id = PIT_DEV_ID;
@@ -92,14 +92,14 @@ int init_pit(kernel_api_t* api, uint64_t base_addr) {
     dev->get_timer_uptime_microseconds = (void*) SYSMOD_TO_KERNEL(get_timer_uptime_microseconds);
     dev->stall = (void*) SYSMOD_TO_KERNEL(stall);
 
-    api->register_device(DEV_TIMER, (void*) dev);
+    k_api->register_device(DEV_TIMER, (void*) dev);
 
-    api->register_interrupt(32, (void*) SYSMOD_TO_KERNEL(interrupt_handler));
+    k_api->register_interrupt(32, (void*) SYSMOD_TO_KERNEL(interrupt_handler));
 
     return 0;
 }
 
-void exit_pit() {
+static void exit_pit() {
     // Disable the interrupts
     k_api->outb(0x43, 0x36);
     k_api->outb(0x40, 0xFF); // Set a very slow frequency

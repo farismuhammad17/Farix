@@ -81,10 +81,9 @@ def build_object(src: str, obj: str, cmd_template: str):
 
     src_path, obj_path = Path(src), Path(obj)
 
-    if obj_path.exists():
-        # If the compiled object is newer than the source, skip compiling
-        if obj_path.stat().st_mtime > src_path.stat().st_mtime:
-            return
+    # If the compiled object is newer than the source, skip compiling
+    if obj_path.exists() and obj_path.stat().st_mtime > src_path.stat().st_mtime:
+        return
 
     # Automatically handle parent directory creation
     obj_path.parent.mkdir(parents=True, exist_ok=True)

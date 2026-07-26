@@ -74,16 +74,16 @@ static void uart_printf(const char* format, ...) {
     va_end(args);
 }
 
-int init_uart(kernel_api_t* api, uint64_t base_addr) {
+static int init_uart(kernel_api_t* api, uint64_t base_addr) {
     k_api = api;
 
-    api->outb(PORT + 1, 0x00);    // Disable interrupts
-    api->outb(PORT + 3, 0x80);    // Enable DLAB (set baud rate divisor)
-    api->outb(PORT + 0, 0x01);    // Set divisor to 1 (lo byte) 115200 baud
-    api->outb(PORT + 1, 0x00);    //                  (hi byte)
-    api->outb(PORT + 3, 0x03);    // 8 bits, no parity, one stop bit
-    api->outb(PORT + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
-    api->outb(PORT + 4, 0x0B);    // IRQs enabled, RTS/DSR set
+    k_api->outb(PORT + 1, 0x00);    // Disable interrupts
+    k_api->outb(PORT + 3, 0x80);    // Enable DLAB (set baud rate divisor)
+    k_api->outb(PORT + 0, 0x01);    // Set divisor to 1 (lo byte) 115200 baud
+    k_api->outb(PORT + 1, 0x00);    //                  (hi byte)
+    k_api->outb(PORT + 3, 0x03);    // 8 bits, no parity, one stop bit
+    k_api->outb(PORT + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
+    k_api->outb(PORT + 4, 0x0B);    // IRQs enabled, RTS/DSR set
 
     dev = k_api->kmalloc(sizeof(output_dev_t));
     dev->id = UART_DEV_ID;
@@ -91,12 +91,12 @@ int init_uart(kernel_api_t* api, uint64_t base_addr) {
 
     dev->printf = (void*) SYSMOD_TO_KERNEL(uart_printf);
 
-    api->register_device(DEV_OUTPUT, (void*) dev);
+    k_api->register_device(DEV_OUTPUT, (void*) dev);
 
     return 0;
 }
 
-void exit_uart() {
+static void exit_uart() {
     // Disable UART hardware so it doesn't fire interrupts or send noise
     k_api->outb(PORT + 1, 0x00); // Disable interrupts
     k_api->outb(PORT + 4, 0x00); // Disable RTS/DSR/IRQ

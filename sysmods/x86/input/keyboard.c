@@ -73,6 +73,7 @@ static unsigned char kbd[128] = {
     0, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', '~', 0,
     '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 0, '*', 0, ' '
 };
+static const char* kbd_ptr = NULL;
 
 static void interrupt_handler() {
     uint8_t status = k_api->inb(PS2_STATUS_PORT);
@@ -100,8 +101,6 @@ static void interrupt_handler() {
             shift_pressed = false;
         } else if (!(scancode & 0x80)) {
             size_t offset = shift_pressed ? KBD_LEN : 0;
-
-            char* kbd_ptr = (char*) SYSMOD_TO_KERNEL(kbd);
             unsigned char c = kbd_ptr[scancode + offset];
 
             if (likely(c > 0 && dev->on_event)) {
@@ -115,45 +114,47 @@ static void interrupt_handler() {
     k_api->irq_send_eoi();
 }
 
-int init_keyboard(kernel_api_t* api, uint64_t b_addr) {
+static int init_keyboard(kernel_api_t* api, uint64_t b_addr) {
     k_api = api;
     base_addr = b_addr;
 
-    // Prepare Command Byte
-    while (api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
-    api->outb(PS2_COMMAND_PORT, PS2_CMD_READ_CB);
+    kbd_ptr = (char*) SYSMOD_TO_KERNEL(kbd);
 
-    while (!(api->inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY));
-    uint8_t cb = api->inb(PS2_DATA_PORT);
+    // Prepare Command Byte
+    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
+    k_api->outb(PS2_COMMAND_PORT, PS2_CMD_READ_CB);
+
+    while (!(k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY));
+    uint8_t cb = k_api->inb(PS2_DATA_PORT);
 
     // Enable IRQs and Scancode Translation
     cb |= (PS2_CB_KBD_IRQ | PS2_CB_MOUSE_IRQ | PS2_CB_TRANSLATION);
 
-    while (api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
-    api->outb(PS2_COMMAND_PORT, PS2_CMD_WRITE_CB);
+    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
+    k_api->outb(PS2_COMMAND_PORT, PS2_CMD_WRITE_CB);
 
-    while (api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
-    api->outb(PS2_DATA_PORT, cb);
+    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
+    k_api->outb(PS2_DATA_PORT, cb);
 
     // Initialize Hardware
-    while (api->inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY) api->inb(PS2_DATA_PORT);
+    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY) k_api->inb(PS2_DATA_PORT);
 
-    while (api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
-    api->outb(PS2_COMMAND_PORT, PS2_CMD_ENABLE_PORT1);
+    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
+    k_api->outb(PS2_COMMAND_PORT, PS2_CMD_ENABLE_PORT1);
 
-    while (api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
-    api->outb(PS2_DATA_PORT, PS2_CMD_RESET);
+    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
+    k_api->outb(PS2_DATA_PORT, PS2_CMD_RESET);
 
     // Verify Response
-    while (!(api->inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY));
-    if (unlikely(api->inb(PS2_DATA_PORT) != PS2_ACK)) {
-        api->err_print("Keyboard: Reset failed (NACK)");
+    while (!(k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY));
+    if (unlikely(k_api->inb(PS2_DATA_PORT) != PS2_ACK)) {
+        k_api->err_print("Keyboard: Reset failed (NACK)");
         return 1;
     }
 
-    while (!(api->inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY));
-    if (unlikely(api->inb(PS2_DATA_PORT) != PS2_SELF_TEST_OK)) {
-        api->err_print("Keyboard: Self-test failed");
+    while (!(k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY));
+    if (unlikely(k_api->inb(PS2_DATA_PORT) != PS2_SELF_TEST_OK)) {
+        k_api->err_print("Keyboard: Self-test failed");
         return 1;
     }
 
@@ -161,14 +162,16 @@ int init_keyboard(kernel_api_t* api, uint64_t b_addr) {
     dev->id = KEYBOARD_PS2_ID;
     dev->type = DEV_INPUT;
 
-    api->register_device(DEV_INPUT, (void*) dev);
+    dev->on_event = NULL;
 
-    api->register_interrupt(33, (void*) SYSMOD_TO_KERNEL(interrupt_handler));
+    k_api->register_device(DEV_INPUT, (void*) dev);
+
+    k_api->register_interrupt(33, (void*) SYSMOD_TO_KERNEL(interrupt_handler));
 
     return 0;
 }
 
-void exit_keyboard() {
+static void exit_keyboard() {
     // Disable the Keyboard Port on the controller
     // This ensures no more IRQs hit our handler while we clean up
     while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
