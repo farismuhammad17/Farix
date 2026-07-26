@@ -26,7 +26,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
-#include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "memory/vmm.h"
 #include "process/task.h"
@@ -135,88 +134,6 @@ static inline void dump_call_log(int funcs_per_line) {
     panic_err_printf("(%s at %d)\n", last_call_finished ? "Finished" : "Unfinished", log_index - 1);
 }
 
-/* Panic shell dump command */
-static void panic_cmd_dump(uint64_t addr) {
-    uint8_t* ptr = (uint8_t*) addr;
-    for (int i = 0; i < 64; i++) {
-        if (i % 16 == 0) panic_err_printf("\n%016llx: ", (uint64_t)(ptr + i));
-        panic_err_printf("%02x ", ptr[i]);
-    }
-    panic_err_printf("\r\n");
-}
-
-/* Panic shell peek command */
-static void panic_cmd_peek(uint64_t addr) {
-    uint64_t value = *(volatile uint64_t*) addr;
-    panic_err_printf("\n0x%016llx = 0x%016llx", addr, value);
-}
-
-/* Panic shell parser function */
-static void execute_panic_cmd(char cmd[]) {
-    if (
-        cmd[0] == 'd' &&
-        cmd[1] == 'u' &&
-        cmd[2] == 'm' &&
-        cmd[3] == 'p'
-    ) {
-        panic_cmd_dump(hex_to_int(&cmd[5]));
-    } else if (
-        cmd[0] == 'p' &&
-        cmd[1] == 'e' &&
-        cmd[2] == 'e' &&
-        cmd[3] == 'k'
-    ) {
-        panic_cmd_peek(hex_to_int(&cmd[5]));
-    } else if (
-        cmd[0] == 'r' &&
-        cmd[1] == 'e' &&
-        cmd[2] == 'b' &&
-        cmd[3] == 'o' &&
-        cmd[4] == 'o' &&
-        cmd[5] == 't'
-    ) {
-        panic_err_printf("Rebooting...\r\n");
-        outb(0x64, 0xFE); // Pulse CPU reset line
-    } else if (
-        cmd[0] == 'h' &&
-        cmd[1] == 'e' &&
-        cmd[2] == 'l' &&
-        cmd[3] == 'p'
-    ) {
-        panic_err_printf("\ndump <hex>\npeek <addr>\nreboot");
-    } else panic_err_printf("\nUnknown command: %s (use help)", cmd);
-}
-
-// TODO: Move panic shell out into dedicated file
-
-/* Panic shell main function */
-static void panic_shell() {
-    // Flush any leftover keys from the crash event
-    while (inb(0x64) & 0x01) inb(0x60);
-
-    echo_raw("\n> ", 3);
-    char cmd[64];
-    int i = 0;
-
-    while (1) {
-        char c = keyboard_getc();
-        if (c != 0) {
-            if (c == '\n') {
-                cmd[i] = '\0';
-                execute_panic_cmd(cmd);
-                i = 0;
-                echo_raw("\n> ", 3);
-            } else if (c == '\b' && i > 0) {
-                i--;
-                echo_raw("\b \b", 3);
-            } else if (i < 63) {
-                cmd[i++] = c;
-                echo_raw((const char*) &c, 1);
-            }
-        }
-    }
-}
-
 // TODO: use t_printf instead, but t_print doesn't support colors yet
 
 /* Called upon exception caught by IDT */
@@ -265,5 +182,5 @@ void exception_handler(syscalls_registers_x86_64_t* regs) {
     dump_register_info(regs);
     dump_multitasking_info();
 
-    panic_shell();
+    while (1) system_halt();
 }

@@ -87,6 +87,7 @@ int init_uart(kernel_api_t* api, uint64_t base_addr) {
 
     dev = k_api->kmalloc(sizeof(output_dev_t));
     dev->id = UART_DEV_ID;
+    dev->type = DEV_OUTPUT;
 
     dev->printf = (void*) SYSMOD_TO_KERNEL(uart_printf);
 
@@ -105,7 +106,7 @@ void exit_uart() {
     k_api->kfree(dev);
 }
 
-SYSMOD_ENTRY sysmod_t test_module_entry = {
+SYSMOD_HEADER sysmod_t test_module_entry = {
     .name = "UART",
     .init_offset = (uint64_t) init_uart,
     .exit_offset = (uint64_t) exit_uart

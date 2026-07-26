@@ -23,18 +23,24 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/terminal.h"
 
 #include "cpu/timer.h"
+#include "drivers/input.h"
 #include "drivers/output.h"
 
 #include "sysmods/devices.h"
 
-output_dev_t* output_dev_head = NULL;
+// Unit devices
 timer_dev_t*  timer_dev       = NULL;
+
+// Chained devices
+input_dev_t*  input_dev_head  = NULL;
+output_dev_t* output_dev_head = NULL;
 
 void register_device(dev_type_t type, void* device) {
     void** head_ptr = NULL;
 
     switch (type) {
         case DEV_OUTPUT : head_ptr = (void**) &output_dev_head; break;
+        case DEV_INPUT  : head_ptr = (void**) &input_dev_head;  break;
 
         case DEV_TIMER  : timer_dev = (timer_dev_t*) device; return;
 
@@ -52,6 +58,7 @@ void unregister_device(dev_type_t type, void* device) {
 
     switch (type) {
         case DEV_OUTPUT : head_ptr = (void**) &output_dev_head; break;
+        case DEV_INPUT  : head_ptr = (void**) &input_dev_head;  break;
 
         case DEV_TIMER  : timer_dev = NULL; return;
 

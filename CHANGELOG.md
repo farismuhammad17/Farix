@@ -1,6 +1,12 @@
 # Changelog
 
-## x86_64 Kernel System Modules (II) - *WIP: 19th July, 2026*
+## Input Kernel System Modules
+
+- Moved keyboard from kernel to system module: `keyboard.sys`
+- Removed panic shell
+- Renamed `SYSMOD_ENTRY` to `SYSMOD_HEADER`
+
+## x86_64 Kernel System Modules (II) - *19th July, 2026*
 
 - Reordered kernel boot sequence
 - IDT

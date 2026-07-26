@@ -23,8 +23,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include "sysmods/devices.h"
+
 typedef struct {
     uint8_t id;
+    dev_type_t type;
 
     uint64_t (*get_timer_uptime_microseconds)();
     void (*stall)(uint64_t microseconds);

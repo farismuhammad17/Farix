@@ -29,7 +29,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
-#include "drivers/keyboard.h"
 #include "drivers/mouse.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
@@ -526,14 +525,6 @@ bool handle_special_chars(uint16_t c) {
 
         case '\r':
             cursor_x = 0;
-            return true;
-
-        case KEY_UP:
-            cmd_history_up();
-            return true;
-
-        case KEY_DOWN:
-            cmd_history_down();
             return true;
 
         default: return false;

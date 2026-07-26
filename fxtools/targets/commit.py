@@ -37,7 +37,8 @@ def get_changelog_changes() -> str:
     for line in diff_output.splitlines():
         if line.startswith("+") and not line.startswith("+++"):
             content = line[1:].strip()
-            if content:
+            # Ensure the content starts with a hyphen after lstripping
+            if content and content.lstrip().startswith("-"):
                 changes.append(content)
 
     return "\n".join(dict.fromkeys(changes))

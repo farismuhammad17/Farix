@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "sysmods/devices.h"
 
-#define SYSMOD_ENTRY __attribute__((section(".sysmod_header"), used))
+#define SYSMOD_HEADER __attribute__((section(".sysmod_header"), used))
 
 #define SYSMOD_TO_KERNEL(s) ((uint64_t)(s) + base_addr)
 

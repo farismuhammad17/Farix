@@ -18,28 +18,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef KEYBOARD_H
-#define KEYBOARD_H
+#ifndef INPUT_H
+#define INPUT_H
 
-#include <stdbool.h>
 #include <stdint.h>
 
-#define KEY_UP   0x11
-#define KEY_DOWN 0x12
+#include "sysmods/devices.h"
 
-#define KBD_LEN        58
-#define KBD_BUFFER_LEN 1024
+typedef struct input_dev_t {
+    struct input_dev_t* next;
+    uint8_t id;
+    dev_type_t type;
 
-extern char kbd_buffer[KBD_BUFFER_LEN];
-extern volatile uint32_t kbd_head;
-extern volatile uint32_t kbd_tail;
+    void (*on_event)(void* data);
+} input_dev_t;
 
-extern bool shift_pressed;
-extern unsigned char kbd[128];
-
-void RARE_FUNC init_keyboard();
-extern void keyboard_handler();
-
-char RARE_FUNC keyboard_getc();
+extern input_dev_t* input_dev_head;
 
 #endif

@@ -33,20 +33,20 @@ static const uint64_t divisor = PIT_FREQ_HZ / FREQUENCY_HZ;
 static uint64_t system_ticks = 0;
 
 static kernel_api_t* k_api = NULL;
-static timer_dev_t* dev = NULL;
+static timer_dev_t*  dev = NULL;
 
-void interrupt_handler() {
+static void interrupt_handler() {
     system_ticks++;
 
     k_api->irq_send_eoi();
     k_api->schedule(); // Swap tasks
 }
 
-uint64_t get_timer_uptime_microseconds() {
+static uint64_t get_timer_uptime_microseconds() {
     return (system_ticks * 1000000ULL) / FREQUENCY_HZ;
 }
 
-void stall(uint64_t microseconds) {
+static void stall(uint64_t microseconds) {
     if (unlikely(microseconds == 0)) return;
 
     uint64_t total_ticks = (microseconds * PIT_FREQ_HZ) / 1000000;
@@ -87,6 +87,7 @@ int init_pit(kernel_api_t* api, uint64_t base_addr) {
 
     dev = k_api->kmalloc(sizeof(timer_dev_t));
     dev->id = PIT_DEV_ID;
+    dev->type = DEV_TIMER;
 
     dev->get_timer_uptime_microseconds = (void*) SYSMOD_TO_KERNEL(get_timer_uptime_microseconds);
     dev->stall = (void*) SYSMOD_TO_KERNEL(stall);
@@ -111,7 +112,7 @@ void exit_pit() {
     k_api->kfree(dev);
 }
 
-SYSMOD_ENTRY sysmod_t test_module_entry = {
+SYSMOD_HEADER sysmod_t test_module_entry = {
     .name = "PIT",
     .init_offset = (uint64_t) init_pit,
     .exit_offset = (uint64_t) exit_pit

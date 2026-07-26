@@ -27,9 +27,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
-#include "drivers/keyboard.h"
+#include "drivers/input.h"
 #include "drivers/terminal.h"
 #include "process/task.h"
+#include "sysmods/devices.h"
 
 #include "shell/commands.h"
 #include "shell/shell.h"
@@ -40,7 +41,7 @@ bool shell_buffer_ready = false;
 
 static size_t shell_buffer_size = 0;
 
-static void shell_parse(const char* input);
+static void shell_parse();
 
 static char* trim(char* s) {
     if (unlikely(s == NULL)) return NULL;
@@ -52,6 +53,32 @@ static char* trim(char* s) {
 
     *(end + 1) = '\0';
     return s;
+}
+
+static void parse_input(void* data) {
+    char c = (char) data;
+
+    if (unlikely(c == '\n')) {
+        shell_buffer[shell_buffer_size] = '\0';
+        shell_buffer_size = 0;
+        echo_char('\n');
+
+        shell_parse();
+        printf("%s> ", shell_directory[0] == '\0' ? "/" : shell_directory);
+    }
+
+    else if (unlikely(c == '\b' && shell_buffer_size > 0)) {
+        shell_buffer_size--;
+        shell_buffer[shell_buffer_size] = '\0';
+
+        echo_char('\b');
+    }
+
+    else if (likely(shell_buffer_size < (MAX_SHELL_BUFFER_LEN - 1))) {
+        shell_buffer[shell_buffer_size++] = c;
+
+        echo_char(c);
+    }
 }
 
 /* Initialises Kernel shell */
@@ -71,60 +98,27 @@ void init_shell() {
         "Type \"help\" for more information\n"
     );
     printf("%s> ", shell_directory);
-}
 
-/*
-Read the keyboard buffer and print the character. If the shell is moved into the
-ready state, then it executes shell_parse.
-*/
-void shell_update() {
-    while (kbd_tail != kbd_head) {
-        char c = kbd_buffer[kbd_tail];
-        kbd_tail = (kbd_tail + 1) % KBD_BUFFER_LEN;
-
-        if (unlikely(c == '\n')) {
-            shell_buffer[shell_buffer_size] = '\0';
-            echo_char('\n');
-            shell_buffer_ready = true;
-            break;
-        } else if (unlikely(c == '\b')) {
-            if (shell_buffer_size > 0) {
-                shell_buffer_size--;
-                shell_buffer[shell_buffer_size] = '\0';
-                echo_char('\b');
-            }
-        } else if (shell_buffer_size < (MAX_SHELL_BUFFER_LEN - 1)) {
-            shell_buffer[shell_buffer_size] = c;
-            shell_buffer_size++;
-            echo_char(c);
-        }
+    input_dev_t* keyboard = input_dev_head;
+    while (keyboard != NULL && keyboard->id != KEYBOARD_PS2_ID) {
+        keyboard = keyboard->next;
+    }
+    if (unlikely(!keyboard)) {
+        err_print("init_shell: Keyboard not found.");
+        return;
     }
 
-    if (shell_buffer_ready) {
-        if (shell_buffer_size != 0) {
-            shell_parse(shell_buffer);
-        }
-
-        shell_buffer[0]    = '\0';
-        shell_buffer_size  = 0;
-        shell_buffer_ready = false;
-
-        printf("%s> ", shell_directory[0] == '\0' ? "/" : shell_directory);
-    }
+    keyboard->on_event = parse_input;
 }
 
 /*
 Takes in the input text, matches it with the list of valid commands, and once
 a command is found, it execute that command's function.
 */
-static void shell_parse(const char* input) {
-    if (unlikely(input == NULL || input[0] == '\0')) return;
+static void shell_parse() {
+    if (unlikely(shell_buffer[0] == '\0')) return;
 
-    char buffer[MAX_SHELL_BUFFER_LEN];
-    strncpy(buffer, input, MAX_SHELL_BUFFER_LEN - 1);
-    buffer[MAX_SHELL_BUFFER_LEN - 1] = '\0';
-
-    char* cmd_name = trim(buffer);
+    char* cmd_name = trim(shell_buffer);
     char* args = strchr(cmd_name, ' ');
 
     if (args != NULL) {

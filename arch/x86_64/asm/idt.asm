@@ -28,7 +28,6 @@ global apic_spurious_handler_stub
 global load_idt
 
 extern interrupt_dispatcher
-extern keyboard_handler
 extern mouse_handler
 extern syscall_handler
 extern exception_handler
@@ -83,7 +82,8 @@ timer_handler_stub:
 
 keyboard_handler_stub:
     PUSHALL
-    call keyboard_handler
+    mov rdi, 33
+    call interrupt_dispatcher
     POPALL
     iretq
 

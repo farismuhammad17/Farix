@@ -27,7 +27,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cpu/multicore.h"
 #include "cpu/timer.h"
 #include "drivers/acpi/acpi.h"
-#include "drivers/keyboard.h"
 #include "drivers/mouse.h"
 #include "drivers/output.h"
 #include "drivers/storage/bdl.h"
@@ -58,10 +57,7 @@ bool last_call_finished = false;
 /* Kernel shell main loop thread. */
 static void shell_thread() {
     init_shell();
-    while (1) {
-        shell_update();
-        system_halt();
-    }
+    while (1) system_halt();
 }
 
 /*
@@ -149,7 +145,7 @@ void kmain() {
     init_multitasking();
     load_sysmod("system/timer.sys");
 
-    init_keyboard();
+    load_sysmod("system/keyboard.sys");
     init_mouse();
 
     init_battery();

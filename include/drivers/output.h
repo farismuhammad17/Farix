@@ -23,9 +23,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include "sysmods/devices.h"
+
 typedef struct output_dev_t {
     struct output_dev_t* next;
     uint8_t id;
+    dev_type_t type;
 
     void (*printf)(const char* format, ...);
 } output_dev_t;
