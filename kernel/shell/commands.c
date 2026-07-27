@@ -53,6 +53,9 @@ ShellCommand command_table[] = {
     {"shutdown", cmd_shutdown, "Shutdown machine"},
     {"sleep", cmd_sleep, "Put machine to sleep"},
     {"reboot", cmd_reboot, "Reboot machine"},
+    {"drivers", cmd_drivers, "List all opened system modules"},
+    {"drv_load", cmd_drv_load, "Load system module"},
+    {"drv_unload", cmd_drv_unload, "Unload system module"},
 
     {NULL, NULL, NULL} // to mark the end
 };

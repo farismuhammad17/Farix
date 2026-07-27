@@ -171,7 +171,7 @@ static int init_keyboard(kernel_api_t* api, uint64_t b_addr) {
     return 0;
 }
 
-static void exit_keyboard() {
+static int exit_keyboard() {
     // Disable the Keyboard Port on the controller
     // This ensures no more IRQs hit our handler while we clean up
     while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
@@ -181,10 +181,12 @@ static void exit_keyboard() {
     k_api->unregister_device(DEV_INPUT, (void*) dev);
 
     k_api->kfree(dev);
+
+    return 0;
 }
 
 SYSMOD_HEADER sysmod_t test_module_entry = {
     .name = "KEYBOARD/PS2",
-    .init_offset = (uint64_t) init_keyboard,
-    .exit_offset = (uint64_t) exit_keyboard
+    .init = init_keyboard,
+    .exit = exit_keyboard
 };

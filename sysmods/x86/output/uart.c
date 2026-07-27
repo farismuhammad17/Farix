@@ -96,7 +96,7 @@ static int init_uart(kernel_api_t* api, uint64_t base_addr) {
     return 0;
 }
 
-static void exit_uart() {
+static int exit_uart() {
     // Disable UART hardware so it doesn't fire interrupts or send noise
     k_api->outb(PORT + 1, 0x00); // Disable interrupts
     k_api->outb(PORT + 4, 0x00); // Disable RTS/DSR/IRQ
@@ -104,10 +104,12 @@ static void exit_uart() {
     k_api->unregister_device(DEV_OUTPUT, (void*) dev);
 
     k_api->kfree(dev);
+
+    return 0;
 }
 
 SYSMOD_HEADER sysmod_t test_module_entry = {
     .name = "UART",
-    .init_offset = (uint64_t) init_uart,
-    .exit_offset = (uint64_t) exit_uart
+    .init = init_uart,
+    .exit = exit_uart
 };

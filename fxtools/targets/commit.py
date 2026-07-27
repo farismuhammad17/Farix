@@ -47,6 +47,27 @@ def run(m: str):
     # Find unstaged files
     status = proc_run("git status --porcelain")
 
+    print()
+    for line in status.strip().splitlines():
+        if not line:
+            continue
+
+        code = line[:2]
+        filename = line[2:]
+
+        if 'D' in code:
+            colored_code = printer.F_RED(code)
+        elif 'A' in code or '?' in code:
+            colored_code = printer.F_GREEN(code)
+        elif 'M' in code:
+            colored_code = printer.F_YELLOW(code)
+        elif 'R' in code:
+            colored_code = printer.F_CYAN(code)
+        else:
+            colored_code = printer.F_WHITE(code)
+
+        print(f"{colored_code}{printer.F_WHITE(filename)}")
+
     if status.strip():
         # Iterate through the status lines
         # 'M ' = modified and staged, ' M' = modified and NOT staged, '??' = untracked
@@ -54,8 +75,7 @@ def run(m: str):
             # If the second character is not a space, it's modified and NOT staged
             # '??' means untracked
             if line[1] != ' ' or line.startswith("??"):
-                printer.error("Unstaged or untracked files detected")
-                print(status)
+                printer.error("Unstaged or untracked files detected\n")
                 return
 
     msg = m
@@ -88,6 +108,7 @@ def run(m: str):
     msg += "\n"
 
     public_key_file_path = os.path.join(data.get("USER_SIGN_FILES"), ".public_key")
+
     try:
         with open(public_key_file_path) as f:
             msg += f.read()

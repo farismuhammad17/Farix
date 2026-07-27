@@ -34,12 +34,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define SYS_ICALL(func, ...)   ((__typeof__(func)*) SYSMOD_TO_KERNEL(func))(__VA_ARGS__)
 
 typedef struct {
-    char name[16];        // 16 bytes
-    uint64_t init_offset; // 8 bytes
-    uint64_t exit_offset; // 8 bytes = 32 bytes
-} __attribute__((packed)) sysmod_t;
-
-typedef struct {
     // Output
     void (*printf)(const char* format, ...);
     void (*err_printf)(const char* format, ...);
@@ -70,5 +64,11 @@ typedef struct {
     void (*register_device)(dev_type_t dev_type, void* device);
     void (*unregister_device)(dev_type_t dev_type, void* device);
 } kernel_api_t;
+
+typedef struct {
+    char name[16];
+    int (*init)(kernel_api_t* api, uint64_t base_addr);
+    int (*exit)(); // 8 bytes = 32 bytes
+} __attribute__((packed)) sysmod_t;
 
 #endif

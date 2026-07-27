@@ -99,7 +99,7 @@ static int init_pit(kernel_api_t* api, uint64_t base_addr) {
     return 0;
 }
 
-static void exit_pit() {
+static int exit_pit() {
     // Disable the interrupts
     k_api->outb(0x43, 0x36);
     k_api->outb(0x40, 0xFF); // Set a very slow frequency
@@ -110,10 +110,12 @@ static void exit_pit() {
     k_api->unregister_device(DEV_TIMER, dev);
 
     k_api->kfree(dev);
+
+    return 0;
 }
 
 SYSMOD_HEADER sysmod_t test_module_entry = {
     .name = "PIT",
-    .init_offset = (uint64_t) init_pit,
-    .exit_offset = (uint64_t) exit_pit
+    .init = init_pit,
+    .exit = exit_pit
 };

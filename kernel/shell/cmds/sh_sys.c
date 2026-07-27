@@ -18,13 +18,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include "klib/stdio.h"
+#include "klib/stdlib.h"
+
 #include "fs/vfs.h"
 #include "syshw/power.h"
 
-#include "klib/stdio.h"
-
 #include "fs/fat32.h"
 #include "fs/ramdisk.h"
+
+#include "sysmods/interface.h"
+#include "sysmods/loader.h"
 
 #include "shell/commands.h"
 
@@ -57,4 +61,31 @@ void cmd_sleep(UNUSED_ARG const char* args) {
 void cmd_reboot(UNUSED_ARG const char* args) {
     printf("Rebooting...");
     system_reboot();
+}
+
+/* List all opened system modules */
+void cmd_drivers(UNUSED_ARG const char* args) {
+    for (size_t i = 0; i < MAX_LOADED_MODULES; i++) {
+        loaded_sysmod_t* reg = &sysmods_registry[i];
+
+        // Can't terminate at first NULL since registry is not
+        // linear, i.e. there will be gaps of NULL in between
+        // valid devices
+        if (!reg || !reg->interface) continue;
+
+        printf("%2d %-16s   %p (%u)\n", i,
+            reg->interface->name,
+            reg->base_address,
+            reg->size);
+    }
+}
+
+/* Load system module */
+void cmd_drv_load(const char* args) {
+    load_sysmod(args);
+}
+
+/* Unload system module */
+void cmd_drv_unload(const char* args) {
+    unload_sysmod(atoi(args));
 }

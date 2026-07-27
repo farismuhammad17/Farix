@@ -36,7 +36,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "sysmods/interface.h"
 #include "sysmods/loader.h"
 
-loaded_sysmod_t sysmods_registry[MAX_LOADED_MODULES];
+loaded_sysmod_t sysmods_registry[MAX_LOADED_MODULES] = {NULL};
 
 kernel_api_t sysmod_kernel_api = {
     .printf = printf,
@@ -65,7 +65,6 @@ kernel_api_t sysmod_kernel_api = {
 };
 
 static int find_free_module_slot() {
-    int slot = -1;
     for (int i = 0; i < MAX_LOADED_MODULES; i++) {
         if (unlikely(!sysmods_registry[i].is_active)) {
             return i;
@@ -117,10 +116,10 @@ int load_sysmod_raw(void* raw_binary_buffer, size_t binary_size) {
     sysmods_registry[slot].size = binary_size;
     sysmods_registry[slot].is_active = 1;
 
-    if (likely(mod->init_offset)) {
-        int (*runtime_init)(kernel_api_t*, uint64_t) = (int(*)(kernel_api_t*, uint64_t))(base + mod->init_offset);
+    if (likely(mod->init != NULL)) {
+        int (*init_func)(kernel_api_t*, uint64_t) = (int(*)(kernel_api_t*, uint64_t))(base + (uint64_t) mod->init);
+        int result = init_func(&sysmod_kernel_api, base);
 
-        int result = runtime_init(&sysmod_kernel_api, base);
         if (unlikely(result != 0)) {
             sysmods_registry[slot].is_active = 0;
             err_printf("load_sysmod_raw: Module returned %d", result);
@@ -139,18 +138,19 @@ int unload_sysmod(int slot_id) {
     loaded_sysmod_t* mod_track = &sysmods_registry[slot_id];
     uint64_t base = (uint64_t) mod_track->base_address;
 
-    // Fire the module's cleanup function using the relative offset
-    if (mod_track->interface->exit_offset) {
-        void (*runtime_exit)(void) = (void(*)(void))(base + mod_track->interface->exit_offset);
-        runtime_exit();
+    if (likely(mod_track->interface->exit != NULL)) {
+        int (*exit_func)(void) = (int(*)(void))(base + (uint64_t) mod_track->interface->exit);
+        int result = exit_func();
+
+        if (unlikely(result != 0)) {
+            err_printf("unload_sysmod: Module (%d) returned %d", slot_id, result);
+            return -1;
+        }
     }
 
-    // Clear the registry tracking slot
     mod_track->is_active = 0;
     mod_track->interface = NULL;
 
-    // Now that loading and unloading routines are working predictably,
-    // freeing the raw buffer block here is perfectly safe to uncomment.
     if (likely(mod_track->base_address)) {
         kfree(mod_track->base_address);
         mod_track->base_address = NULL;

@@ -6,6 +6,7 @@
 
 # WIP
 /arch/x86_64/libc
+/Docs/
 
 # System & IDEs
 __pycache__/

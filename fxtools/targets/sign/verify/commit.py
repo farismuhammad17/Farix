@@ -44,7 +44,7 @@ def run(sig: str, key: str):
         public_key.verify(signature_bytes, checksum.encode("utf-8"))
 
         printer.success("Valid signature")
-    except (InvalidSignature, Exception):
+    except InvalidSignature:
         printer.error("Invalid signature")
 
 def help():
@@ -54,5 +54,12 @@ def help():
         "ARGS": {
             "sig": "Signature given for the commit; usually found in the commit message.",
             "key": "The public key of the user you wish to check the signature against."
-        }
+        },
+        "NOTES": [
+            (
+                "This command returns negative unless the current files match the commit;\n"
+                "the command fails if the current set of files are not exactly the same as it\n"
+                "was when the commit was made."
+            )
+        ]
     }

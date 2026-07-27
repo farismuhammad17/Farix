@@ -14,12 +14,12 @@ The `fx sign` utility provides the security verification layer for Farix. Use th
 
 ```bash
 # To verify a file:
-fx sign verify file <-f> <-sig> <-key>
+fx sign verify file --help
 ```
 
 ```bash
 # To verify a commit:
-fx sign verify commit <-sig> <-key>
+fx sign verify commit --help
 ```
 
 Use internal documentation for `fx` for futher information.

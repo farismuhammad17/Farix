@@ -64,5 +64,8 @@ void cmd_vfs(const char* args);
 void cmd_shutdown(const char* args);
 void cmd_sleep(const char* args);
 void cmd_reboot(const char* args);
+void cmd_drivers(const char* args);
+void cmd_drv_load(const char* args);
+void cmd_drv_unload(const char* args);
 
 #endif

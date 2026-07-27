@@ -7,10 +7,16 @@
 - Renamed `SYSMOD_ENTRY` to `SYSMOD_HEADER`
 - Deleted old MFuncs completely
 - Sysmods:
+  - System module struct uses pointers for clarity.
+  - Unloader checks exit result.
   - Moved keyboard into input folder
   - Moved UART into output folder
+- Shell:
+  - Added commands: `drivers`, `drv_load`, and `drv_unload`
 - FXTools:
   - Made `make` recursively find all sysmods
+  - Cleaner `commit` output
+  - Check in `sign` to create new public and private
 
 ## x86_64 Kernel System Modules (II) - *19th July, 2026*
 
