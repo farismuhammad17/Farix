@@ -30,6 +30,7 @@ Use {printer.F_MAGENTA('fx [target] help')} for further information.
 
 INFO = {
     "Targets": {
+        "editor": "Launch built-in TUI editor.",
         "make": "Compiles the kernel into bootable ISO and creates disk.img with system files",
         "clean": "Cleans up build artifacts and temporary files",
         "init": "Fetches dependencies and sets up the build requirements",
@@ -50,16 +51,17 @@ INFO = {
     },
 
     "Supported Architectures": {
-        "x86_64": "64-bit x86 (Default)",
-        "x86_32": "32-bit x86",
-        "arm32": "32-bit ARM (WIP)"
+        "x86_64": "64-bit x86 (Default)"
     },
 
     "Configuration": {
         "DEFAULT_ARCH": "Architecture to compile to",
         "THREADS": "Default number of threads to use for compiling",
-        "BOOT_USB_PATH": "Path to USB to copy kernel to for 'fx usb'",
         "RUNTIME_CORES": "Number of CPU cores during runtime in emulation",
+        "QEMU_FULLSCREEN": "Whether to launch into QEMU in fullscreen by default or not",
+        "USER_NAME": "Username used when committing",
+        "USER_EMAIL": "Email of the user used when committing",
+        "USER_SIGN_FILES": "Path to the public and private key"
     }
 }
 
@@ -67,7 +69,7 @@ def run():
     print(HEADER)
 
     # Find longest key section for target X
-    all_keys = [key for section in INFO.values() for key in section.keys()]
+    all_keys = [key for section in INFO.values() for key in section]
     max_key_len = max(len(key) for key in all_keys) if all_keys else 0
 
     # Define layout rules

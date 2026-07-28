@@ -1,4 +1,4 @@
-/*
+"""
 -----------------------------------------------------------------------
 Farix Operating System
 Copyright (C) 2026  Faris Muhammad
@@ -16,46 +16,25 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
-*/
+"""
 
-/* Multiboot Header constants */
+from fxtools.core.editor import init
 
-.set ALIGN,    1<<0
-.set MEMINFO,  1<<1
-.set FLAGS,    ALIGN | MEMINFO
-.set MAGIC,    0x1BADB002
-.set CHECKSUM, -(MAGIC + FLAGS)
+# im severely ill as i write this
+# there are probably bugs everywhere
+# because i cant focus on a thing and
+# i dont trust chatgpt to write the code
+# to write the code.
+# ill clean up the entire thing later once
+# im better. this also will probably be
+# lost in the void or smth, no one gona
+# read this ever.
 
-/* Declare the Multiboot section */
+def run():
+    init.Editor()
 
-.section .multiboot
-.align 4
-.long MAGIC
-.long FLAGS
-.long CHECKSUM
-
-/* Reserve a small area for the stack */
-
-.section .bss
-.align 16
-stack_bottom:
-.global stack_bottom
-.skip 65536 /* 64 KiB stack */
-stack_top:
-.global stack_top
-
-/* The actual entry point where the CPU begins execution */
-
-.section .text
-.global _start
-.type _start, @function
-
-_start:
-	/* Setup the Stack */
-	mov $stack_top, %esp
-
-	push %ebx    /* This becomes 'mbi' */
-    push %eax    /* This becomes 'magic' */
-
-	/* Call the C function */
-	call arch_kmain
+def help():
+    return {
+        "USAGE": "fx studio",
+        "DESCRIPTION": "Launches a TUI editor"
+    }

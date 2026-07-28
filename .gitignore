@@ -6,7 +6,8 @@
 
 # WIP
 /arch/x86_64/libc
-/Docs/
+/Docs/Kernel/*
+/Docs/Initboot/*
 
 # System & IDEs
 __pycache__/

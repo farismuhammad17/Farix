@@ -2,6 +2,7 @@
 
 ## Input Kernel System Modules
 
+- Removed `x86_32`
 - Moved keyboard from kernel to system module: `keyboard.sys`
 - Removed panic shell
 - Renamed `SYSMOD_ENTRY` to `SYSMOD_HEADER`
@@ -17,6 +18,10 @@
   - Made `make` recursively find all sysmods
   - Cleaner `commit` output
   - Check in `sign` to create new public and private
+  - Implemented FX-Studio: built-in TUI code editor
+  - Removed old `BOOT_USB_PATH` from State JSON
+  - Fixed `lint` bug of not including literally every file
+  - Support to `make` to compile to assembly
 
 ## x86_64 Kernel System Modules (II) - *19th July, 2026*
 

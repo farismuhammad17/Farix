@@ -154,15 +154,6 @@ def track_references(content: str, file: Path, references: dict):
             references[word] = set()
         references[word].add(file)
 
-def extract_header_exports(content: str) -> set:
-    # Extracts identifiers (structs, macros, functions) exported by a header.
-    exports = set()
-    for match in HEADER_EXPORT_RE.finditer(content):
-        for group in match.groups():
-            if group and not group.startswith(("_", "if", "while", "for", "switch")):
-                exports.add(group)
-    return exports
-
 # --- Post-Processing Global Passes ---
 
 def process_static_visibility(definitions: dict, references: dict, files_report: dict):
@@ -288,7 +279,7 @@ def get_checksum() -> str:
         )
     except (subprocess.CalledProcessError, FileNotFoundError):
         printer.error("Error: git failed")
-        return
+        return ''
 
     raw_paths = result.stdout.split(b'\x00') if result.stdout else []
 
@@ -302,16 +293,18 @@ def get_checksum() -> str:
         '.cmd',
         '.bat',
         '.env',
+        '.md',
+        '.txt',
+        '.lst',
+        '.gitignore',
+        '.gitattributes',
+        'stage2_eltorito',
         'Dockerfile',
-        'CONTRIBUTING.md',
-        'DOCUMENTATION.md',
-        'LICENSE',
-        'legal/ATTRIBUTIONS.txt',
-        'legal/CLA.md',
-        'legal/LICENSE_EXCEPTIONS.md'
+        'LICENSE'
     )
 
     file_paths = []
+
     for path_bytes in raw_paths:
         if not path_bytes:
             continue

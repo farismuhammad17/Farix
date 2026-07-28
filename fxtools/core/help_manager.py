@@ -35,7 +35,7 @@ def print_format_help(data: dict[str, Any]) -> None:
 
     if "ARGS" in data and isinstance(data["ARGS"], dict):
         print(f"{printer.F_BLUE('ARGS')}:")
-        max_len = max(len(arg) for arg in data["ARGS"].keys()) if data["ARGS"] else 0
+        max_len = max(len(arg) for arg in data["ARGS"]) if data["ARGS"] else 0
         for arg, desc in data["ARGS"].items():
             padded_arg = arg.ljust(max_len)
             print(f"  {printer.F_GREEN(padded_arg)}  {desc}")

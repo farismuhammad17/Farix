@@ -40,7 +40,7 @@ def run():
 
     os.makedirs(keys_dir, exist_ok=True)
 
-    if input(printer.F_YELLOW("Keys not found, would you like to make a new one? (y)")) != 'y':
+    if input(printer.F_YELLOW("Keys not found. Would you like to make a new pair? (y) ")) != 'y':
         return
 
     private_key = ed25519.Ed25519PrivateKey.generate()

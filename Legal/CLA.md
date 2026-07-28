@@ -11,12 +11,14 @@ This Agreement governs all contributions to the Farix project. By submitting a c
 * **Dual-Licencing:** You explicitly authorise the Project Owner to distribute your contribution under both the GNU AGPLv3 and any private commercial licences negotiated by the Project Owner.
 
 ### 3. Originality and Warranty
+
 * **Ownership:** You certify that your contribution is your original work and you possess all necessary rights to grant the licences herein.
-* **Third-Party Code:** Contributions containing third-party code must be documented with all required attributions in [`/legal/ATTRIBUTIONS.txt`](./ATTRIBUTIONS.txt).
+* **Third-Party Code:** Contributions containing third-party code must be documented with all required attributions in [/Legal/ATTRIBUTIONS.txt](./ATTRIBUTIONS.txt).
 * **Encumbrances:** You certify your contribution is free of any third-party claims, patent encumbrances, or conflicting intellectual property obligations.
 * **No Warranty:** Contributions are provided "as-is" without warranty.
 
 ### 4. Contribution Standards
+
 * **Licence Header:** Every new file must begin with the following header (with appropriate commenting):
     ```
     -----------------------------------------------------------------------
@@ -37,5 +39,4 @@ This Agreement governs all contributions to the Farix project. By submitting a c
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
     -----------------------------------------------------------------------
     ```
-* **Source Integrity:** To ensure kernel stability and licencing boundary integrity, the project tracks deterministic checksums. Every commit message must include the checksum of the development milestone in the changelog footer (which can be acquired via `fx lint`).
-* **Sign-Off:** By using `fx commit` to sign and push a contribution, the contributor acknowledges they have read, understood, and agreed to be legally bound by this Contributor Licence Agreement.
+* **Sign-Off:** All contributions must be submitted via `fx commit`. Utilizing this tool automatically appends the required cryptographic checksum to the commit metadata and serves as the legal acknowledgement that the contributor agrees to be bound by this Contributor Licence Agreement (CLA). Commit metadata structure must adhere to that of `fx commit`.

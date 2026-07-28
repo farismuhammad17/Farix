@@ -1,8 +1,8 @@
 # Farix Kernel Licencing Policy & Additional Permissions
 
-**The "project owner", throughout the project repository, is the individual that owns and maintains the "Farix" project in the "project repository" in [github.com/farismuhammad17/farix](https://github.com/farismuhammad17/farix) or its official successors, and whose cryptographic identity can be verified by the master public key defined in [legal/AUTH.md](./AUTH.md), unless further notices, signed by the master public key, were made in the aforementioned repository.**
+**The "project owner", throughout the project repository, is the individual that owns and maintains the "Farix" project in the "project repository" in [github.com/farismuhammad17/farix](https://github.com/farismuhammad17/farix) or its official successors, and whose cryptographic identity can be verified by the master public key defined in [/Legal/AUTH.md](./AUTH.md), unless further notices, signed by the master public key, were made in the aforementioned repository.**
 
-The public repository source code for the Farix project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). As the sole Copyright Holder of this software, the project owner provides this source code subject to the following binding definitions and clarifications regarding derivative works and distribution boundaries. The goal is to ensure that the project remains open-source and free of cost to every casual user using Farix acquired from the project repository.
+The public repository source code for the Farix project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). As the sole Copyright Holder of this software, the project owner provides this source code subject to the following binding definitions and clarifications regarding derivative works and distribution boundaries. The goal is to ensure that the project remains open-source and free of cost to every casual user using Farix acquired as is from the project repository.
 
 ## Part A: Additional Licence Permissions (AGPLv3 Section 7)
 

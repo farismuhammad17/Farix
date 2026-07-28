@@ -1,4 +1,4 @@
-/*
+"""
 -----------------------------------------------------------------------
 Farix Operating System
 Copyright (C) 2026  Faris Muhammad
@@ -13,29 +13,22 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU Affero General Public License for more details.
 
-You should have received a copy of the GNU Affero General Public License
+You should have received a cop of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
-*/
+"""
 
-#include "farix.h"
+class Menubar:
+    def __init__(self, width: int, height: int, text: str = ""):
+        self.text = text
+        self.width = width
+        self.height = height
 
-/*
-Writing inline assembly is tedious, this function just abstract that off.
-Unused arguments are to be set to 0.
-*/
-int32_t farix_syscall(uint32_t sys_id, uint32_t arg1, uint32_t arg2, uint32_t arg3, uint32_t arg4, uint32_t arg5) {
-    int32_t ret;
-    asm volatile (
-        "int $0x80"
-        : "=a"(ret)     // Return value comes back in EAX
-        : "a"(sys_id),  // EAX
-          "b"(arg1),    // EBX
-          "c"(arg2),    // ECX
-          "d"(arg3),    // EDX
-          "S"(arg4),    // ESI
-          "D"(arg5)     // EDI
-        : "memory"      // Tells compiler that thZ memory might change
-    );
-    return ret;
-}
+    def update_text(self, text: str) -> None:
+        self.text = text
+
+    def render(self) -> str:
+        # Jump cursor directly to the bottom row, column 1, then draw the bar
+        formatted_text = self.text[:self.width]
+        bar_string = f"\x1b[47m\x1b[30m{formatted_text:<{self.width}}\x1b[0m"
+        return f"\x1b[{self.height};1H{bar_string}"

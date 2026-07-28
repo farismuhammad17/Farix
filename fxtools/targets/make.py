@@ -43,7 +43,9 @@ TOOLS = tools.get_tools()
 
 BOOT_OBJ = "build/boot.o"
 
-def compile_x86_64():
+kernel_asm_path = "build/farix_asm"
+
+def compile_x86_64(compile_to_asm: bool):
     CRTI_SRC = "arch/x86_64/asm/boot/crti.asm"
     CRTN_SRC = "arch/x86_64/asm/boot/crtn.asm"
     BOOT_SRC = "arch/x86_64/boot.s"
@@ -92,6 +94,12 @@ def compile_x86_64():
 
     printer.wait("Linking farix.bin for x86_64...")
     proc_run(cmd)
+
+    # Dump entire kernel assembly if requested
+    if compile_to_asm:
+        os.makedirs(kernel_asm_path, exist_ok=True)
+        printer.wait("Dumping full kernel assembly...")
+        proc_run(f"{TOOLS['PREFIX']}objdump -d -M intel -S bootloader/x86/boot/farix.bin > build/kernelASM/farix.asm")
 
     proc_run(f"{TOOLS['PREFIX']}objcopy -I elf64-x86-64 -O elf32-i386 bootloader/x86/boot/farix.bin bootloader/x86/boot/farix_elf32.bin")
 
@@ -142,6 +150,13 @@ def compile_x86_64():
 
         ld_flags = "-T sysmods/linker.ld -ffreestanding -nostdlib -O2 -Wl,--oformat=binary"
         proc_run(f"{TOOLS['CC']} {ld_flags} {mod_obj} -o {mod_out}")
+
+        # Dump entire system module assembly if requested
+        if compile_to_asm:
+            os.makedirs(kernel_asm_path, exist_ok=True)
+            print(f"\x1b[36mDumping assembly for system module: {mod_name}\x1b[0m")
+            proc_run(f"{TOOLS['PREFIX']}objdump -d -M intel -S {mod_obj} > build/kernelASM/{mod_name}.asm")
+
         print(f"\x1b[33mDeploying {mod_name}.sys to {emulation.DISK_PATH}/system/\x1b[0m")
         proc_run(f"mcopy -D o -i {emulation.DISK_PATH} {mod_out} ::/system/{mod_name}.sys")
 
@@ -158,18 +173,19 @@ def compile_x86_64():
 
     printer.success("Process completed")
 
-def run(arch: str = arch):
+def run(arch: str = arch, asm: bool = False):
     match arch:
         case "x86_64":
-            compile_x86_64()
+            compile_x86_64(asm)
         case _:
             printer.error(f"Unsupported architecture: {arch}")
 
 def help():
     return {
-        "USAGE": "fx make <-arch>",
+        "USAGE": "fx make <-arch> <--asm>",
         "ARGS": {
-            "arch": "Architecture to build for."
+            "arch": "Architecture to build for.",
+            "asm": f"When enabled, the entire compiled kernel is placed as assembly files into {kernel_asm_path}."
         },
         "VARIABLES": {
             "DEFAULT_ARCH": "Default architecture to build for, which is taken if no architecture was passed."

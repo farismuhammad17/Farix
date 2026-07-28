@@ -29,7 +29,6 @@ STATE_JSON_FILE = "fx.state.json"
 DEFAULT_SCHEME = {
     "DEFAULT_ARCH": "x86_64",
     "THREADS": 4,
-    "BOOT_USB_PATH": None,
     "RUNTIME_CORES": 4,
     "QEMU_FULLSCREEN": True,
 
