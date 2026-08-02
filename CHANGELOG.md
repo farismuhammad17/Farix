@@ -1,5 +1,21 @@
 # Changelog
 
+## Storage Driver System Module
+
+- Initboot
+  - Implemented raw binary passed to kernel via GRUB multiboot 1
+- Hardware Abstraction Layer (HAL)
+  - Moved page flag constants to `hal.h`
+  - Added `get_cpu_cycles`
+- Kernel Library
+  - Added `debug.h` and `utils.h` (yet to use)
+- FXTools
+  - `make` compiles kernel binary into `kernel.bin` and uses functions to organise
+- TODO:
+  - AHCI and ATA are sysmods, but are faulty, and require testing
+  - Move timer into initboot blob
+  - PMM to free multiboot modules once finished
+
 ## Input Kernel System Modules
 
 - Removed `x86_32`

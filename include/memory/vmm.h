@@ -32,13 +32,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define PHYSICAL_TO_VIRTUAL(addr) ((void*)((uint64_t)(addr) + PAGE_OFFSET))
 #define VIRTUAL_TO_PHYSICAL(addr) ((uint64_t)(uintptr_t)(addr) - PAGE_OFFSET)
 
-extern const uint64_t PAGE_PRESENT;
-extern const uint64_t PAGE_RW;
-extern const uint64_t PAGE_USER;
-extern const uint64_t PAGE_CACHE;
-extern const uint64_t PAGE_PWT;
-extern const uint64_t PAGE_PCD;
-
 extern uint64_t* kernel_directory;
 
 void RARE_FUNC init_vmm();

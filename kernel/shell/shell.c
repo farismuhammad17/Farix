@@ -100,7 +100,7 @@ void init_shell() {
     printf("%s> ", shell_directory);
 
     input_dev_t* keyboard = input_dev_head;
-    while (keyboard != NULL && keyboard->id != KEYBOARD_PS2_ID) {
+    while (keyboard != NULL && keyboard->id != KEYBOARD_PS2_DEV_ID) {
         keyboard = keyboard->next;
     }
     if (unlikely(!keyboard)) {

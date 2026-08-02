@@ -21,14 +21,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 
 #include "klib/stdio.h"
+#include "klib/string.h"
+#include "klib/utils.h"
 
 #include "hal.h"
 
 #include "cpu/ints.h"
 #include "cpu/irq.h"
+#include "cpu/pci.h"
 #include "drivers/terminal.h"
 #include "fs/vfs.h"
 #include "memory/heap.h"
+#include "memory/pmm.h"
 #include "memory/vmm.h"
 #include "process/task.h"
 
@@ -51,17 +55,30 @@ kernel_api_t sysmod_kernel_api = {
     .inw = inw,
     .inl = inl,
 
+    .pmm_alloc_page = pmm_alloc_page,
+    .pmm_alloc_pages = pmm_alloc_pages,
+    .vmm_map_page = vmm_map_page,
+    .vmm_get_current_directory = vmm_get_current_directory,
     .kmalloc = kmalloc,
     .kfree = kfree,
+    .memset = memset,
+    .memcpy = memcpy,
 
     .register_interrupt = register_interrupt,
     .unregister_interrupt = unregister_interrupt,
     .irq_send_eoi = irq_send_eoi,
+    .irq_unmask = irq_unmask,
 
     .schedule = schedule,
 
+    .pci_read = pci_read,
+    .pci_write = pci_write,
+    .pci_devices = pci_devices,
+
     .register_device = register_device,
     .unregister_device = unregister_device,
+
+    .get_timer_dev = get_timer_dev
 };
 
 static int find_free_module_slot() {
@@ -115,6 +132,7 @@ int load_sysmod_raw(void* raw_binary_buffer, size_t binary_size) {
     sysmods_registry[slot].base_address = raw_binary_buffer;
     sysmods_registry[slot].size = binary_size;
     sysmods_registry[slot].is_active = 1;
+
 
     if (likely(mod->init != NULL)) {
         int (*init_func)(kernel_api_t*, uint64_t) = (int(*)(kernel_api_t*, uint64_t))(base + (uint64_t) mod->init);

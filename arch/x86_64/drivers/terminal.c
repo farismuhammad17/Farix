@@ -439,48 +439,23 @@ void err_print(const char* data) {
 void err_printf(const char* format, ...) {
     #define ERROR_PRINT_COLOR 0x0C
 
-    uint16_t* err_print_vga_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(VGA_MEMORY);
-
+    char buffer[64];
     va_list args;
+
     va_start(args, format);
-
-    int col = 0;
-    for (int i = 0; format[i] != '\0'; i++) {
-        if (format[i] == '%' && format[i + 1] != '\0') {
-            i++;
-            if (format[i] == 's') {
-                char* s = va_arg(args, char*);
-                while (*s) {
-                    char c = *s++;
-                    err_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) c | (uint16_t) ERROR_PRINT_COLOR << 8;
-                }
-            }
-            else if (format[i] == 'd' || format[i] == 'x') {
-                uint64_t val = (format[i] == 'x') ? va_arg(args, uint64_t) : (uint64_t) va_arg(args, int);
-                int base = (format[i] == 'x') ? 16 : 10;
-
-                char buffer[32];
-                int p = 0;
-
-                if (val == 0) buffer[p++] = '0';
-                else {
-                    while (val > 0) {
-                        int r = val % base;
-                        buffer[p++] = (r < 10) ? (r + '0') : (r - 10 + 'a');
-                        val /= base;
-                    }
-                }
-                while (p > 0) {
-                    char c = buffer[--p];
-                    err_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) c | (uint16_t) ERROR_PRINT_COLOR << 8;
-                }
-            }
-        } else {
-            err_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) format[i] | (uint16_t) ERROR_PRINT_COLOR << 8;
-        }
-    }
-
+    int len = vsnprintf(buffer, sizeof(buffer), format, args);
     va_end(args);
+
+    // If vsnprintf failed or returned an error
+    if (len < 0) return;
+
+    uint16_t* err_print_vga_buffer = (uint16_t*) PHYSICAL_TO_VIRTUAL(VGA_MEMORY);
+    size_t col = cursor_x;
+
+    for (int i = 0; buffer[i] != '\0'; i++) {
+        char c = buffer[i];
+        err_print_vga_buffer[(cursor_y * WIDTH) + col++] = (uint16_t) c | ((uint16_t) ERROR_PRINT_COLOR << 8);
+    }
 
     cursor_y++;
     update_cursor(cursor_x, cursor_y);

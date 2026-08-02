@@ -28,8 +28,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cpu/timer.h"
 #include "drivers/acpi/acpi.h"
 #include "drivers/mouse.h"
-#include "drivers/output.h"
-#include "drivers/storage/bdl.h"
 #include "drivers/terminal.h"
 #include "fs/fat32.h"
 #include "fs/ramdisk.h"
@@ -42,17 +40,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "sysmods/devices.h"
 #include "sysmods/loader.h"
 
+#include "drivers/storage.h" // TODO REM
+
 #include "initboot.h"
 
 #include "kernel.h"
 
 #define THREAD_HZ 100
-
-int logged_num = 0;
-
-const char* call_log[MAX_LOG_LEN] = {0};
-int log_index = 0;
-bool last_call_finished = false;
 
 /* Kernel shell main loop thread. */
 static void shell_thread() {
@@ -118,18 +112,25 @@ void kmain() {
     init_interrupts();
     init_heap();
 
+    init_terminal();
+
     initboot();
 
-    init_storage();
+    // AHCI driver doesn't seem to be right, the binary is broken, it seems.
+    // the printf inside the init_ahci outputs garbage. No clue why, currently
+    // in the process of fixing that.
+    while(1) system_halt();
 
     system_int_on();
 
     init_ramdisk();
+
+    while(1) system_halt();
+
+    // Crashes here, since storage_dev is not defined, i.e. still NULL
     init_fat32();
 
     vfs_mount(&fat32_vfs);
-
-    init_terminal();
 
     load_sysmod("system/uart.sys");
 
@@ -155,7 +156,7 @@ void kmain() {
 
     // init_multicore();
 
-    kill_bootstrap();
+    // kill_bootstrap();
 
     while (1) system_halt();
 }

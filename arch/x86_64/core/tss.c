@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "klib/string.h"
 
+#include "initboot.h"
+
 #include "hal.h"
 
 #include "gdt.h"
@@ -35,7 +37,7 @@ TSSEntry tss_entry;
 
 void load_tss();
 
-void init_tss(uint32_t idx, uint32_t kss, uint64_t krsp) {
+void INITBOOT_TXT_SECTION init_tss(uint32_t idx, uint32_t kss, uint64_t krsp) {
     uint64_t base = (uint64_t) PHYSICAL_TO_VIRTUAL(&tss_entry);
     uint32_t limit = sizeof(TSSEntry) - 1;
 

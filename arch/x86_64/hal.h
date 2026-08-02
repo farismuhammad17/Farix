@@ -32,6 +32,14 @@ typedef struct {
     uint64_t rip, cs, rflags, rsp, ss;
 } syscalls_registers_x86_64_t;
 
+// VMM
+#define PAGE_PRESENT (1ULL << 0) // Bit 0 - If page is in RAM
+#define PAGE_RW      (1ULL << 1) // Bit 1 - 0 = Read-only,   1 = Read/Write
+#define PAGE_USER    (1ULL << 2) // Bit 2 - 0 = Kernel only, 1 = Everyone
+#define PAGE_PWT     (1ULL << 3) // Bit 3 - Writes go to cache and memory immediately
+#define PAGE_PCD     (1ULL << 4) // Bit 4 - Completely disables CPU caching for that page
+#define PAGE_CACHE   0           // Not present in x86, does nothing, but required stub
+
 /* Assembly outb */
 static inline void outb(uint16_t port, uint8_t val) {
     asm volatile("outb %0, %1" : : "a"(val), "Nd"(port));
@@ -134,6 +142,13 @@ static inline void restore_interrupts(uint64_t flags) {
         "popfq"
         : : "r"(flags) : "memory", "cc"
     );
+}
+
+/* Assembly read time-stamp counter (TSC) */
+static inline uint64_t get_cpu_cycles() {
+    uint32_t lo, hi;
+    asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((uint64_t) hi << 32) | lo;
 }
 
 void FREQ_FUNC set_kernel_stack(uint64_t stack);

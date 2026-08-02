@@ -25,11 +25,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cpu/timer.h"
 #include "drivers/input.h"
 #include "drivers/output.h"
+#include "drivers/storage.h"
 
 #include "sysmods/devices.h"
 
 // Unit devices
-timer_dev_t*  timer_dev       = NULL;
+timer_dev_t*   timer_dev      = NULL;
+storage_dev_t* storage_dev    = NULL;
 
 // Chained devices
 input_dev_t*  input_dev_head  = NULL;
@@ -42,7 +44,8 @@ void register_device(dev_type_t type, void* device) {
         case DEV_OUTPUT : head_ptr = (void**) &output_dev_head; break;
         case DEV_INPUT  : head_ptr = (void**) &input_dev_head;  break;
 
-        case DEV_TIMER  : timer_dev = (timer_dev_t*) device; return;
+        case DEV_TIMER   : timer_dev = (timer_dev_t*) device;     return;
+        case DEV_STORAGE : storage_dev = (storage_dev_t*) device; return;
 
         default:
             err_printf("Unknown device type: %d", type);
@@ -60,7 +63,8 @@ void unregister_device(dev_type_t type, void* device) {
         case DEV_OUTPUT : head_ptr = (void**) &output_dev_head; break;
         case DEV_INPUT  : head_ptr = (void**) &input_dev_head;  break;
 
-        case DEV_TIMER  : timer_dev = NULL; return;
+        case DEV_TIMER   : timer_dev = NULL;   return;
+        case DEV_STORAGE : storage_dev = NULL; return;
 
         default:
             err_printf("Unknown device type: %d", type);
@@ -74,4 +78,10 @@ void unregister_device(dev_type_t type, void* device) {
     if (*curr) {
         *curr = *(void**) *curr;
     }
+}
+
+// --- Getters ---
+
+timer_dev_t* get_timer_dev() {
+    return timer_dev;
 }

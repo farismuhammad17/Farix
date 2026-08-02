@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
+#include "initboot.h"
+
 #include "cpu/ints.h"
 #include "cpu/irq.h"
 
@@ -61,6 +63,8 @@ void isr28(); void isr29(); void isr30(); void isr31();
 static idt_entry idt[256];
 static idt_ptr   idtp;
 
+// 'volatile' forces the CPU to not cache the values,
+// forcing it to look up the actual value in RAM.
 static void* volatile dispatch_table[256] = { 0 };
 
 /* Set IDT gate at index `num` with given 64-bit function, selector, and flags */
@@ -79,7 +83,7 @@ static void idt_set_gate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags
 Initialise the IDT by setting everything to exception 15 (Unknown interrupt),
 then setting the interrupts we actually use, so that we can catch stray interrupts.
 */
-void init_interrupts() {
+void INITBOOT_TXT_SECTION init_interrupts() {
     idtp.limit = (sizeof(idt_entry) * 256) - 1;
     idtp.base  = (uint64_t) &idt;
 

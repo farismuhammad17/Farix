@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "klib/ctype.h"
 #include "klib/string.h"
 
-#include "drivers/storage/bdl.h"
+#include "drivers/storage.h"
 #include "drivers/terminal.h"
 #include "memory/heap.h"
 
@@ -188,7 +188,7 @@ static uint32_t get_next_cluster(uint32_t cluster) {
 
     uint32_t fat_sector = disk_info->reserved_sectors + (cluster / 128);
     uint32_t buffer[128];
-    bdl_read(disk_info->partition_start_lba + fat_sector, buffer);
+    storage_dev->read_sector(disk_info->partition_start_lba + fat_sector, (uint8_t*) buffer);
 
     uint32_t next = buffer[cluster % 128] & 0x0FFFFFFF;
 
@@ -206,7 +206,7 @@ static uint32_t find_free_fat_entry() {
     uint32_t fat_buffer[128];
 
     for (uint32_t s = 0; s < disk_info->sectors_per_fat; s++) {
-        bdl_read(disk_info->partition_start_lba + disk_info->reserved_sectors + s, fat_buffer);
+        storage_dev->read_sector(disk_info->partition_start_lba + disk_info->reserved_sectors + s, (uint8_t*) fat_buffer);
 
         for (int i = 0; i < 128; i++) {
             if (unlikely(s == 0 && i < 2)) continue; // Skip reserved entries
@@ -262,16 +262,16 @@ static void update_fat_entry(uint32_t cluster, uint32_t value) {
     uint32_t fat_buffer[128];
     uint32_t lba = disk_info->reserved_sectors + (cluster / 128);
 
-    bdl_read(disk_info->partition_start_lba + lba, fat_buffer);
+    storage_dev->read_sector(disk_info->partition_start_lba + lba, (uint8_t*) fat_buffer);
     fat_buffer[cluster % 128] = value;
-    bdl_write(disk_info->partition_start_lba + lba, fat_buffer);
+    storage_dev->write_sector(disk_info->partition_start_lba + lba, (uint8_t*) fat_buffer);
 
     // Check if bit 7 is 0 (Mirroring Enabled)
     if (!(disk_info->flags & 0x80)) {
         // Loop starts at 1 because we already wrote to FAT 0
         for (uint32_t i = 1; i < disk_info->fat_count; i++) {
             uint32_t backup_lba = lba + (i * disk_info->sectors_per_fat);
-            bdl_write(disk_info->partition_start_lba + backup_lba, fat_buffer);
+            storage_dev->write_sector(disk_info->partition_start_lba + backup_lba, (uint8_t*) fat_buffer);
         }
     }
 }
@@ -287,7 +287,7 @@ static uint32_t find_entry_in_cluster(uint32_t directory_cluster, const char* na
 
         // A cluster can have multiple sectors
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            bdl_read(lba + s, entries);
+            storage_dev->read_sector(lba + s, (uint8_t*) entries);
 
             for (int i = 0; i < 16; i++) {
                 // 0x00 means end of directory, stop searching
@@ -350,7 +350,7 @@ static uint32_t find_cluster_for_path(const char* path) {
 /* Create a new sub-directory entry, allocate its cluster, and initialize its '.' and '..' links. */
 static bool create_directory_entry(uint32_t sector_lba, int index, const char* name, uint32_t parent_cluster) {
     fat32_file_t entries[ENTRIES_PER_SECTOR];
-    bdl_read(sector_lba, entries);
+    storage_dev->read_sector(sector_lba, (uint8_t*) entries);
 
     uint32_t new_cluster = find_free_fat_entry();
     if (unlikely(new_cluster == FAT32_ERROR_CODE)) return false;
@@ -362,7 +362,7 @@ static bool create_directory_entry(uint32_t sector_lba, int index, const char* n
     entries[index].cluster_high = (uint16_t)((new_cluster >> 16) & 0xFFFF);
     entries[index].size = 0;
 
-    bdl_write(sector_lba, entries);
+    storage_dev->write_sector(sector_lba, (uint8_t*) entries);
     update_fat_entry(new_cluster, 0x0FFFFFFF);
 
     // Initialize "." and ".."
@@ -381,7 +381,7 @@ static bool create_directory_entry(uint32_t sector_lba, int index, const char* n
 
     uint32_t folder_lba = get_lba_from_cluster(new_cluster);
 
-    bdl_write(folder_lba, folder_data);
+    storage_dev->write_sector(folder_lba, folder_data);
 
     return true;
 }
@@ -410,12 +410,12 @@ a set of checks. We then cache the data into `disk_info` to use.
 */
 void init_fat32() {
     mbr_sector_t mbr;
-    bdl_read(0, &mbr);
+    storage_dev->read_sector(0, (uint8_t*) &mbr);
 
     uint32_t partition_base = mbr.partitions[0].start_lba;
 
     fat32_bpb_t bpb;
-    bdl_read(partition_base, &bpb);
+    storage_dev->read_sector(partition_base, (uint8_t*) &bpb);
 
     // Verify boot signature
     if (unlikely(bpb.boot_sector_sig != BOOT_SECTOR_SIG)) {
@@ -533,7 +533,7 @@ int fat32_read(const char* name, void* buffer, size_t size, uint64_t offset) {
         uint32_t lba = get_lba_from_cluster(current_dir_cluster);
 
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            bdl_read(lba + s, sector_buffer);
+            storage_dev->read_sector(lba + s, sector_buffer);
 
             fat32_file_t* files = (fat32_file_t*) sector_buffer;
 
@@ -571,7 +571,7 @@ int fat32_read(const char* name, void* buffer, size_t size, uint64_t offset) {
 
                         // Start from sector_in_cluster on the first cluster, then 0 for others
                         for (int sec = (int) sector_in_cluster; sec < disk_info->sectors_per_cluster && bytes_read < size; sec++) {
-                            bdl_read(cluster_lba + sec, sector_buffer);
+                            storage_dev->read_sector(cluster_lba + sec, sector_buffer);
 
                             // How much can we take from this sector
                             uint32_t available = 512 - byte_in_sector;
@@ -633,7 +633,7 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint64_t offs
         uint64_t lba = get_lba_from_cluster(current_dir_cluster);
 
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            bdl_read(lba + s, dir_buf);
+            storage_dev->read_sector(lba + s, dir_buf);
 
             fat32_file_t* entries = (fat32_file_t*) dir_buf;
 
@@ -670,7 +670,7 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint64_t offs
                             uint8_t temp_block[512];
 
                             // Read current sector to preserve data we aren't overwriting
-                            bdl_read(data_lba + sec, temp_block);
+                            storage_dev->read_sector(data_lba + sec, temp_block);
 
                             uint32_t available = 512 - byte_in_sector;
                             uint32_t to_write = (size - bytes_written > available) ? available : (uint32_t)(size - bytes_written);
@@ -678,7 +678,7 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint64_t offs
                             // Copy new data into the specific offset of the sector buffer
                             memcpy(temp_block + byte_in_sector, write_ptr + bytes_written, to_write);
 
-                            bdl_write(data_lba + sec, temp_block);
+                            storage_dev->write_sector(data_lba + sec, temp_block);
 
                             bytes_written += to_write;
                             byte_in_sector = 0; // After first sector, we start at byte 0
@@ -699,7 +699,7 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint64_t offs
                     // Update directory entry size ONLY if file grew
                     if (offset + size > (uint64_t) entries[i].size) {
                         entries[i].size = (uint32_t)(offset + size);
-                        bdl_write(lba + s, dir_buf);
+                        storage_dev->write_sector(lba + s, dir_buf);
                     }
 
                     return bytes_written;
@@ -745,7 +745,7 @@ int fat32_create(const char* path) {
         uint64_t lba = get_lba_from_cluster(current_dir_cluster);
 
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            bdl_read(lba + s, buffer);
+            storage_dev->read_sector(lba + s, buffer);
             fat32_file_t* entries = (fat32_file_t*) buffer;
 
             for (int i = 0; i < 16; i++) {
@@ -759,7 +759,7 @@ int fat32_create(const char* path) {
                     entries[i].cluster_high = (uint16_t)((file_cluster >> 16) & 0xFFFF);
                     entries[i].size = 0;
 
-                    bdl_write(lba + s, buffer);
+                    storage_dev->write_sector(lba + s, buffer);
                     update_fat_entry(file_cluster, 0x0FFFFFFF); // Mark EOF in FAT
 
                     return 1;
@@ -786,7 +786,7 @@ int fat32_create(const char* path) {
     uint64_t new_lba = get_lba_from_cluster(new_cluster);
     uint8_t zero_block[512] = {0};
     for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-        bdl_write(new_lba + s, zero_block);
+        storage_dev->write_sector(new_lba + s, zero_block);
     }
 
     // Place the new file entry in the first slot of the new cluster
@@ -803,7 +803,7 @@ int fat32_create(const char* path) {
 
     // Write the new entry to the start of the new cluster
     memcpy(buffer, &new_entry, sizeof(fat32_file_t));
-    bdl_write(new_lba, buffer);
+    storage_dev->write_sector(new_lba, buffer);
     update_fat_entry(file_cluster, 0x0FFFFFFF);
 
     return 1;
@@ -836,7 +836,7 @@ int fat32_mkdir(const char* path) {
         uint64_t lba = get_lba_from_cluster(current_dir_cluster);
 
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            bdl_read(lba + s, buffer);
+            storage_dev->read_sector(lba + s, buffer);
             fat32_file_t* entries = (fat32_file_t*) buffer;
 
             for (int i = 0; i < 16; i++) {
@@ -865,7 +865,7 @@ int fat32_mkdir(const char* path) {
 
     // Initialize the new sector with zeros
     for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-        bdl_write(new_lba + s, zero_block);
+        storage_dev->write_sector(new_lba + s, zero_block);
     }
 
     // Use slot 0 of the newly allocated directory cluster
@@ -897,7 +897,7 @@ int fat32_remove(const char* name) {
         uint64_t first_lba = get_lba_from_cluster(cluster);
 
         for (uint32_t s = 0; s < disk_info->sectors_per_cluster; s++) {
-            bdl_read(first_lba + s, dir_buf);
+            storage_dev->read_sector(first_lba + s, dir_buf);
             fat32_file_t* entries = (fat32_file_t*) dir_buf;
 
             for (int i = 0; i < 16; i++) {
@@ -921,7 +921,7 @@ int fat32_remove(const char* name) {
 
                     // Mark directory entry as deleted
                     entries[i].name[0] = 0xE5;
-                    bdl_write(first_lba + s, dir_buf);
+                    storage_dev->write_sector(first_lba + s, dir_buf);
 
                     return 1;
                 }
@@ -969,7 +969,7 @@ File* fat32_get(const char* name) {
         uint64_t lba = get_lba_from_cluster(current_dir_cluster);
 
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            bdl_read(lba + s, sector_buf);
+            storage_dev->read_sector(lba + s, sector_buf);
             fat32_file_t* entries = (fat32_file_t*) sector_buf;
             for (int i = 0; i < 16; i++) {
                 if (unlikely(entries[i].name[0] == 0x00)) goto search_done;
@@ -1017,11 +1017,11 @@ search_done:
             for (int s = 0; s < disk_info->sectors_per_cluster && bytes_read < f->size; s++) {
                 uint32_t remaining = f->size - bytes_read;
                 if (remaining >= 512) {
-                    bdl_read(start_lba + s, (uint8_t*)(f->data + bytes_read));
+                    storage_dev->read_sector(start_lba + s, (uint8_t*)(f->data + bytes_read));
                     bytes_read += 512;
                 } else {
                     uint8_t bounce[512];
-                    bdl_read(start_lba + s, bounce);
+                    storage_dev->read_sector(start_lba + s, bounce);
                     memcpy((uint8_t*)(f->data + bytes_read), bounce, remaining);
                     bytes_read += remaining;
                 }
@@ -1059,7 +1059,7 @@ FileNode* fat32_getall(const char* path) {
         uint64_t lba = get_lba_from_cluster(current_cluster);
 
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            bdl_read(lba + s, buffer);
+            storage_dev->read_sector(lba + s, buffer);
 
             fat32_file_t* entries = (fat32_file_t*) buffer;
 

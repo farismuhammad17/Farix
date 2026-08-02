@@ -18,21 +18,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#ifndef AHCI_H
-#define AHCI_H
+#ifndef STORAGE_H
+#define STORAGE_H
 
 #include <stdint.h>
 
-#include "cpu/pci.h"
+#include "sysmods/devices.h"
 
-extern int HBA_PxCMD_ST;
-extern int HBA_PxCMD_FRE;
-extern int HBA_PxCMD_FR;
-extern int HBA_PxCMD_CR;
+#define PCI_CLASS_CODE_STORAGE 0x01
 
-void RARE_FUNC init_ahci(pci_device_t* pci_ahci_device);
+#define PCI_ATA_SUBCLASS       0x01
+#define PCI_AHCI_SUBCLASS      0x06
 
-void ahci_read_sector(uint64_t lba, uint8_t* buffer);
-void ahci_write_sector(uint64_t lba, uint8_t* buffer);
+typedef struct {
+    uint8_t id;
+    dev_type_t type;
+
+    void (*read_sector)(uint64_t lba, uint8_t* buffer);
+    void (*write_sector)(uint64_t lba, uint8_t* buffer);
+} storage_dev_t;
+
+extern storage_dev_t* storage_dev;
 
 #endif

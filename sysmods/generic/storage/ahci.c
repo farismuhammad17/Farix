@@ -18,23 +18,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-#include <stdbool.h>
 #include <stdint.h>
-
-#include "klib/string.h"
 
 #include "hal.h"
 
-#include "cpu/irq.h"
 #include "cpu/pci.h"
 #include "cpu/timer.h"
-#include "drivers/terminal.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
 
-#include "drivers/storage/bdl.h"
+#include "sysmods/devices.h"
+#include "sysmods/interface.h"
 
-#include "drivers/storage/ahci.h"
+#include "drivers/storage.h"
 
 #define MAX_TIMEOUT_DURATION 1000000
 
@@ -230,10 +226,31 @@ static size_t drives_found = 0;
 
 static uint8_t ahci_bounce[512] __attribute__((aligned(512)));
 
-static BDLDevice bdl_ahci_device = {
-    .read  = ahci_read_sector,
-    .write = ahci_write_sector
-};
+static kernel_api_t* k_api = NULL;
+static storage_dev_t* dev  = NULL;
+static uint64_t base_addr  = 0;
+
+static pci_device_t* pci_dev = NULL;
+
+/*
+It just clears out the port specific bits, and sends and EOI through the IRQ.
+*/
+static void interrupt_handler() {
+    uint32_t is = g_hba->is;
+    if (is == 0) return;
+
+    // Clear the bits for all ports that fired
+    for (int i = 0; i < 32; i++) {
+        if (is & (1 << i)) {
+            g_hba->ports[i].is = g_hba->ports[i].is; // Clear port-specific bits
+        }
+    }
+
+    g_hba->is = is; // Clear global status
+
+    k_api->irq_send_eoi();
+}
+
 
 /*
 Stops a running port. As per the documentation:
@@ -286,7 +303,7 @@ static hba_port_t* ahci_find_free_port(size_t max_retry_attempts) {
             }
         }
 
-        timer_dev->stall(1000); // 1 ms
+        k_api->get_timer_dev()->stall(1000); // 1 ms
     }
 
     return NULL;
@@ -312,194 +329,20 @@ static int ahci_find_free_slot(hba_port_t* port) {
 }
 
 /*
-AHCI initialisation sequence is documentation in the Serial ATA AHCI: Specification,
-Rev. 1.3.1, section 2.1.11 (ABAR – AHCI Base Address), which details it step-by-step,
-though it is required to move from section-to-section to fully get through it. The
-full explanation on the source can be found in the README.md, or just refer the actual
-specification.
-*/
-void init_ahci(pci_device_t* dev) {
-    static int timeout;
-
-    // Enable PCI Bus Mastering and Memory Space
-    uint32_t pci_cmd = pci_read(dev->bus, dev->device, dev->function, 0x04);
-    pci_write(dev->bus, dev->device, dev->function, 0x04, pci_cmd | (1 << 1) | (1 << 2));
-
-    uint8_t irq_line = (uint8_t) pci_read(dev->bus, dev->device, dev->function, 0x3C);
-
-    // Map BAR5 (ABAR)
-    uint32_t  bar5 = pci_read(dev->bus, dev->device, dev->function, 0x24);
-    uintptr_t phys = bar5 & 0xFFFFFFF0;
-
-    // Check for 64-bit BAR and read upper 32 bits if present
-    if (unlikely(((bar5 >> 1) & 0x03) == 0x02)) {
-        uint64_t upper = pci_read(dev->bus, dev->device, dev->function, 0x28);
-        phys |= (upper << 32);
-    }
-
-    uint64_t* pd = vmm_get_current_directory();
-    for (int i = 0; i < AHCI_HBA_PAGES; i++) {
-        vmm_map_page(pd,
-            (void*)(phys + (i * PAGE_SIZE)), (void*)(AHCI_BASE_VIRT + (i * PAGE_SIZE)),
-            PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
-    }
-
-    g_hba = (volatile hba_mem_t*) AHCI_BASE_VIRT;
-
-    // BIOS-OS Handoff
-    if (g_hba->cap2 & 0x01) {
-        g_hba->bohc |= BOHC_OOS; // Set OS Owned Semaphore
-
-        timeout = MAX_TIMEOUT_DURATION;
-        while ((g_hba->bohc & BOHC_BOS) && --timeout) { // Wait for BIOS Owned Semaphore to clear
-            system_pause();
-        }
-
-        if (unlikely(timeout == 0)) {
-            err_print("init_ahci: BIOS Handoff timed out");
-        }
-
-        timeout = MAX_TIMEOUT_DURATION;
-        while ((g_hba->bohc & BOHC_BB) && --timeout) {
-            system_pause();
-        }
-
-        if (unlikely(timeout == 0)) {
-            err_print("init_ahci: BIOS busy bit timed out");
-        }
-    }
-
-    // Global Reset
-    g_hba->ghc |= GHC_AE;    // Ensure AE (AHCI Enable) is set
-    timer_dev->stall(1000);       // 1ms
-    g_hba->ghc |= GHC_HR;    // Set HR
-
-    timeout = MAX_TIMEOUT_DURATION;
-    while ((g_hba->ghc & GHC_HR) && --timeout) {
-        system_pause();
-    }
-
-    if (unlikely(timeout == 0)) {
-        err_print("init_ahci: HBA Reset timed out");
-    }
-
-    g_hba->ghc |= GHC_AE;    // Re-enable AHCI mode after reset
-    timer_dev->stall(1000);       // 1ms
-    g_hba->ghc |= GHC_IE;    // Enable Interrupts
-
-    if (unlikely(!(g_hba->ghc & GHC_AE))) {
-        err_print("init_ahci: GHC.AE bit failed to persist");
-    }
-
-    irq_unmask(irq_line, 46);
-
-    uint32_t ncs = HBA_CAP_NCS(g_hba->cap);
-    uint32_t pi = g_hba->pi;
-
-    for (int i = 0; i < 32; i++) {
-        if (pi & (1 << i)) {
-            hba_port_t* port = &g_hba->ports[i];
-
-            // If port is not IDLE, make it IDLE
-            if (unlikely((port->cmd & (PX_CMD_ST | PX_CMD_CR | PX_CMD_FRE | PX_CMD_FR)) != 0)) {
-                bool res = ahci_stop_port(port);
-
-                if (unlikely(!res)) {
-                    err_printf("init_ahci: Port %d failed to stop (PxCMD: 0x%x)", i, port->cmd);
-                    continue;
-                }
-            }
-
-            uintptr_t port_phys = (uintptr_t) pmm_alloc_page();
-            uintptr_t port_virt = (uintptr_t) PHYSICAL_TO_VIRTUAL(port_phys);
-
-            if (unlikely(!port_phys)) {
-                err_print("init_ahci: PMM out of memory");
-                continue;
-            }
-
-            vmm_map_page((uint64_t*) VIRTUAL_TO_PHYSICAL(kernel_directory),
-                (void*) port_phys, (void*) port_virt,
-                PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
-            memset((void*) port_virt, 0, PAGE_SIZE);
-
-            port->clb  = (uint32_t)(port_phys & 0xFFFFFFFF);
-            port->clbu = (uint32_t)(port_phys >> 32);
-
-            // Each page can only fit 16 ports, we have 32, thus 2 pages
-            uintptr_t cmd_tables_phys = (uintptr_t) pmm_alloc_pages(2);
-            uintptr_t cmd_tables_virt = (uintptr_t) PHYSICAL_TO_VIRTUAL(cmd_tables_phys);
-
-            if (unlikely(!cmd_tables_phys)) {
-                err_print("init_ahci: 2 consecutive pages not found for cmd_table");
-                continue;
-            }
-
-            // Map the 2 pages
-            for (int j = 0; j < 2; j++) {
-                vmm_map_page((uint64_t*) VIRTUAL_TO_PHYSICAL(kernel_directory),
-                    (void*)(cmd_tables_phys + (PAGE_SIZE * j)),
-                    (void*)(cmd_tables_virt + (PAGE_SIZE * j)),
-                    PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
-            }
-
-            memset((void*) cmd_tables_virt, 0, PAGE_SIZE * 2);
-
-            hba_cmd_header_t* headers = (hba_cmd_header_t*) port_virt;
-            for (int j = 0; j < 32; j++) {
-                // Each table is 256 bytes (0x100)
-                uint64_t ctba_val = cmd_tables_phys + (j * 256);
-                headers[j].ctba  = (uint32_t)(ctba_val & 0xFFFFFFFF);
-                headers[j].ctbau = (uint32_t)(ctba_val >> 32);
-            }
-
-            uint64_t fis_addr = port_phys + 1024;
-            port->fb  = (uint32_t)(fis_addr & 0xFFFFFFFF);
-            port->fbu = (uint32_t)(fis_addr >> 32);
-
-            port->cmd |= PX_CMD_FRE;
-
-            port->serr = 0xFFFFFFFF;
-
-            port->is  = port->is;
-            g_hba->is = (1 << i);
-            port->ie = 0xF; // Trigger interrupts for DHRE, PSE, DSE, and SDBE
-
-            port->cmd |= PX_CMD_ST;
-
-            timer_dev->stall(1000); // 1ms
-
-            // Check if a device is present (0x3 means present and communication established)
-            if ((port->ssts & 0x0F) == 0x03) {
-                active_drives[drives_found++] = port;
-            }
-        }
-    }
-
-    g_hba->ghc |= GHC_IE;
-
-    if (unlikely(drives_found == 0)) {
-        err_print("init_ahci: No drives found on any port");
-    }
-
-    bdl_mount(&bdl_ahci_device);
-}
-
-/*
 Follows the Serial ATA AHCI: Specification, Rev. 1.3.1, to read port. A read
 command is sent to the AHCI, and we request it to write the data at a given
 LBA into the provided buffer.
 */
-void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
+static void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
     if (unlikely(!buffer)) {
-        err_print("ahci_read_sector: Void buffer");
+        k_api->err_print("ahci_read_sector: Void buffer");
         return;
     }
 
-    hba_port_t* port = ahci_find_free_port(5);
+    hba_port_t* port = SYS_ICALL(ahci_find_free_port, 5);
 
     if (unlikely(!port)) {
-        err_print("ahci_read_sector: No free port found");
+        k_api->err_print("ahci_read_sector: No free port found");
         return;
     }
 
@@ -508,10 +351,10 @@ void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
         port->serr = port->serr;
     }
 
-    int port_slot = ahci_find_free_slot(port);
+    int port_slot = SYS_ICALL(ahci_find_free_slot, port);
 
     if (unlikely(port_slot == -1)) {
-        err_print("ahci_read_sector: No free slot found on port");
+        k_api->err_print("ahci_read_sector: No free slot found on port");
         return;
     }
 
@@ -528,7 +371,7 @@ void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
     // Reconstruct full 64-bit physical command table pointer
     uint64_t ctba_phys = ((uint64_t) header->ctbau << 32) | header->ctba;
     hba_cmd_table_t* table = (hba_cmd_table_t*) PHYSICAL_TO_VIRTUAL(ctba_phys);
-    memset(table, 0, sizeof(hba_cmd_table_t));
+    k_api->memset(table, 0, sizeof(hba_cmd_table_t));
 
     fis_reg_h2d_t* fis = (fis_reg_h2d_t*)(&table->cfis);
 
@@ -573,7 +416,7 @@ void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
         }
 
         if (unlikely(port->is & PX_IE_TFES)) {
-            err_print("ahci_read_sector: Task File Error Status detected");
+            k_api->err_print("ahci_read_sector: Task File Error Status detected");
             return;
         }
 
@@ -581,10 +424,10 @@ void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
     }
 
     if (unlikely(timeout == 0)) {
-        err_print("ahci_read_sector: Timeout waiting for CI to clear");
+        k_api->err_print("ahci_read_sector: Timeout waiting for CI to clear");
     }
 
-    memcpy(buffer, ahci_bounce, 512);
+    k_api->memcpy(buffer, ahci_bounce, 512);
 }
 
 /*
@@ -592,16 +435,16 @@ Follows the Serial ATA AHCI: Specification, Rev. 1.3.1, to write to port.
 A write command is sent to the AHCI, and we request it to write the data
 to a given LBA from the provided buffer.
 */
-void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
+static void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
     if (unlikely(!buffer)) {
-        err_print("ahci_write_sector: Void buffer");
+        k_api->err_print("ahci_write_sector: Void buffer");
         return;
     }
 
-    hba_port_t* port = ahci_find_free_port(5);
+    hba_port_t* port = SYS_ICALL(ahci_find_free_port, 5);
 
     if (unlikely(!port)) {
-        err_print("ahci_write_sector: No free port found");
+        k_api->err_print("ahci_write_sector: No free port found");
         return;
     }
 
@@ -610,15 +453,15 @@ void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
         port->serr = port->serr;
     }
 
-    int port_slot = ahci_find_free_slot(port);
+    int port_slot = SYS_ICALL(ahci_find_free_slot, port);
 
     if (unlikely(port_slot == -1)) {
-        err_print("ahci_write_sector: No free slot found on port");
+        k_api->err_print("ahci_write_sector: No free slot found on port");
         return;
     }
 
     // Since ahci_bounce is a static array, copy to its virtual location directly
-    memcpy(ahci_bounce, buffer, 512);
+    k_api->memcpy(ahci_bounce, buffer, 512);
 
     // Reconstruct full 64-bit physical command list base pointer
     uint64_t clb_phys = ((uint64_t) port->clbu << 32) | port->clb;
@@ -633,7 +476,7 @@ void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
     // Reconstruct full 64-bit physical command table pointer
     uint64_t ctba_phys = ((uint64_t) header->ctbau << 32) | header->ctba;
     hba_cmd_table_t* table = (hba_cmd_table_t*) PHYSICAL_TO_VIRTUAL(ctba_phys);
-    memset(table, 0, sizeof(hba_cmd_table_t));
+    k_api->memset(table, 0, sizeof(hba_cmd_table_t));
 
     fis_reg_h2d_t* fis = (fis_reg_h2d_t*)(&table->cfis);
 
@@ -676,7 +519,7 @@ void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
         }
 
         if (unlikely(port->is & PX_IE_TFES)) {
-            err_print("ahci_write_sector: Task File Error Status detected");
+            k_api->err_print("ahci_write_sector: Task File Error Status detected");
             return;
         }
 
@@ -684,25 +527,233 @@ void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
     }
 
     if (unlikely(timeout == 0)) {
-        err_print("ahci_write_sector: Timeout waiting for CI to clear");
+        k_api->err_print("ahci_write_sector: Timeout waiting for CI to clear");
     }
 }
 
 /*
-Defined in idt.asm, it just clears out the port specific bits, and sends and
-EOI through the IRQ.
+AHCI initialisation sequence is documentation in the Serial ATA AHCI: Specification,
+Rev. 1.3.1, section 2.1.11 (ABAR – AHCI Base Address), which details it step-by-step,
+though it is required to move from section-to-section to fully get through it. The
+full explanation on the source can be found in the README.md, or just refer the actual
+specification.
 */
-void ahci_interrupt_handler() {
-    uint32_t is = g_hba->is;
-    if (is == 0) return;
+static int init_ahci(kernel_api_t* api, uint64_t b_addr) {
+    api->printf((const char*) SYSMOD_TO_KERNEL("Hello"));
+    return 0;
 
-    // Clear the bits for all ports that fired
-    for (int i = 0; i < 32; i++) {
-        if (is & (1 << i)) {
-            g_hba->ports[i].is = g_hba->ports[i].is; // Clear port-specific bits
+    k_api = api;
+    base_addr = b_addr;
+
+    timer_dev_t* timer_dev = k_api->get_timer_dev();
+
+    // In init, it would be kernel_directory. Passing kernel directory through
+    // the kernel API would require a getter.
+    uint64_t* kernel_directory = k_api->vmm_get_current_directory();
+
+    for (int i = 0; i < PCI_MAX_DEVICES; i++) {
+        pci_device_t* dev = &k_api->pci_devices[i];
+        if (dev->class_code == PCI_CLASS_CODE_STORAGE) {
+            if (dev->subclass == PCI_AHCI_SUBCLASS && dev->progif == 0x01) {
+                pci_dev = &k_api->pci_devices[i];
+                break;
+            }
         }
     }
 
-    g_hba->is = is; // Clear global status
-    irq_send_eoi();
+    if (unlikely(!pci_dev)) {
+        k_api->err_print("init_ahci: AHCI device not found");
+        return 1;
+    }
+
+    static int timeout;
+
+    // Enable PCI Bus Mastering and Memory Space
+    uint32_t pci_cmd = k_api->pci_read(pci_dev->bus, pci_dev->device, pci_dev->function, 0x04);
+    k_api->pci_write(pci_dev->bus, pci_dev->device, pci_dev->function, 0x04, pci_cmd | (1 << 1) | (1 << 2));
+
+    uint8_t irq_line = (uint8_t) k_api->pci_read(pci_dev->bus, pci_dev->device, pci_dev->function, 0x3C);
+
+    // Map BAR5 (ABAR)
+    uint32_t  bar5 = k_api->pci_read(pci_dev->bus, pci_dev->device, pci_dev->function, 0x24);
+    uintptr_t phys = bar5 & 0xFFFFFFF0;
+
+    // Check for 64-bit BAR and read upper 32 bits if present
+    if (unlikely(((bar5 >> 1) & 0x03) == 0x02)) {
+        uint64_t upper = k_api->pci_read(pci_dev->bus, pci_dev->device, pci_dev->function, 0x28);
+        phys |= (upper << 32);
+    }
+
+    uint64_t* pd = k_api->vmm_get_current_directory();
+    for (int i = 0; i < AHCI_HBA_PAGES; i++) {
+        k_api->vmm_map_page(pd,
+            (void*)(phys + (i * PAGE_SIZE)), (void*)(AHCI_BASE_VIRT + (i * PAGE_SIZE)),
+            PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
+    }
+
+    g_hba = (volatile hba_mem_t*) AHCI_BASE_VIRT;
+
+    // BIOS-OS Handoff
+    if (g_hba->cap2 & 0x01) {
+        g_hba->bohc |= BOHC_OOS; // Set OS Owned Semaphore
+
+        timeout = MAX_TIMEOUT_DURATION;
+        while ((g_hba->bohc & BOHC_BOS) && --timeout) { // Wait for BIOS Owned Semaphore to clear
+            system_pause();
+        }
+
+        if (unlikely(timeout == 0)) {
+            k_api->err_print("init_ahci: BIOS Handoff timed out");
+            return 2;
+        }
+
+        timeout = MAX_TIMEOUT_DURATION;
+        while ((g_hba->bohc & BOHC_BB) && --timeout) {
+            system_pause();
+        }
+
+        if (unlikely(timeout == 0)) {
+            k_api->err_print("init_ahci: BIOS busy bit timed out");
+            return 3;
+        }
+    }
+
+    // Global Reset
+    g_hba->ghc |= GHC_AE;            // Ensure AE (AHCI Enable) is set
+    timer_dev->stall(1000);   // 1ms
+    g_hba->ghc |= GHC_HR;            // Set HR
+
+    timeout = MAX_TIMEOUT_DURATION;
+    while ((g_hba->ghc & GHC_HR) && --timeout) {
+        system_pause();
+    }
+
+    if (unlikely(timeout == 0)) {
+        k_api->err_print("init_ahci: HBA Reset timed out");
+        return 4;
+    }
+
+    g_hba->ghc |= GHC_AE;            // Re-enable AHCI mode after reset
+    timer_dev->stall(1000);   // 1ms
+    g_hba->ghc |= GHC_IE;            // Enable Interrupts
+
+    if (unlikely(!(g_hba->ghc & GHC_AE))) {
+        k_api->err_print("init_ahci: GHC.AE bit failed to persist");
+        return 5;
+    }
+
+    k_api->irq_unmask(irq_line, 46);
+
+    uint32_t ncs = HBA_CAP_NCS(g_hba->cap);
+    uint32_t pi = g_hba->pi;
+
+    for (int i = 0; i < 32; i++) {
+        if (pi & (1 << i)) {
+            hba_port_t* port = &g_hba->ports[i];
+
+            // If port is not IDLE, make it IDLE
+            if (unlikely((port->cmd & (PX_CMD_ST | PX_CMD_CR | PX_CMD_FRE | PX_CMD_FR)) != 0)) {
+                bool res = SYS_ICALL(ahci_stop_port, port);
+
+                if (unlikely(!res)) {
+                    k_api->err_printf("init_ahci: Port %d failed to stop (PxCMD: 0x%x)", i, port->cmd);
+                    continue;
+                }
+            }
+
+            uintptr_t port_phys = (uintptr_t) k_api->pmm_alloc_page();
+            uintptr_t port_virt = (uintptr_t) PHYSICAL_TO_VIRTUAL(port_phys);
+
+            if (unlikely(!port_phys)) {
+                k_api->err_print("init_ahci: PMM out of memory");
+                continue;
+            }
+
+            k_api->vmm_map_page((uint64_t*) VIRTUAL_TO_PHYSICAL(kernel_directory),
+                (void*) port_phys, (void*) port_virt,
+                PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
+            k_api->memset((void*) port_virt, 0, PAGE_SIZE);
+
+            port->clb  = (uint32_t)(port_phys & 0xFFFFFFFF);
+            port->clbu = (uint32_t)(port_phys >> 32);
+
+            // Each page can only fit 16 ports, we have 32, thus 2 pages
+            uintptr_t cmd_tables_phys = (uintptr_t) k_api->pmm_alloc_pages(2);
+            uintptr_t cmd_tables_virt = (uintptr_t) PHYSICAL_TO_VIRTUAL(cmd_tables_phys);
+
+            if (unlikely(!cmd_tables_phys)) {
+                k_api->err_print("init_ahci: 2 consecutive pages not found for cmd_table");
+                continue;
+            }
+
+            // Map the 2 pages
+            for (int j = 0; j < 2; j++) {
+                k_api->vmm_map_page((uint64_t*) VIRTUAL_TO_PHYSICAL(kernel_directory),
+                    (void*)(cmd_tables_phys + (PAGE_SIZE * j)),
+                    (void*)(cmd_tables_virt + (PAGE_SIZE * j)),
+                    PAGE_PRESENT | PAGE_RW | PAGE_PCD | PAGE_PWT);
+            }
+
+            k_api->memset((void*) cmd_tables_virt, 0, PAGE_SIZE * 2);
+
+            hba_cmd_header_t* headers = (hba_cmd_header_t*) port_virt;
+            for (int j = 0; j < 32; j++) {
+                // Each table is 256 bytes (0x100)
+                uint64_t ctba_val = cmd_tables_phys + (j * 256);
+                headers[j].ctba  = (uint32_t)(ctba_val & 0xFFFFFFFF);
+                headers[j].ctbau = (uint32_t)(ctba_val >> 32);
+            }
+
+            uint64_t fis_addr = port_phys + 1024;
+            port->fb  = (uint32_t)(fis_addr & 0xFFFFFFFF);
+            port->fbu = (uint32_t)(fis_addr >> 32);
+
+            port->cmd |= PX_CMD_FRE;
+
+            port->serr = 0xFFFFFFFF;
+
+            port->is  = port->is;
+            g_hba->is = (1 << i);
+            port->ie = 0xF; // Trigger interrupts for DHRE, PSE, DSE, and SDBE
+
+            port->cmd |= PX_CMD_ST;
+
+            timer_dev->stall(1000); // 1ms
+
+            // Check if a device is present (0x3 means present and communication established)
+            if ((port->ssts & 0x0F) == 0x03) {
+                active_drives[drives_found++] = port;
+            }
+        }
+    }
+
+    g_hba->ghc |= GHC_IE;
+
+    if (unlikely(drives_found == 0)) {
+        k_api->err_print("init_ahci: No drives found on any port");
+        return 6;
+    }
+
+    dev = k_api->kmalloc(sizeof(storage_dev_t));
+    dev->id = AHCI_DEV_ID;
+    dev->type = DEV_STORAGE;
+
+    dev->read_sector  = (void*) SYSMOD_TO_KERNEL(ahci_read_sector);
+    dev->write_sector = (void*) SYSMOD_TO_KERNEL(ahci_write_sector);
+
+    k_api->register_device(DEV_STORAGE, (void*) dev);
+
+    k_api->register_interrupt(46, (void*) SYSMOD_TO_KERNEL(interrupt_handler));
+
+    return 0;
 }
+
+static int exit_ahci() {
+    return 0;
+}
+
+SYSMOD_HEADER sysmod_t module_entry = {
+    .name = "AHCI",
+    .init = init_ahci,
+    .exit = exit_ahci
+};

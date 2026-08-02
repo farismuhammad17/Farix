@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
+#include "initboot.h"
+
 #include "multiboot.h"
 
 #include "cpu/multicore.h"
@@ -67,7 +69,7 @@ static inline bool pmm_test_bit(uint64_t page_number) {
 Initialise PMM and set the bitmap on the pages for the multiboot, kernel (so that
 we don't overwrite the kernel during runtime), and the bitmask itself.
 */
-void init_pmm() {
+void INITBOOT_TXT_SECTION init_pmm() {
     if (unlikely(!(mbi->flags & (1 << 6)))) return;
 
     // Start by marking everything as used (1)
@@ -110,6 +112,17 @@ void init_pmm() {
     uint64_t mbi_start_p = VIRTUAL_TO_PHYSICAL(mbi) / PAGE_SIZE;
     uint64_t mbi_end_p   = (VIRTUAL_TO_PHYSICAL(mbi) + sizeof(multiboot_info) + PAGE_SIZE - 1) / PAGE_SIZE;
     for (uint64_t i = mbi_start_p; i <= mbi_end_p; i++) pmm_set_bit(i);
+
+    // Protect Multiboot Modules
+    multiboot_mod_list_t* mods = (multiboot_mod_list_t*) PHYSICAL_TO_VIRTUAL(mbi->mods_addr);
+    for (uint32_t j = 0; j < mbi->mods_count; j++) {
+        uint64_t mod_start_p = mods[j].mod_start / PAGE_SIZE;
+        uint64_t mod_end_p   = (mods[j].mod_end + PAGE_SIZE - 1) / PAGE_SIZE;
+
+        for (uint64_t i = mod_start_p; i < mod_end_p; i++) {
+            pmm_set_bit(i);
+        }
+    }
 }
 
 /* Request a 4 KB page from the PMM using a first-fit algorithm. */

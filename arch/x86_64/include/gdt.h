@@ -61,9 +61,8 @@ typedef struct {
 extern GDTEntry   gdt[GDT_TOTAL_ENTRIES];
 extern GDTPointer gdt_ptr;
 
-void RARE_FUNC init_gdt();
+void init_gdt();
 
-void RARE_FUNC gdt_set_entry(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran);
-void RARE_FUNC gdt_set_tss_entry(int num, uint64_t base, uint32_t limit, uint8_t access, uint8_t gran);
+void gdt_set_tss_entry(int num, uint64_t base, uint32_t limit, uint8_t access, uint8_t gran);
 
 #endif

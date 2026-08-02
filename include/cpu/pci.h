@@ -24,9 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
-#define PCI_CLASS_CODE_STORAGE 0x01
-#define PCI_ATA_SUBCLASS       0x01
-#define PCI_AHCI_SUBCLASS      0x06
+#define PCI_MAX_DEVICES 32
 
 typedef struct {
     uint16_t vendor_id;
@@ -39,8 +37,7 @@ typedef struct {
     uint8_t  progif;
 } pci_device_t;
 
-extern pci_device_t pci_devices[32];
-extern size_t pci_device_count;
+extern pci_device_t pci_devices[PCI_MAX_DEVICES];
 
 void RARE_FUNC init_pci();
 

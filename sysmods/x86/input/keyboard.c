@@ -159,7 +159,7 @@ static int init_keyboard(kernel_api_t* api, uint64_t b_addr) {
     }
 
     dev = k_api->kmalloc(sizeof(input_dev_t));
-    dev->id = KEYBOARD_PS2_ID;
+    dev->id = KEYBOARD_PS2_DEV_ID;
     dev->type = DEV_INPUT;
 
     dev->on_event = NULL;
@@ -185,7 +185,7 @@ static int exit_keyboard() {
     return 0;
 }
 
-SYSMOD_HEADER sysmod_t test_module_entry = {
+SYSMOD_HEADER sysmod_t module_entry = {
     .name = "KEYBOARD/PS2",
     .init = init_keyboard,
     .exit = exit_keyboard

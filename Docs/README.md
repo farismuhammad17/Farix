@@ -1,5 +1,5 @@
 > [!NOTE]
-> Documentation is currently incomplete, and is actively Work-In-Progress.
+> Documentation is currently incomplete, and is actively Work-In-Progress. FXTools is soon to have a function to also help navigate these docs files more cleanly.
 
 # Documentation Guide
 

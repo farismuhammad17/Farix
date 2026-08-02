@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include "initboot.h"
+
 #include "gdt.h"
 #include "multiboot.h"
 #include "pic.h"
@@ -33,16 +35,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "kernel.h"
 
-multiboot_info* mbi = NULL;
+multiboot_info* INITBOOT_DAT_SECTION mbi = NULL;
 
 /* Defined in asm/boot/crti.asm */
 void _init();
+
+static void init_initboot_blob() {
+    if (unlikely(!(mbi->flags & (1 << 3)))) {
+        err_print("init_initboot_blob: No modules flags set");
+        return;
+    }
+
+    if (unlikely(mbi->mods_count == 0)) {
+        err_print("init_initboot_blob: No modules found in mbi->mods_count");
+        return;
+    }
+
+    multiboot_mod_list_t* mods = (multiboot_mod_list_t*) PHYSICAL_TO_VIRTUAL(mbi->mods_addr);
+    initboot_blob = (void*) PHYSICAL_TO_VIRTUAL(mods[0].mod_start);
+}
 
 /*
 x86 specific initialisations, called right between early_kmain
 and kmain, both of which are architecture independant.
 */
-void arch_kmain(uint64_t magic, uint64_t mbi_phys) {
+void INITBOOT_TXT_SECTION arch_kmain(uint64_t magic, uint64_t mbi_phys) {
     early_kmain();
 
     if (unlikely((uint32_t) magic != MULTIBOOT_BOOTLOADER_MAGIC)) {
@@ -56,8 +73,9 @@ void arch_kmain(uint64_t magic, uint64_t mbi_phys) {
     init_pci();
 
     init_pmm();
-
     init_vmm();
+
+    init_initboot_blob();
 
     init_gdt();
 

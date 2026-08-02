@@ -43,6 +43,6 @@ typedef struct TSSEntry {
 
 extern TSSEntry tss_entry;
 
-void RARE_FUNC init_tss(uint32_t idx, uint32_t kss, uint64_t krsp);
+void init_tss(uint32_t idx, uint32_t kss, uint64_t krsp);
 
 #endif

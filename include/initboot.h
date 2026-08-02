@@ -26,6 +26,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define INITBOOT_TXT_SECTION __attribute__((section(".initboot.text")))
 #define INITBOOT_DAT_SECTION __attribute__((section(".initboot.data")))
 
+typedef struct {
+    char name[32];
+    uint32_t offset;
+    uint32_t size;
+} __attribute__((packed)) initboot_entry_t;
+
+extern void* initboot_blob;
+
 void initboot();
 void kill_bootstrap();
 

@@ -21,18 +21,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
+#include "initboot.h"
+
 #include "hal.h"
 
 #include "drivers/terminal.h"
 
 #include "cpu/pci.h"
 
-pci_device_t pci_devices[32];
-size_t pci_device_count;
+pci_device_t pci_devices[PCI_MAX_DEVICES];
 
 /* Initialise the PCI by iterating through and storing all found devices into `pci_devices`. */
-void init_pci() {
-    pci_device_count = 0;
+void INITBOOT_TXT_SECTION init_pci() {
+    uint8_t pci_device_count = 0;
 
     for (int bus = 0; bus < 256; bus++) {
         for (int dev = 0; dev < 32; dev++) {
@@ -66,7 +67,7 @@ void init_pci() {
         }
     }
 
-    if (pci_device_count == 0) err_print("init_pci: No devices found on bus");
+    if (unlikely(pci_device_count == 0)) err_print("init_pci: No devices found on bus");
 }
 
 /* Read using PCI the given bus, device, function, and register */

@@ -22,9 +22,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // it makes the code more readable, hence the functions are nicer.
 #include "hal.h"
 
+#include "initboot.h"
+
 #include "pic.h"
 
-void init_pic() {
+void INITBOOT_TXT_SECTION init_pic() {
     // ICW1
     outb(PIC1_COMMAND, 0x11);
     outb(PIC2_COMMAND, 0x11);

@@ -58,6 +58,13 @@ typedef struct multiboot_info {
     uint16_t vbe_interface_len;
 } __attribute__((packed)) multiboot_info;
 
+typedef struct multiboot_mod_list {
+    uint32_t mod_start;
+    uint32_t mod_end;
+    uint32_t string;
+    uint32_t reserved;
+} __attribute__((packed)) multiboot_mod_list_t;
+
 extern multiboot_info* mbi;
 
 #endif

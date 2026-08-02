@@ -58,6 +58,8 @@ def libc_x86_64():
     print("\x1b[1;32mMusl x86_64 compilation completed!\x1b[0m")
 
 def run():
+    # TODO Implement downloading toolchains
+    # Refer Dockerfile for all tools
     if not os.path.exists("musl"):
         print("\x1b[33mInstalling musl...\x1b[0m")
         proc_run("git clone --depth 1 https://github.com/hadean-mirrors/musl.git", capture=False)

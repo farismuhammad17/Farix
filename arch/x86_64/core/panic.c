@@ -120,20 +120,6 @@ static inline void dump_multitasking_info() {
     panic_err_printf("Page:  %p (PRIVILEGE:%u)\n", (void*) current_task->page_directory, current_task->privilege);
 }
 
-/* Dumps call log upon crash */
-static inline void dump_call_log(int funcs_per_line) {
-    if (likely(!__DEBUG__)) return;
-
-    panic_err_printf("--- Call log ---\n");
-    for (size_t i = 0; i < MAX_LOG_LEN; i++) {
-        panic_err_printf("%d:%s ", i, call_log[i]);
-        if ((i + 1) % funcs_per_line == 0) {
-            panic_err_printf("\n");
-        }
-    }
-    panic_err_printf("(%s at %d)\n", last_call_finished ? "Finished" : "Unfinished", log_index - 1);
-}
-
 // TODO: use t_printf instead, but t_print doesn't support colors yet
 
 /* Called upon exception caught by IDT */
@@ -148,10 +134,6 @@ void exception_handler(syscalls_registers_x86_64_t* regs) {
         panic_err_printf("Exception: %d (%s)\n", regs->int_no, exception_messages[regs->int_no]);
     } else {
         panic_err_printf("Exception: %d\n", regs->int_no);
-    }
-
-    if (unlikely(__DEBUG__)) {
-        panic_err_printf("Logged number: %d | ", logged_num);
     }
 
     panic_err_printf("Error Code: %llx\n", regs->err_code);
@@ -178,7 +160,6 @@ void exception_handler(syscalls_registers_x86_64_t* regs) {
         }
     }
 
-    dump_call_log(3);
     dump_register_info(regs);
     dump_multitasking_info();
 

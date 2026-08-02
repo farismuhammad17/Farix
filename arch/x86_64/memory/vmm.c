@@ -21,19 +21,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <stdint.h>
 
+#include "initboot.h"
+
 #include "klib/string.h"
 
 #include "cpu/multicore.h"
 #include "memory/pmm.h"
 
 #include "memory/vmm.h"
-
-const uint64_t PAGE_PRESENT = 0x1;  // 10e0 in binary - If page is in RAM
-const uint64_t PAGE_RW      = 0x2;  // 10e1 in binary - 0 = Read-only,   1 = Read/Write
-const uint64_t PAGE_USER    = 0x4;  // 10e2 in binary - 0 = Kernel only, 1 = Everyone
-const uint64_t PAGE_PWT     = 0x8;  // 10e3 in binary - Writes go to cache and memory immediately
-const uint64_t PAGE_PCD     = 0x10; // 10e4 in binary - Completely disables CPU caching for that page
-const uint64_t PAGE_CACHE   = 0x0;  // Not present in x86, does nothing, but required stub
 
 #define PAGING_BIT  0x80000000
 #define PAGE_WP_BIT 0x00010000
@@ -83,7 +78,7 @@ Note that the actual directories are set to the virtual addresses, because boot.
 
 TODO: Consider what resursive mapping is, left out kernel PDPT slot 511 in case we'd need it.
 */
-void init_vmm() {
+void INITBOOT_TXT_SECTION init_vmm() {
     // Allocate PML4 Root
     uint64_t phys_kernel_directory = (uint64_t) pmm_alloc_page();
     kernel_directory = (uint64_t*) PHYSICAL_TO_VIRTUAL(phys_kernel_directory);

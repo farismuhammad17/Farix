@@ -31,7 +31,6 @@ extern interrupt_dispatcher
 extern mouse_handler
 extern syscall_handler
 extern exception_handler
-extern ahci_interrupt_handler
 extern apic_spurious_handler
 
 ; Helper macro to save all 64-bit general purpose registers
@@ -108,7 +107,8 @@ syscall_handler_stub:
 
 ahci_interrupt_handler_stub:
     PUSHALL
-    call ahci_interrupt_handler
+    mov rdi, 46
+    call interrupt_dispatcher
     POPALL
     iretq
 

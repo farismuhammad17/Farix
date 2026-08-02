@@ -20,4 +20,5 @@ default=0
 timeout=0
 
 title Farix
-kernel /boot/farix_elf32.bin
+kernel /boot/kernel.bin
+module /boot/initboot.bin

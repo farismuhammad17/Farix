@@ -21,10 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef DEVICES_H
 #define DEVICES_H
 
+#define INITBOOT_DEV_ID      0
 #define UART_DEV_ID          1
 #define PIT_DEV_ID           2
-#define KEYBOARD_PS2_ID      3
-#define MOUSE_PS2_ID         4
+#define KEYBOARD_PS2_DEV_ID  3
+#define ATA_DEV_ID           4
+#define AHCI_DEV_ID          5
 
 // DEVELOPER NOTE:
 // Every device struct MUST have a next pointer
@@ -35,7 +37,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 typedef enum {
     DEV_OUTPUT,
     DEV_INPUT,
-    DEV_TIMER
+    DEV_TIMER,
+    DEV_STORAGE,
 } dev_type_t;
 
 void register_device(dev_type_t type, void* device);

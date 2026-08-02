@@ -20,13 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include "initboot.h"
+
 #include "hal.h"
 
 #include "cpu/timer.h"
 #include "memory/heap.h"
 #include "sysmods/devices.h"
-
-#include "initboot.h"
 
 #define PIT_FREQ_HZ  1193182
 #define FREQUENCY_HZ 100
@@ -68,7 +68,7 @@ void INITBOOT_TXT_SECTION timer_stall(uint64_t microseconds) {
 }
 
 static timer_dev_t INITBOOT_DAT_SECTION bootstrap_timer_dev = {
-    .id = PIT_DEV_ID,
+    .id = INITBOOT_DEV_ID,
     .get_timer_uptime_microseconds = get_timer_uptime_microseconds,
     .stall = timer_stall
 };

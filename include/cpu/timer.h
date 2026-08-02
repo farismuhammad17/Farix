@@ -35,4 +35,6 @@ typedef struct {
 
 extern timer_dev_t* timer_dev;
 
+timer_dev_t* get_timer_dev();
+
 #endif

@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include "initboot.h"
+
 #include "tss.h"
 
 #include "memory/vmm.h"
@@ -31,8 +33,20 @@ GDTPointer gdt_ptr;
 
 void gdt_flush(GDTPointer* ptr);
 
+static void INITBOOT_TXT_SECTION gdt_set_entry(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran) {
+    gdt[num].base_low    = (base & 0xFFFF);
+    gdt[num].base_middle = (base >> 16) & 0xFF;
+    gdt[num].base_high   = (base >> 24) & 0xFF;
+
+    gdt[num].limit_low   = (limit & 0xFFFF);
+    gdt[num].granularity = (limit >> 16) & 0x0F;
+
+    gdt[num].granularity |= (gran & 0xF0);
+    gdt[num].access       = access;
+}
+
 /* Initialises the 64-bit GDT */
-void init_gdt() {
+void INITBOOT_TXT_SECTION init_gdt() {
     gdt_ptr.limit = (sizeof(GDTEntry) * GDT_TOTAL_ENTRIES) - 1;
     gdt_ptr.base  = (uint64_t) &gdt;
 
@@ -66,21 +80,8 @@ void init_gdt() {
     gdt_flush(&gdt_ptr);
 }
 
-/* Set standard 8-byte GDT entry (For Code and Data segments) */
-void gdt_set_entry(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran) {
-    gdt[num].base_low    = (base & 0xFFFF);
-    gdt[num].base_middle = (base >> 16) & 0xFF;
-    gdt[num].base_high   = (base >> 24) & 0xFF;
-
-    gdt[num].limit_low   = (limit & 0xFFFF);
-    gdt[num].granularity = (limit >> 16) & 0x0F;
-
-    gdt[num].granularity |= (gran & 0xF0);
-    gdt[num].access       = access;
-}
-
 /* Set extended 16-byte GDT entry (Consumes 2 sequential slots for 64-bit System TSS tracking) */
-void gdt_set_tss_entry(int num, uint64_t base, uint32_t limit, uint8_t access, uint8_t gran) {
+void INITBOOT_TXT_SECTION gdt_set_tss_entry(int num, uint64_t base, uint32_t limit, uint8_t access, uint8_t gran) {
     // Fill first standard 8-byte GDT slot
     gdt_set_entry(num, (uint32_t) base, limit, access, gran);
 

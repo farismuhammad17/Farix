@@ -114,7 +114,7 @@ static int exit_pit() {
     return 0;
 }
 
-SYSMOD_HEADER sysmod_t test_module_entry = {
+SYSMOD_HEADER sysmod_t module_entry = {
     .name = "PIT",
     .init = init_pit,
     .exit = exit_pit

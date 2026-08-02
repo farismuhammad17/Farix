@@ -28,6 +28,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define PIC2_COMMAND	PIC2
 #define PIC2_DATA	(PIC2+1)
 
-void RARE_FUNC init_pic();
+void init_pic();
 
 #endif

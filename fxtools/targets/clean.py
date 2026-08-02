@@ -25,8 +25,8 @@ from fxtools.core import printer
 
 JUNK = (
     "build",
-    "bootloader/x86/boot/farix.bin",
-    "bootloader/x86/boot/farix_elf32.bin",
+    "bootloader/x86/boot/kernel.bin",
+    "bootloader/x86/boot/initboot.bin",
     "farix.iso",
     "disk.img",
 )

@@ -108,7 +108,7 @@ static int exit_uart() {
     return 0;
 }
 
-SYSMOD_HEADER sysmod_t test_module_entry = {
+SYSMOD_HEADER sysmod_t module_entry = {
     .name = "UART",
     .init = init_uart,
     .exit = exit_uart

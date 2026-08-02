@@ -21,41 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #ifndef KERNEL_H
 #define KERNEL_H
 
-#include <stdbool.h>
-
-#define __DEBUG__ 0
-
-#ifdef __DEBUG__
-    #define MAX_LOG_LEN 30
-
-    // Just a number you can set for debugging purposes
-    extern int logged_num;
-
-    extern const char* call_log[MAX_LOG_LEN];
-    extern int log_index;
-    extern bool last_call_finished;
-
-    static inline void start_call_log(const char* func_name) {
-        call_log[log_index] = func_name;
-        log_index = (log_index + 1) % MAX_LOG_LEN;
-        last_call_finished = false;
-    }
-
-    static inline void end_call_log(void* res) {
-        (void) res;
-        last_call_finished = true;
-    }
-
-    #define LOG_CALL() \
-        start_call_log(__func__); \
-        int _sentinel __attribute__((cleanup(end_call_log))) = 0
-
-    #define LOG_NUM(n) (logged_num = (n))
-#else
-    #define LOG_CALL()
-    #define LOG_NUM()
-#endif
-
 // Reorders the machine code to place these accordingly
 #define likely(x)   __builtin_expect(!!(x), 1)  // x is more likely to be true than false
 #define unlikely(x) __builtin_expect(!!(x), 0)  // x is more likely to be false than true
