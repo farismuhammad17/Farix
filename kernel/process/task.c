@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "hal.h"
 
+#include "cpu/timer.h"
 #include "memory/heap.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
@@ -88,6 +89,8 @@ void init_multitasking() {
     current_task_list->next      = NULL;
 
     first_task_list = current_task_list;
+
+    timer_dev->on_tick = schedule;
 }
 
 /* Create new task to execute the `entry_point` with given name and privilege */

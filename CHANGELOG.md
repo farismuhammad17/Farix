@@ -2,6 +2,13 @@
 
 ## Storage Driver System Module
 
+- IRQ
+  - Added `irq_mask`
+- Panic
+  - Dumps sysmod information using RIP
+- Sysmods
+  - Renamed `MAX_LOADED_MODULES` to `MAX_SYSMODS`
+  - Perfected AHCI
 - Initboot
   - Implemented raw binary passed to kernel via GRUB multiboot 1
 - Hardware Abstraction Layer (HAL)
@@ -12,7 +19,7 @@
 - FXTools
   - `make` compiles kernel binary into `kernel.bin` and uses functions to organise
 - TODO:
-  - AHCI and ATA are sysmods, but are faulty, and require testing
+  - ATA requires testing
   - Move timer into initboot blob
   - PMM to free multiboot modules once finished
 

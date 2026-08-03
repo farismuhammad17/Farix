@@ -29,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/terminal.h"
 #include "memory/vmm.h"
 #include "process/task.h"
+#include "sysmods/loader.h"
 
 static const char* exception_messages[] = {
     "Division By Zero",             // 0
@@ -120,6 +121,31 @@ static inline void dump_multitasking_info() {
     panic_err_printf("Page:  %p (PRIVILEGE:%u)\n", (void*) current_task->page_directory, current_task->privilege);
 }
 
+/* If the error was from a sysmod, find which one */
+static inline void dump_faulting_sysmod(uint64_t rip) {
+    loaded_sysmod_t* faulting_sysmod = NULL;
+
+    for (int i = 0; i < MAX_SYSMODS; i++) {
+        if (sysmods_registry[i].is_active &&
+
+            // Check if the faulting address is coming from inside the sysmod
+            rip >= sysmods_registry[i].base_address &&
+            rip < (sysmods_registry[i].base_address + sysmods_registry[i].size))
+
+        {
+            faulting_sysmod = &sysmods_registry[i];
+        }
+    }
+
+    if (!faulting_sysmod) return;
+
+    panic_err_printf("--- System Module ---\n");
+    panic_err_printf("Name:    %s\n", faulting_sysmod->interface->name);
+    panic_err_printf("Address: %x -> %x\n",
+        faulting_sysmod->base_address,
+        faulting_sysmod->base_address + faulting_sysmod->size);
+}
+
 // TODO: use t_printf instead, but t_print doesn't support colors yet
 
 /* Called upon exception caught by IDT */
@@ -161,6 +187,7 @@ void exception_handler(syscalls_registers_x86_64_t* regs) {
     }
 
     dump_register_info(regs);
+    dump_faulting_sysmod(regs->rip);
     dump_multitasking_info();
 
     while (1) system_halt();

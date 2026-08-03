@@ -40,8 +40,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "sysmods/devices.h"
 #include "sysmods/loader.h"
 
-#include "drivers/storage.h" // TODO REM
-
 #include "initboot.h"
 
 #include "kernel.h"
@@ -116,18 +114,9 @@ void kmain() {
 
     initboot();
 
-    // AHCI driver doesn't seem to be right, the binary is broken, it seems.
-    // the printf inside the init_ahci outputs garbage. No clue why, currently
-    // in the process of fixing that.
-    while(1) system_halt();
-
     system_int_on();
 
     init_ramdisk();
-
-    while(1) system_halt();
-
-    // Crashes here, since storage_dev is not defined, i.e. still NULL
     init_fat32();
 
     vfs_mount(&fat32_vfs);

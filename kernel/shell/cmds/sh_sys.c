@@ -65,7 +65,7 @@ void cmd_reboot(UNUSED_ARG const char* args) {
 
 /* List all opened system modules */
 void cmd_drivers(UNUSED_ARG const char* args) {
-    for (size_t i = 0; i < MAX_LOADED_MODULES; i++) {
+    for (size_t i = 0; i < MAX_SYSMODS; i++) {
         loaded_sysmod_t* reg = &sysmods_registry[i];
 
         // Can't terminate at first NULL since registry is not

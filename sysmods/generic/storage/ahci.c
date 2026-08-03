@@ -228,7 +228,7 @@ static uint8_t ahci_bounce[512] __attribute__((aligned(512)));
 
 static kernel_api_t* k_api = NULL;
 static storage_dev_t* dev  = NULL;
-static uint64_t base_addr  = 0;
+static uint64_t base_addr;
 
 static pci_device_t* pci_dev = NULL;
 
@@ -394,7 +394,7 @@ static void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
     fis->counth = 0;
 
     // Convert the virtual bounce buffer pointer back to physical space and split it
-    uint64_t bounce_phys = (uint64_t) VIRTUAL_TO_PHYSICAL(ahci_bounce);
+    uint64_t bounce_phys = (uint64_t) VIRTUAL_TO_PHYSICAL(SYSMOD_TO_KERNEL(ahci_bounce));
     table->prdt_entry[0].dba  = (uint32_t)(bounce_phys & 0xFFFFFFFF);
     table->prdt_entry[0].dbau = (uint32_t)(bounce_phys >> 32);
     table->prdt_entry[0].dbc  = 511;                    // 512 bytes - 1
@@ -427,7 +427,7 @@ static void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
         k_api->err_print("ahci_read_sector: Timeout waiting for CI to clear");
     }
 
-    k_api->memcpy(buffer, ahci_bounce, 512);
+    k_api->memcpy(buffer, (const void*) SYSMOD_TO_KERNEL(ahci_bounce), 512);
 }
 
 /*
@@ -461,7 +461,7 @@ static void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
     }
 
     // Since ahci_bounce is a static array, copy to its virtual location directly
-    k_api->memcpy(ahci_bounce, buffer, 512);
+    k_api->memcpy((void*) SYSMOD_TO_KERNEL(ahci_bounce), buffer, 512);
 
     // Reconstruct full 64-bit physical command list base pointer
     uint64_t clb_phys = ((uint64_t) port->clbu << 32) | port->clb;
@@ -497,7 +497,7 @@ static void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
     fis->counth = 0;
 
     // Convert the virtual bounce buffer pointer back to physical space and split it
-    uint64_t bounce_phys = (uint64_t) VIRTUAL_TO_PHYSICAL(ahci_bounce);
+    uint64_t bounce_phys = (uint64_t) VIRTUAL_TO_PHYSICAL(SYSMOD_TO_KERNEL(ahci_bounce));
     table->prdt_entry[0].dba  = (uint32_t)(bounce_phys & 0xFFFFFFFF);
     table->prdt_entry[0].dbau = (uint32_t)(bounce_phys >> 32);
     table->prdt_entry[0].dbc  = 511;                    // 512 bytes - 1
@@ -539,9 +539,6 @@ full explanation on the source can be found in the README.md, or just refer the 
 specification.
 */
 static int init_ahci(kernel_api_t* api, uint64_t b_addr) {
-    api->printf((const char*) SYSMOD_TO_KERNEL("Hello"));
-    return 0;
-
     k_api = api;
     base_addr = b_addr;
 
@@ -619,9 +616,9 @@ static int init_ahci(kernel_api_t* api, uint64_t b_addr) {
     }
 
     // Global Reset
-    g_hba->ghc |= GHC_AE;            // Ensure AE (AHCI Enable) is set
+    g_hba->ghc |= GHC_AE;     // Ensure AE (AHCI Enable) is set
     timer_dev->stall(1000);   // 1ms
-    g_hba->ghc |= GHC_HR;            // Set HR
+    g_hba->ghc |= GHC_HR;     // Set HR
 
     timeout = MAX_TIMEOUT_DURATION;
     while ((g_hba->ghc & GHC_HR) && --timeout) {
@@ -749,6 +746,69 @@ static int init_ahci(kernel_api_t* api, uint64_t b_addr) {
 }
 
 static int exit_ahci() {
+    timer_dev_t* timer_dev = k_api->get_timer_dev();
+
+    // Unmask/unregister interrupts
+    uint8_t irq_line = (uint8_t) k_api->pci_read(pci_dev->bus, pci_dev->device, pci_dev->function, 0x3C);
+    k_api->irq_mask(irq_line);
+
+    // Disable HBA-level interrupts
+    g_hba->ghc &= ~GHC_IE;
+
+    // Stop all active ports
+    uint32_t pi = g_hba->pi;
+    for (int i = 0; i < 32; i++) {
+        if (pi & (1 << i)) {
+            hba_port_t* port = &g_hba->ports[i];
+
+            // Disable port-level interrupts
+            port->ie = 0;
+
+            // Clear FIS receive and Command execution
+            port->cmd &= ~(PX_CMD_ST | PX_CMD_FRE);
+
+            // Wait for CR (Command Running) and FR (FIS Receive Running) to clear
+            int timeout = MAX_TIMEOUT_DURATION;
+            while ((port->cmd & (PX_CMD_CR | PX_CMD_FR)) && --timeout) {
+                system_pause();
+            }
+
+            if (timeout == 0) {
+                k_api->err_printf("exit_ahci: Port %d failed to stop cleanly", i);
+            }
+
+            // Clear any pending interrupt status flags
+            port->is = 0xFFFFFFFF;
+        }
+    }
+
+    // Clear global interrupt status
+    g_hba->is = 0xFFFFFFFF;
+
+    // Perform Global HBA Reset (optional but recommended during driver unload)
+    g_hba->ghc |= GHC_HR;
+    int timeout = MAX_TIMEOUT_DURATION;
+    while ((g_hba->ghc & GHC_HR) && --timeout) {
+        system_pause();
+    }
+
+    // Clear OS Owned Semaphore (OOS)
+    if (g_hba->cap2 & 0x01) {
+        g_hba->bohc &= ~BOHC_OOS;
+    }
+
+    // Disable AHCI mode (clear AE)
+    g_hba->ghc &= ~GHC_AE;
+
+    // Disable PCI Bus Mastering and Memory Space in Command Register
+    uint32_t pci_cmd = k_api->pci_read(pci_dev->bus, pci_dev->device, pci_dev->function, 0x04);
+    k_api->pci_write(pci_dev->bus, pci_dev->device, pci_dev->function, 0x04, pci_cmd & ~((1 << 1) | (1 << 2)));
+
+    k_api->unregister_interrupt(46);
+    k_api->unregister_device(DEV_STORAGE, (void*) dev);
+
+    k_api->kfree(dev);
+
     return 0;
 }
 

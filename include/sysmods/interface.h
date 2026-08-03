@@ -76,6 +76,7 @@ typedef struct {
     void (*register_interrupt)(uint8_t, void*);
     void (*unregister_interrupt)(uint8_t);
     void (*irq_send_eoi)();
+    void (*irq_mask)(uint8_t pin);
     void (*irq_unmask)(uint8_t pin, uint8_t vector);
 
     // Tasks

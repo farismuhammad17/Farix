@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 
+#include "hal.h"
+
 #include "sysmods/devices.h"
 #include "sysmods/interface.h"
 
@@ -76,14 +78,14 @@ static unsigned char kbd[128] = {
 static const char* kbd_ptr = NULL;
 
 static void interrupt_handler() {
-    uint8_t status = k_api->inb(PS2_STATUS_PORT);
+    uint8_t status = inb(PS2_STATUS_PORT);
 
     if (unlikely(!(status & PS2_STATUS_OUT_READY) || (status & PS2_STATUS_IN_BUSY))) {
         k_api->irq_send_eoi();
         return;
     }
 
-    uint8_t scancode = k_api->inb(PS2_DATA_PORT);
+    uint8_t scancode = inb(PS2_DATA_PORT);
 
     if (scancode == 0xE0) {
         is_extended = true;
@@ -121,39 +123,39 @@ static int init_keyboard(kernel_api_t* api, uint64_t b_addr) {
     kbd_ptr = (char*) SYSMOD_TO_KERNEL(kbd);
 
     // Prepare Command Byte
-    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
-    k_api->outb(PS2_COMMAND_PORT, PS2_CMD_READ_CB);
+    while (inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
+    outb(PS2_COMMAND_PORT, PS2_CMD_READ_CB);
 
-    while (!(k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY));
-    uint8_t cb = k_api->inb(PS2_DATA_PORT);
+    while (!(inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY));
+    uint8_t cb = inb(PS2_DATA_PORT);
 
     // Enable IRQs and Scancode Translation
     cb |= (PS2_CB_KBD_IRQ | PS2_CB_MOUSE_IRQ | PS2_CB_TRANSLATION);
 
-    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
-    k_api->outb(PS2_COMMAND_PORT, PS2_CMD_WRITE_CB);
+    while (inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
+    outb(PS2_COMMAND_PORT, PS2_CMD_WRITE_CB);
 
-    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
-    k_api->outb(PS2_DATA_PORT, cb);
+    while (inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
+    outb(PS2_DATA_PORT, cb);
 
     // Initialize Hardware
-    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY) k_api->inb(PS2_DATA_PORT);
+    while (inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY) inb(PS2_DATA_PORT);
 
-    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
-    k_api->outb(PS2_COMMAND_PORT, PS2_CMD_ENABLE_PORT1);
+    while (inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
+    outb(PS2_COMMAND_PORT, PS2_CMD_ENABLE_PORT1);
 
-    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
-    k_api->outb(PS2_DATA_PORT, PS2_CMD_RESET);
+    while (inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
+    outb(PS2_DATA_PORT, PS2_CMD_RESET);
 
     // Verify Response
-    while (!(k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY));
-    if (unlikely(k_api->inb(PS2_DATA_PORT) != PS2_ACK)) {
+    while (!(inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY));
+    if (unlikely(inb(PS2_DATA_PORT) != PS2_ACK)) {
         k_api->err_print("Keyboard: Reset failed (NACK)");
         return 1;
     }
 
-    while (!(k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY));
-    if (unlikely(k_api->inb(PS2_DATA_PORT) != PS2_SELF_TEST_OK)) {
+    while (!(inb(PS2_STATUS_PORT) & PS2_STATUS_OUT_READY));
+    if (unlikely(inb(PS2_DATA_PORT) != PS2_SELF_TEST_OK)) {
         k_api->err_print("Keyboard: Self-test failed");
         return 1;
     }
@@ -174,8 +176,8 @@ static int init_keyboard(kernel_api_t* api, uint64_t b_addr) {
 static int exit_keyboard() {
     // Disable the Keyboard Port on the controller
     // This ensures no more IRQs hit our handler while we clean up
-    while (k_api->inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
-    k_api->outb(PS2_COMMAND_PORT, 0xAD); // 0xAD = Disable 1st PS/2 port
+    while (inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
+    outb(PS2_COMMAND_PORT, 0xAD); // 0xAD = Disable 1st PS/2 port
 
     k_api->unregister_interrupt(33);
     k_api->unregister_device(DEV_INPUT, (void*) dev);

@@ -38,6 +38,7 @@ static ACPI_TABLE_HEADER* ACPI_MADT_P;
 static void parse_madt(ACPI_TABLE_MADT* madt);
 
 static inline void ioapic_set_entry(uint8_t pin, uint64_t data);
+static inline uint32_t ioapic_read(uintptr_t base, uint32_t reg);
 static inline void ioapic_write(uintptr_t base, uint32_t reg, uint32_t val);
 
 void init_irq_controller() {
@@ -71,6 +72,18 @@ void init_irq_controller() {
 
 void irq_send_eoi() {
     lapic_write(0xB0, 0);
+}
+
+void irq_mask(uint8_t pin) {
+    // Read the current low 32-bit entry of the redirection table for this pin
+    // IOAPIC redirection entries start at index 0x10, and each pin uses 2 registers (low and high)
+    uint32_t val_low = ioapic_read(ioapic_virt, 0x10 + (pin * 2));
+
+    // Set Bit 16 (the interrupt mask bit)
+    val_low |= (1 << 16);
+
+    // Write the updated low dword back, leaving the vector/configuration intact
+    ioapic_write(ioapic_virt, 0x10 + (pin * 2), val_low);
 }
 
 void irq_unmask(uint8_t pin, uint8_t vector) {
@@ -143,6 +156,11 @@ static inline void ioapic_set_entry(uint8_t pin, uint64_t data) {
     // 0x10 + (pin * 2) is the low bits, +1 is the high bits
     ioapic_write((uintptr_t)ioapic_virt, 0x10 + (pin * 2), (uint32_t) data);
     ioapic_write((uintptr_t)ioapic_virt, 0x10 + (pin * 2) + 1, (uint32_t)(data >> 32));
+}
+
+static inline uint32_t ioapic_read(uintptr_t base, uint32_t reg) {
+    *(volatile uint32_t*)(base + 0x00) = reg;
+    return *(volatile uint32_t*)(base + 0x10);
 }
 
 static inline void ioapic_write(uintptr_t base, uint32_t reg, uint32_t val) {

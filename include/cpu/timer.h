@@ -31,6 +31,8 @@ typedef struct {
 
     uint64_t (*get_timer_uptime_microseconds)();
     void (*stall)(uint64_t microseconds);
+
+    void (*on_tick)();
 } timer_dev_t;
 
 extern timer_dev_t* timer_dev;

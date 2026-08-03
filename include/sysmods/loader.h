@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "sysmods/interface.h"
 
-#define MAX_LOADED_MODULES 16
+#define MAX_SYSMODS 16
 
 typedef struct {
     sysmod_t* interface;
@@ -32,7 +32,7 @@ typedef struct {
     int is_active;
 } loaded_sysmod_t;
 
-extern loaded_sysmod_t sysmods_registry[MAX_LOADED_MODULES];
+extern loaded_sysmod_t sysmods_registry[MAX_SYSMODS];
 
 int load_sysmod(const char* path);
 

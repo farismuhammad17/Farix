@@ -85,12 +85,12 @@ static pci_device_t* pci_dev = NULL;
 
 static bool ata_wait_ready() {
     // 400ns delay for status to stabilize
-    for (int i = 0; i < 4; i++) k_api->inb(REG_STATUS);
+    for (int i = 0; i < 4; i++) inb(REG_STATUS);
 
     uint8_t status;
     uint32_t timeout = MAX_TIMEOUT_DURATION;
 
-    while (((status = k_api->inb(REG_STATUS)) & SR_BSY) && --timeout > 0) {
+    while (((status = inb(REG_STATUS)) & SR_BSY) && --timeout > 0) {
         if (unlikely(status == 0xFF)) {
             k_api->err_print("ata_wait_ready: Bus floating/dead");
             return true;
@@ -104,10 +104,10 @@ static bool ata_wait_ready() {
     }
 
     timeout = MAX_TIMEOUT_DURATION;
-    while (!((status = k_api->inb(REG_STATUS)) & SR_DRQ) && --timeout > 0) {
+    while (!((status = inb(REG_STATUS)) & SR_DRQ) && --timeout > 0) {
         if (unlikely(status & SR_ERR)) {
             k_api->err_printf("ata_wait_ready: status: %x, error reg: %x",
-                     status, k_api->inb(REG_ERROR));
+                     status, inb(REG_ERROR));
             return true;
         }
         system_pause();
@@ -127,14 +127,14 @@ static void ata_read_sector(uint64_t lba, uint8_t* buffer) {
         return;
     }
 
-    k_api->outb(REG_DRV_SEL, (uint8_t)(((lba >> 24) & 0x0F) | LBA_MASTER));
-    for(int i = 0; i < 4; i++) k_api->inb(REG_STATUS);
+    outb(REG_DRV_SEL, (uint8_t)(((lba >> 24) & 0x0F) | LBA_MASTER));
+    for(int i = 0; i < 4; i++) inb(REG_STATUS);
 
-    k_api->outb(REG_SEC_CNT, 1);
-    k_api->outb(REG_LBA_LO, (uint8_t) lba);
-    k_api->outb(REG_LBA_MI, (uint8_t)(lba >> 8));
-    k_api->outb(REG_LBA_HI, (uint8_t)(lba >> 16));
-    k_api->outb(REG_COMMAND, CMD_READ);
+    outb(REG_SEC_CNT, 1);
+    outb(REG_LBA_LO, (uint8_t) lba);
+    outb(REG_LBA_MI, (uint8_t)(lba >> 8));
+    outb(REG_LBA_HI, (uint8_t)(lba >> 16));
+    outb(REG_COMMAND, CMD_READ);
 
     bool wait_stat = SYS_ICALL(ata_wait_ready); // Wait for DRQ before sending data
     if (unlikely(wait_stat)) {
@@ -152,14 +152,14 @@ static void ata_write_sector(uint64_t lba, uint8_t* buffer) {
         return;
     }
 
-    k_api->outb(REG_DRV_SEL, (uint8_t)(((lba >> 24) & 0x0F) | LBA_MASTER));
-    for(int i = 0; i < 4; i++) k_api->inb(REG_STATUS);
+    outb(REG_DRV_SEL, (uint8_t)(((lba >> 24) & 0x0F) | LBA_MASTER));
+    for(int i = 0; i < 4; i++) inb(REG_STATUS);
 
-    k_api->outb(REG_SEC_CNT, 1);
-    k_api->outb(REG_LBA_LO, (uint8_t) lba);
-    k_api->outb(REG_LBA_MI, (uint8_t)(lba >> 8));
-    k_api->outb(REG_LBA_HI, (uint8_t)(lba >> 16));
-    k_api->outb(REG_COMMAND, CMD_WRITE);
+    outb(REG_SEC_CNT, 1);
+    outb(REG_LBA_LO, (uint8_t) lba);
+    outb(REG_LBA_MI, (uint8_t)(lba >> 8));
+    outb(REG_LBA_HI, (uint8_t)(lba >> 16));
+    outb(REG_COMMAND, CMD_WRITE);
 
     bool wait_stat = SYS_ICALL(ata_wait_ready); // Wait for DRQ before sending data
     if (unlikely(wait_stat)) {
@@ -168,12 +168,12 @@ static void ata_write_sector(uint64_t lba, uint8_t* buffer) {
     }
 
     uint16_t* ptr = (uint16_t*) buffer;
-    for (int i = 0; i < 256; i++) k_api->outw(REG_DATA, ptr[i]);
+    for (int i = 0; i < 256; i++) outw(REG_DATA, ptr[i]);
 
-    k_api->outb(REG_COMMAND, CMD_FLUSH);
+    outb(REG_COMMAND, CMD_FLUSH);
 
     // Safely spin for flush completion
-    while (k_api->inb(REG_STATUS) & SR_BSY) {
+    while (inb(REG_STATUS) & SR_BSY) {
         system_pause();
     }
 }
@@ -223,32 +223,32 @@ static int init_ata(kernel_api_t* api, uint64_t b_addr) {
     REG_STATUS   = base + 7;
     REG_CONTROL  = ctrl + 2;
 
-    k_api->outb(REG_CONTROL, CTRL_RESET);               // Set SRST bit (Software Reset)
-    for(int i = 0; i < 20; i++) k_api->inb(REG_STATUS); // Wait for the hardware to react
-    k_api->outb(REG_CONTROL, CTRL_NORMAL);              // Clear SRST (Back to normal operation)
-    for(int i = 0; i < 20; i++) k_api->inb(REG_STATUS);
+    outb(REG_CONTROL, CTRL_RESET);               // Set SRST bit (Software Reset)
+    for(int i = 0; i < 20; i++) inb(REG_STATUS); // Wait for the hardware to react
+    outb(REG_CONTROL, CTRL_NORMAL);              // Clear SRST (Back to normal operation)
+    for(int i = 0; i < 20; i++) inb(REG_STATUS);
 
-    k_api->outb(REG_DRV_SEL, DRIVE_MASTER); // Master
-    for(int i = 0; i < 4; i++) k_api->inb(REG_STATUS); // 400ns "Select" delay
+    outb(REG_DRV_SEL, DRIVE_MASTER); // Master
+    for(int i = 0; i < 4; i++) inb(REG_STATUS); // 400ns "Select" delay
 
     // Clear the counts
-    k_api->outb(REG_SEC_CNT, 0);
-    k_api->outb(REG_LBA_LO, 0);
-    k_api->outb(REG_LBA_MI, 0);
-    k_api->outb(REG_LBA_HI, 0);
+    outb(REG_SEC_CNT, 0);
+    outb(REG_LBA_LO, 0);
+    outb(REG_LBA_MI, 0);
+    outb(REG_LBA_HI, 0);
 
-    k_api->outb(REG_COMMAND, CMD_IDENTIFY);
+    outb(REG_COMMAND, CMD_IDENTIFY);
 
-    uint8_t status = k_api->inb(REG_STATUS);
+    uint8_t status = inb(REG_STATUS);
     if (unlikely(status == 0 || status == 0xFF)) {
         k_api->err_print("init_ata: Floating bus, unresponsive hardware at port");
         return 2;
     }
-    for (int i = 0; i < 3; i++) k_api->inb(REG_STATUS); // 400ns "Command" delay (1 from earlier 'status')
+    for (int i = 0; i < 3; i++) inb(REG_STATUS); // 400ns "Command" delay (1 from earlier 'status')
 
     SYS_ICALL(ata_wait_ready);
 
-    for (int i = 0; i < 256; i++) k_api->inw(REG_DATA);
+    for (int i = 0; i < 256; i++) inw(REG_DATA);
 
     dev = k_api->kmalloc(sizeof(storage_dev_t));
     dev->id = ATA_DEV_ID;

@@ -40,7 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "sysmods/interface.h"
 #include "sysmods/loader.h"
 
-loaded_sysmod_t sysmods_registry[MAX_LOADED_MODULES] = {NULL};
+loaded_sysmod_t sysmods_registry[MAX_SYSMODS] = {NULL};
 
 kernel_api_t sysmod_kernel_api = {
     .printf = printf,
@@ -67,6 +67,7 @@ kernel_api_t sysmod_kernel_api = {
     .register_interrupt = register_interrupt,
     .unregister_interrupt = unregister_interrupt,
     .irq_send_eoi = irq_send_eoi,
+    .irq_mask = irq_mask,
     .irq_unmask = irq_unmask,
 
     .schedule = schedule,
@@ -82,7 +83,7 @@ kernel_api_t sysmod_kernel_api = {
 };
 
 static int find_free_module_slot() {
-    for (int i = 0; i < MAX_LOADED_MODULES; i++) {
+    for (int i = 0; i < MAX_SYSMODS; i++) {
         if (unlikely(!sysmods_registry[i].is_active)) {
             return i;
         }
@@ -149,7 +150,7 @@ int load_sysmod_raw(void* raw_binary_buffer, size_t binary_size) {
 }
 
 int unload_sysmod(int slot_id) {
-    if (unlikely(slot_id < 0 || slot_id >= MAX_LOADED_MODULES || !sysmods_registry[slot_id].is_active)) {
+    if (unlikely(slot_id < 0 || slot_id >= MAX_SYSMODS || !sysmods_registry[slot_id].is_active)) {
         return -1;
     }
 

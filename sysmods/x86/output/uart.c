@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdarg.h>
 #include <stdint.h>
 
+#include "hal.h"
+
 #include "sysmods/devices.h"
 #include "sysmods/interface.h"
 
@@ -34,21 +36,21 @@ static output_dev_t* dev = NULL;
 static char buffer[256];
 
 static inline int is_uart_transmit_empty() {
-    return k_api->inb(PORT + 5) & 0x20;
+    return inb(PORT + 5) & 0x20;
 }
 
 static inline int is_uart_received() {
-    return k_api->inb(PORT + 5) & 1; // Bit 0 is "Data Ready"
+    return inb(PORT + 5) & 1; // Bit 0 is "Data Ready"
 }
 
 static inline char uart_getc() {
     while (is_uart_received() == 0);
-    return k_api->inb(PORT);
+    return inb(PORT);
 }
 
 static inline void uart_putc(char c) {
     while (is_uart_transmit_empty() == 0);
-    k_api->outb(PORT, c);
+    outb(PORT, c);
 }
 
 static inline void uart_print(const char* data) {
@@ -77,13 +79,13 @@ static void uart_printf(const char* format, ...) {
 static int init_uart(kernel_api_t* api, uint64_t base_addr) {
     k_api = api;
 
-    k_api->outb(PORT + 1, 0x00);    // Disable interrupts
-    k_api->outb(PORT + 3, 0x80);    // Enable DLAB (set baud rate divisor)
-    k_api->outb(PORT + 0, 0x01);    // Set divisor to 1 (lo byte) 115200 baud
-    k_api->outb(PORT + 1, 0x00);    //                  (hi byte)
-    k_api->outb(PORT + 3, 0x03);    // 8 bits, no parity, one stop bit
-    k_api->outb(PORT + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
-    k_api->outb(PORT + 4, 0x0B);    // IRQs enabled, RTS/DSR set
+    outb(PORT + 1, 0x00);    // Disable interrupts
+    outb(PORT + 3, 0x80);    // Enable DLAB (set baud rate divisor)
+    outb(PORT + 0, 0x01);    // Set divisor to 1 (lo byte) 115200 baud
+    outb(PORT + 1, 0x00);    //                  (hi byte)
+    outb(PORT + 3, 0x03);    // 8 bits, no parity, one stop bit
+    outb(PORT + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
+    outb(PORT + 4, 0x0B);    // IRQs enabled, RTS/DSR set
 
     dev = k_api->kmalloc(sizeof(output_dev_t));
     dev->id = UART_DEV_ID;
@@ -98,8 +100,8 @@ static int init_uart(kernel_api_t* api, uint64_t base_addr) {
 
 static int exit_uart() {
     // Disable UART hardware so it doesn't fire interrupts or send noise
-    k_api->outb(PORT + 1, 0x00); // Disable interrupts
-    k_api->outb(PORT + 4, 0x00); // Disable RTS/DSR/IRQ
+    outb(PORT + 1, 0x00); // Disable interrupts
+    outb(PORT + 4, 0x00); // Disable RTS/DSR/IRQ
 
     k_api->unregister_device(DEV_OUTPUT, (void*) dev);
 

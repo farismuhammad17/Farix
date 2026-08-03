@@ -53,6 +53,12 @@ static initboot_entry_t* find_initboot_module(const char* target_name) {
 }
 
 void initboot() {
+    // --- Timer Device ---
+
+    initboot_timer();
+
+    // --- Initboot blob ---
+
     if (unlikely(!initboot_blob)) {
         err_print("initboot: Initboot Blob not found");
         while (1) system_halt(); // Critical failure, causes unpredictable errors
@@ -75,10 +81,6 @@ void initboot() {
     size_t binary_size   = (size_t) entry->size;
 
     load_sysmod_raw(binary_buffer, binary_size);
-
-    // --- Timer Device ---
-
-    initboot_timer();
 }
 
 void kill_bootstrap() {
