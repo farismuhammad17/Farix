@@ -228,7 +228,6 @@ static uint8_t ahci_bounce[512] __attribute__((aligned(512)));
 
 static kernel_api_t* k_api = NULL;
 static storage_dev_t* dev  = NULL;
-static uint64_t base_addr;
 
 static pci_device_t* pci_dev = NULL;
 
@@ -303,7 +302,14 @@ static hba_port_t* ahci_find_free_port(size_t max_retry_attempts) {
             }
         }
 
-        k_api->get_timer_dev()->stall(1000); // 1 ms
+        timer_dev_t* timer = k_api->get_device(DRV_TIMER);
+
+        if (unlikely(!timer)) {
+            k_api->err_print("ahci_find_Free_port: Timer not found");
+            return NULL;
+        }
+
+        timer->stall(1000); // 1 ms
     }
 
     return NULL;
@@ -339,7 +345,7 @@ static void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
         return;
     }
 
-    hba_port_t* port = SYS_ICALL(ahci_find_free_port, 5);
+    hba_port_t* port = ahci_find_free_port(5);
 
     if (unlikely(!port)) {
         k_api->err_print("ahci_read_sector: No free port found");
@@ -351,7 +357,7 @@ static void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
         port->serr = port->serr;
     }
 
-    int port_slot = SYS_ICALL(ahci_find_free_slot, port);
+    int port_slot = ahci_find_free_slot(port);
 
     if (unlikely(port_slot == -1)) {
         k_api->err_print("ahci_read_sector: No free slot found on port");
@@ -394,7 +400,7 @@ static void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
     fis->counth = 0;
 
     // Convert the virtual bounce buffer pointer back to physical space and split it
-    uint64_t bounce_phys = (uint64_t) VIRTUAL_TO_PHYSICAL(SYSMOD_TO_KERNEL(ahci_bounce));
+    uint64_t bounce_phys = (uint64_t) VIRTUAL_TO_PHYSICAL(ahci_bounce);
     table->prdt_entry[0].dba  = (uint32_t)(bounce_phys & 0xFFFFFFFF);
     table->prdt_entry[0].dbau = (uint32_t)(bounce_phys >> 32);
     table->prdt_entry[0].dbc  = 511;                    // 512 bytes - 1
@@ -427,7 +433,7 @@ static void ahci_read_sector(uint64_t lba, uint8_t* buffer) {
         k_api->err_print("ahci_read_sector: Timeout waiting for CI to clear");
     }
 
-    k_api->memcpy(buffer, (const void*) SYSMOD_TO_KERNEL(ahci_bounce), 512);
+    k_api->memcpy(buffer, ahci_bounce, 512);
 }
 
 /*
@@ -441,7 +447,7 @@ static void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
         return;
     }
 
-    hba_port_t* port = SYS_ICALL(ahci_find_free_port, 5);
+    hba_port_t* port = ahci_find_free_port(5);
 
     if (unlikely(!port)) {
         k_api->err_print("ahci_write_sector: No free port found");
@@ -453,7 +459,7 @@ static void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
         port->serr = port->serr;
     }
 
-    int port_slot = SYS_ICALL(ahci_find_free_slot, port);
+    int port_slot = ahci_find_free_slot(port);
 
     if (unlikely(port_slot == -1)) {
         k_api->err_print("ahci_write_sector: No free slot found on port");
@@ -461,7 +467,7 @@ static void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
     }
 
     // Since ahci_bounce is a static array, copy to its virtual location directly
-    k_api->memcpy((void*) SYSMOD_TO_KERNEL(ahci_bounce), buffer, 512);
+    k_api->memcpy((void*) ahci_bounce, buffer, 512);
 
     // Reconstruct full 64-bit physical command list base pointer
     uint64_t clb_phys = ((uint64_t) port->clbu << 32) | port->clb;
@@ -497,7 +503,7 @@ static void ahci_write_sector(uint64_t lba, uint8_t* buffer) {
     fis->counth = 0;
 
     // Convert the virtual bounce buffer pointer back to physical space and split it
-    uint64_t bounce_phys = (uint64_t) VIRTUAL_TO_PHYSICAL(SYSMOD_TO_KERNEL(ahci_bounce));
+    uint64_t bounce_phys = (uint64_t) VIRTUAL_TO_PHYSICAL(ahci_bounce);
     table->prdt_entry[0].dba  = (uint32_t)(bounce_phys & 0xFFFFFFFF);
     table->prdt_entry[0].dbau = (uint32_t)(bounce_phys >> 32);
     table->prdt_entry[0].dbc  = 511;                    // 512 bytes - 1
@@ -538,11 +544,15 @@ though it is required to move from section-to-section to fully get through it. T
 full explanation on the source can be found in the README.md, or just refer the actual
 specification.
 */
-static int init_ahci(kernel_api_t* api, uint64_t b_addr) {
+static int init(kernel_api_t* api) {
     k_api = api;
-    base_addr = b_addr;
 
-    timer_dev_t* timer_dev = k_api->get_timer_dev();
+    timer_dev_t* timer_dev = k_api->get_device(DRV_TIMER);
+
+    if (unlikely(!timer_dev)) {
+        k_api->err_print("init_ahci: Timer not found");
+        return 1;
+    }
 
     // In init, it would be kernel_directory. Passing kernel directory through
     // the kernel API would require a getter.
@@ -560,7 +570,7 @@ static int init_ahci(kernel_api_t* api, uint64_t b_addr) {
 
     if (unlikely(!pci_dev)) {
         k_api->err_print("init_ahci: AHCI device not found");
-        return 1;
+        return 2;
     }
 
     static int timeout;
@@ -601,7 +611,7 @@ static int init_ahci(kernel_api_t* api, uint64_t b_addr) {
 
         if (unlikely(timeout == 0)) {
             k_api->err_print("init_ahci: BIOS Handoff timed out");
-            return 2;
+            return 3;
         }
 
         timeout = MAX_TIMEOUT_DURATION;
@@ -611,7 +621,7 @@ static int init_ahci(kernel_api_t* api, uint64_t b_addr) {
 
         if (unlikely(timeout == 0)) {
             k_api->err_print("init_ahci: BIOS busy bit timed out");
-            return 3;
+            return 4;
         }
     }
 
@@ -627,16 +637,16 @@ static int init_ahci(kernel_api_t* api, uint64_t b_addr) {
 
     if (unlikely(timeout == 0)) {
         k_api->err_print("init_ahci: HBA Reset timed out");
-        return 4;
+        return 5;
     }
 
     g_hba->ghc |= GHC_AE;            // Re-enable AHCI mode after reset
-    timer_dev->stall(1000);   // 1ms
+    timer_dev->stall(1000);          // 1ms
     g_hba->ghc |= GHC_IE;            // Enable Interrupts
 
     if (unlikely(!(g_hba->ghc & GHC_AE))) {
         k_api->err_print("init_ahci: GHC.AE bit failed to persist");
-        return 5;
+        return 6;
     }
 
     k_api->irq_unmask(irq_line, 46);
@@ -650,7 +660,7 @@ static int init_ahci(kernel_api_t* api, uint64_t b_addr) {
 
             // If port is not IDLE, make it IDLE
             if (unlikely((port->cmd & (PX_CMD_ST | PX_CMD_CR | PX_CMD_FRE | PX_CMD_FR)) != 0)) {
-                bool res = SYS_ICALL(ahci_stop_port, port);
+                bool res = ahci_stop_port(port);
 
                 if (unlikely(!res)) {
                     k_api->err_printf("init_ahci: Port %d failed to stop (PxCMD: 0x%x)", i, port->cmd);
@@ -728,25 +738,30 @@ static int init_ahci(kernel_api_t* api, uint64_t b_addr) {
 
     if (unlikely(drives_found == 0)) {
         k_api->err_print("init_ahci: No drives found on any port");
-        return 6;
+        return 7;
     }
 
     dev = k_api->kmalloc(sizeof(storage_dev_t));
     dev->id = AHCI_DEV_ID;
-    dev->type = DEV_STORAGE;
+    dev->type = DRV_STORAGE;
 
-    dev->read_sector  = (void*) SYSMOD_TO_KERNEL(ahci_read_sector);
-    dev->write_sector = (void*) SYSMOD_TO_KERNEL(ahci_write_sector);
+    dev->read_sector  = ahci_read_sector;
+    dev->write_sector = ahci_write_sector;
 
-    k_api->register_device(DEV_STORAGE, (void*) dev);
+    k_api->register_device(DRV_STORAGE, (void*) dev);
 
-    k_api->register_interrupt(46, (void*) SYSMOD_TO_KERNEL(interrupt_handler));
+    k_api->register_interrupt(46, interrupt_handler);
 
     return 0;
 }
 
-static int exit_ahci() {
-    timer_dev_t* timer_dev = k_api->get_timer_dev();
+static int exit() {
+    timer_dev_t* timer_dev = k_api->get_device(DRV_TIMER);
+
+    if (unlikely(!timer_dev)) {
+        k_api->err_print("exit_ahci: Timer device not found");
+        return 1;
+    }
 
     // Unmask/unregister interrupts
     uint8_t irq_line = (uint8_t) k_api->pci_read(pci_dev->bus, pci_dev->device, pci_dev->function, 0x3C);
@@ -775,6 +790,7 @@ static int exit_ahci() {
 
             if (timeout == 0) {
                 k_api->err_printf("exit_ahci: Port %d failed to stop cleanly", i);
+                return 2;
             }
 
             // Clear any pending interrupt status flags
@@ -805,7 +821,7 @@ static int exit_ahci() {
     k_api->pci_write(pci_dev->bus, pci_dev->device, pci_dev->function, 0x04, pci_cmd & ~((1 << 1) | (1 << 2)));
 
     k_api->unregister_interrupt(46);
-    k_api->unregister_device(DEV_STORAGE, (void*) dev);
+    k_api->unregister_device(DRV_STORAGE, (void*) dev);
 
     k_api->kfree(dev);
 
@@ -814,6 +830,6 @@ static int exit_ahci() {
 
 SYSMOD_HEADER sysmod_t module_entry = {
     .name = "AHCI",
-    .init = init_ahci,
-    .exit = exit_ahci
+    .init = init,
+    .exit = exit
 };

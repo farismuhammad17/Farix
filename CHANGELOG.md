@@ -1,6 +1,29 @@
 # Changelog
 
-## Storage Driver System Module
+## FAT32 System Module (WIP) - *8th August, 2026*
+
+> [!IMPORTANT]  
+> Current version is WIP, and does not boot due to the fact that the storage driver does **not** work inside another system module. Reading a sector seems to dump the value that *was* to be set to the buffer somewhere else (or I think that's the problem). This is the active problem being worked at currently. **ALSO,** I had worked in another folder to figure out what to do without muddling the branches in the main directory. I have kept that version, but it is primitive, back when UART was first added (it was the first system module), but it spanned multiple days, and, perhaps there is a mishap, that I have not copied some part of the code entirely right. Will check later.
+
+- Moved `fs/vfs.h` to `drivers/vfs.h`
+- System Modules
+  - Made loading position independant using ELF instead of flat binaries
+    - Removed `SYSMOD_TO_KERNEL` and `SYS_ICALL` and all usages
+  - Renamed `dev_type_t` to `driver_type_t`
+  - Added `DRV_VFS` driver type
+  - Moved FAT32 as System Module
+  - Added `get_device` function
+- Initboot
+  - Moved from `initboot/manager.c` into `initboot.c`
+  - Added FAT32 into blob
+- FXTools 
+  - Added `RUNTIME_STORAGE_DEVICE` configuration
+- TODO:
+  - Fix storage driver from failing FAT32 MBR value
+  - Move timer into initboot blob
+  - PMM to free multiboot modules once finished
+
+## Storage Driver System Module - *3rd August, 2026*
 
 - IRQ
   - Added `irq_mask`
@@ -18,12 +41,8 @@
   - Added `debug.h` and `utils.h` (yet to use)
 - FXTools
   - `make` compiles kernel binary into `kernel.bin` and uses functions to organise
-- TODO:
-  - ATA requires testing
-  - Move timer into initboot blob
-  - PMM to free multiboot modules once finished
 
-## Input Kernel System Modules
+## Input Kernel System Modules - *28th July, 2026*
 
 - Removed `x86_32`
 - Moved keyboard from kernel to system module: `keyboard.sys`

@@ -28,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 typedef struct input_dev_t {
     struct input_dev_t* next;
     uint8_t id;
-    dev_type_t type;
+    driver_type_t type;
 
     void (*on_event)(void* data);
 } input_dev_t;

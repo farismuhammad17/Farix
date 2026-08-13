@@ -21,11 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "klib/stdio.h"
 #include "klib/stdlib.h"
 
-#include "fs/vfs.h"
+#include "drivers/vfs.h"
 #include "syshw/power.h"
-
-#include "fs/fat32.h"
-#include "fs/ramdisk.h"
 
 #include "sysmods/interface.h"
 #include "sysmods/loader.h"
@@ -33,16 +30,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "shell/commands.h"
 
 /* Outputs the current VFS */
-void cmd_vfs(const char* args) {
-    if (args[0] == '\0') {
-        printf("%s\n", current_vfs->name);
-    } else if (args[0] == 'F' || args[0] == 'f') {
-        vfs_mount(&fat32_vfs);
-    } else if (args[0] == 'R' || args[0] == 'r') {
-        vfs_mount(&ramdisk_vfs);
-    } else {
-        printf("vfs: Unknown VFS '%s'", args);
-    }
+void cmd_vfs(UNUSED_ARG const char* args) {
+    printf("%s\n", vfs->name);
 }
 
 /* Shutdown command */

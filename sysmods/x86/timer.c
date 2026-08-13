@@ -74,7 +74,7 @@ static void stall(uint64_t microseconds) {
     }
 }
 
-static int init_pit(kernel_api_t* api, uint64_t base_addr) {
+static int init(kernel_api_t* api) {
     k_api = api;
 
     k_api->outb(0x43, 0x36);
@@ -87,19 +87,19 @@ static int init_pit(kernel_api_t* api, uint64_t base_addr) {
 
     dev = k_api->kmalloc(sizeof(timer_dev_t));
     dev->id = PIT_DEV_ID;
-    dev->type = DEV_TIMER;
+    dev->type = DRV_TIMER;
 
-    dev->get_timer_uptime_microseconds = (void*) SYSMOD_TO_KERNEL(get_timer_uptime_microseconds);
-    dev->stall = (void*) SYSMOD_TO_KERNEL(stall);
+    dev->get_timer_uptime_microseconds = get_timer_uptime_microseconds;
+    dev->stall = stall;
 
-    k_api->register_device(DEV_TIMER, (void*) dev);
+    k_api->register_device(DRV_TIMER, (void*) dev);
 
-    k_api->register_interrupt(32, (void*) SYSMOD_TO_KERNEL(interrupt_handler));
+    k_api->register_interrupt(32, interrupt_handler);
 
     return 0;
 }
 
-static int exit_pit() {
+static int exit() {
     // Disable the interrupts
     k_api->outb(0x43, 0x36);
     k_api->outb(0x40, 0xFF); // Set a very slow frequency
@@ -107,7 +107,7 @@ static int exit_pit() {
 
     k_api->unregister_interrupt(32);
 
-    k_api->unregister_device(DEV_TIMER, dev);
+    k_api->unregister_device(DRV_TIMER, dev);
 
     k_api->kfree(dev);
 
@@ -116,6 +116,6 @@ static int exit_pit() {
 
 SYSMOD_HEADER sysmod_t module_entry = {
     .name = "PIT",
-    .init = init_pit,
-    .exit = exit_pit
+    .init = init,
+    .exit = exit
 };

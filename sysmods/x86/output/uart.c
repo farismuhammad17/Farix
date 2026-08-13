@@ -76,7 +76,7 @@ static void uart_printf(const char* format, ...) {
     va_end(args);
 }
 
-static int init_uart(kernel_api_t* api, uint64_t base_addr) {
+static int init(kernel_api_t* api) {
     k_api = api;
 
     outb(PORT + 1, 0x00);    // Disable interrupts
@@ -89,21 +89,21 @@ static int init_uart(kernel_api_t* api, uint64_t base_addr) {
 
     dev = k_api->kmalloc(sizeof(output_dev_t));
     dev->id = UART_DEV_ID;
-    dev->type = DEV_OUTPUT;
+    dev->type = DRV_OUTPUT;
 
-    dev->printf = (void*) SYSMOD_TO_KERNEL(uart_printf);
+    dev->printf = uart_printf;
 
-    k_api->register_device(DEV_OUTPUT, (void*) dev);
+    k_api->register_device(DRV_OUTPUT, (void*) dev);
 
     return 0;
 }
 
-static int exit_uart() {
+static int exit() {
     // Disable UART hardware so it doesn't fire interrupts or send noise
     outb(PORT + 1, 0x00); // Disable interrupts
     outb(PORT + 4, 0x00); // Disable RTS/DSR/IRQ
 
-    k_api->unregister_device(DEV_OUTPUT, (void*) dev);
+    k_api->unregister_device(DRV_OUTPUT, (void*) dev);
 
     k_api->kfree(dev);
 
@@ -112,6 +112,6 @@ static int exit_uart() {
 
 SYSMOD_HEADER sysmod_t module_entry = {
     .name = "UART",
-    .init = init_uart,
-    .exit = exit_uart
+    .init = init,
+    .exit = exit
 };

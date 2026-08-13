@@ -80,5 +80,5 @@ void INITBOOT_TXT_SECTION initboot_timer() {
     outb(0x40, low);
     outb(0x40, high);
 
-    register_device(DEV_TIMER, &bootstrap_timer_dev);
+    register_device(DRV_TIMER, &bootstrap_timer_dev);
 }

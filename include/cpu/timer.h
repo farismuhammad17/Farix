@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 typedef struct {
     uint8_t id;
-    dev_type_t type;
+    driver_type_t type;
 
     uint64_t (*get_timer_uptime_microseconds)();
     void (*stall)(uint64_t microseconds);
@@ -36,7 +36,5 @@ typedef struct {
 } timer_dev_t;
 
 extern timer_dev_t* timer_dev;
-
-timer_dev_t* get_timer_dev();
 
 #endif

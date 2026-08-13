@@ -26,26 +26,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/input.h"
 #include "drivers/output.h"
 #include "drivers/storage.h"
+#include "drivers/vfs.h"
 
 #include "sysmods/devices.h"
 
-// Unit devices
+// Unit drivers
 timer_dev_t*   timer_dev      = NULL;
 storage_dev_t* storage_dev    = NULL;
+vfs_driver_t*  vfs            = NULL;
 
-// Chained devices
+// Chained drivers
 input_dev_t*  input_dev_head  = NULL;
 output_dev_t* output_dev_head = NULL;
 
-void register_device(dev_type_t type, void* device) {
+void register_device(driver_type_t type, void* device) {
     void** head_ptr = NULL;
 
     switch (type) {
-        case DEV_OUTPUT : head_ptr = (void**) &output_dev_head; break;
-        case DEV_INPUT  : head_ptr = (void**) &input_dev_head;  break;
+        case DRV_TIMER   : timer_dev = (timer_dev_t*) device;     return;
+        case DRV_STORAGE : storage_dev = (storage_dev_t*) device; return;
+        case DRV_VFS     : vfs = (vfs_driver_t*) device;          return;
 
-        case DEV_TIMER   : timer_dev = (timer_dev_t*) device;     return;
-        case DEV_STORAGE : storage_dev = (storage_dev_t*) device; return;
+        case DRV_INPUT  : head_ptr = (void**) &input_dev_head;  break;
+        case DRV_OUTPUT : head_ptr = (void**) &output_dev_head; break;
 
         default:
             err_printf("Unknown device type: %d", type);
@@ -56,15 +59,16 @@ void register_device(dev_type_t type, void* device) {
     *head_ptr = device;
 }
 
-void unregister_device(dev_type_t type, void* device) {
+void unregister_device(driver_type_t type, void* device) {
     void** head_ptr = NULL;
 
     switch (type) {
-        case DEV_OUTPUT : head_ptr = (void**) &output_dev_head; break;
-        case DEV_INPUT  : head_ptr = (void**) &input_dev_head;  break;
+        case DRV_TIMER   : timer_dev   = NULL; return;
+        case DRV_STORAGE : storage_dev = NULL; return;
+        case DRV_VFS     : vfs         = NULL; return;
 
-        case DEV_TIMER   : timer_dev = NULL;   return;
-        case DEV_STORAGE : storage_dev = NULL; return;
+        case DRV_INPUT  : head_ptr = (void**) &input_dev_head;  break;
+        case DRV_OUTPUT : head_ptr = (void**) &output_dev_head; break;
 
         default:
             err_printf("Unknown device type: %d", type);
@@ -80,8 +84,15 @@ void unregister_device(dev_type_t type, void* device) {
     }
 }
 
-// --- Getters ---
+/* Required for system modules to dynamically get other devices */
+void* get_device(driver_type_t dev_type) {
+    switch (dev_type) {
+        case DRV_OUTPUT  : return output_dev_head;
+        case DRV_INPUT   : return input_dev_head;
+        case DRV_TIMER   : return timer_dev;
+        case DRV_STORAGE : return storage_dev;
+        case DRV_VFS     : return vfs;
 
-timer_dev_t* get_timer_dev() {
-    return timer_dev;
+        default: return NULL;
+    }
 }

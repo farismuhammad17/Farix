@@ -31,12 +31,20 @@ from fxtools.vars import emulation
 data = statejson.get()
 cores = data["RUNTIME_CORES"]
 fullscreen = data["QEMU_FULLSCREEN"]
+default_storage_dev = data["RUNTIME_STORAGE_DEVICE"]
 
 def get_qemu_flags_x86_64(storage_dev: str):
     QEMU_BIN = "qemu-system-x86_64"
 
-    QEMU_FLAGS = (
-        "-machine q35,accel=tcg "
+    if storage_dev == "ahci":
+        QEMU_FLAGS = "-machine q35,accel=tcg "
+    elif storage_dev == "ata":
+        QEMU_FLAGS = "-machine pc,accel=tcg "
+    else:
+        printer.error(f"Invalid storage device: {storage_dev}")
+        sys.exit(1)
+
+    QEMU_FLAGS += (
         "-cpu max "
         "-m 512 "
         "-boot order=d,once=d,menu=on,strict=on "
@@ -55,18 +63,16 @@ def get_qemu_flags_x86_64(storage_dev: str):
             "-device ide-hd,drive=disk0,bus=ahci0.0 "
         )
     elif storage_dev == "ata":
+        # This is only configured to get past the bootloader,
+        # no clue how to make it work, and I have no reason to
+        # make it work anyway. Future problem. TODO.
         QEMU_FLAGS += (
-            f"-drive file={emulation.DISK_PATH},if=none,id=hd0,format=raw,media=disk "
-            "-device piix4-ide,id=pci-ide0 "
-            "-device ide-hd,bus=pci-ide0.0,drive=hd0 "
+            f"-drive file={emulation.DISK_PATH},if=ide,index=0,media=disk,format=raw "
         )
-    else:
-        printer.error(f"Invalid storage device: {storage_dev}")
-        sys.exit(1)
 
     return QEMU_BIN, QEMU_FLAGS
 
-def run(no_fs: bool = not fullscreen, storage_device: str = "ahci"):
+def run(no_fs: bool = not fullscreen, storage_device: str = default_storage_dev):
     if env.is_in_docker():
         print("\x1b[31mCannot emulate QEMU in docker. Run on native machine instead.\x1b[0m")
         return

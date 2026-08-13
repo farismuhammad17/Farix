@@ -9,6 +9,7 @@ DEFAULT_SCHEME = {
     "DEFAULT_ARCH": "x86_64",
     "THREADS": 4,
     "RUNTIME_CORES": 4,
+    "RUNTIME_STORAGE_DEVICE": "ahci",
     "QEMU_FULLSCREEN": True,
 
     "USER_NAME": None,
@@ -20,6 +21,7 @@ DEFAULT_SCHEME = {
 * [DEFAULT_ARCH](#default-architecture)
 * [THREADS](#threads)
 * [RUNTIME_CORES](#runtime-cores)
+* [RUNTIME_STORAGE_DEVICE](#runtime-storage-device)
 * [QEMU_FULLSCREEN](#qemu-fullscreen)
 * [USER_NAME](#user-name)
 * [USER_EMAIL](#user-email)
@@ -36,6 +38,10 @@ Number of threads used by the program when compiling or any intensive task. This
 ## Runtime Cores
 
 When emulating the kernel, this value decides the number of cores that the emulated CPU runs with.
+
+## Runtime Storage Device
+
+By default, the AHCI storage driver is used. Alternatively, you may use ATA in its place. Note that the value must be all lowercase.
 
 ## QEMU Fullscreen
 

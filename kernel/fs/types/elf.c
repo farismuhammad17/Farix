@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "hal.h"
 
 #include "drivers/terminal.h"
-#include "fs/vfs.h"
+#include "drivers/vfs.h"
 #include "memory/heap.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
@@ -55,7 +55,7 @@ The function also verifies if the given file is also a valid ELF file, since
 an ELF file is to start with 0x7F, followed by the characters E, L, and F.
 */
 static uint8_t* load_elf_file(const char* path, uint64_t* out_size) {
-    File* file_obj = fs_get(path);
+    File* file_obj = vfs->get(path);
     if (unlikely(!file_obj || file_obj->size == 0)) {
         err_printf("load_elf_file: File %s not found or empty", path);
         return NULL;
@@ -67,7 +67,7 @@ static uint8_t* load_elf_file(const char* path, uint64_t* out_size) {
         return NULL;
     }
 
-    if (unlikely(!fs_read(path, buffer, file_obj->size, 0))) {
+    if (unlikely(!vfs->read(path, buffer, file_obj->size, 0))) {
         err_print("load_elf_file: Failed to read file data");
         kfree(buffer);
         return NULL;

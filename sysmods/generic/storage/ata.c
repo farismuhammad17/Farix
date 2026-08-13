@@ -79,7 +79,6 @@ static int REG_ALT_STAT  = 0x3F6; // Same as REG_CONTROL, but read-only
 
 static kernel_api_t* k_api = NULL;
 static storage_dev_t* dev  = NULL;
-static uint64_t base_addr  = 0;
 
 static pci_device_t* pci_dev = NULL;
 
@@ -136,7 +135,7 @@ static void ata_read_sector(uint64_t lba, uint8_t* buffer) {
     outb(REG_LBA_HI, (uint8_t)(lba >> 16));
     outb(REG_COMMAND, CMD_READ);
 
-    bool wait_stat = SYS_ICALL(ata_wait_ready); // Wait for DRQ before sending data
+    bool wait_stat = ata_wait_ready(); // Wait for DRQ before sending data
     if (unlikely(wait_stat)) {
         k_api->err_printf("ata_read_sector: Read aborted at %x", lba);
         return;
@@ -161,7 +160,7 @@ static void ata_write_sector(uint64_t lba, uint8_t* buffer) {
     outb(REG_LBA_HI, (uint8_t)(lba >> 16));
     outb(REG_COMMAND, CMD_WRITE);
 
-    bool wait_stat = SYS_ICALL(ata_wait_ready); // Wait for DRQ before sending data
+    bool wait_stat = ata_wait_ready(); // Wait for DRQ before sending data
     if (unlikely(wait_stat)) {
         k_api->err_printf("ata_write_sector: Write aborted at %x", lba);
         return;
@@ -178,9 +177,8 @@ static void ata_write_sector(uint64_t lba, uint8_t* buffer) {
     }
 }
 
-static int init_ata(kernel_api_t* api, uint64_t b_addr) {
+static int init(kernel_api_t* api) {
     k_api = api;
-    base_addr = b_addr;
 
     for (int i = 0; i < PCI_MAX_DEVICES; i++) {
         if (k_api->pci_devices[i].subclass == PCI_ATA_SUBCLASS) {
@@ -246,27 +244,27 @@ static int init_ata(kernel_api_t* api, uint64_t b_addr) {
     }
     for (int i = 0; i < 3; i++) inb(REG_STATUS); // 400ns "Command" delay (1 from earlier 'status')
 
-    SYS_ICALL(ata_wait_ready);
+    ata_wait_ready();
 
     for (int i = 0; i < 256; i++) inw(REG_DATA);
 
     dev = k_api->kmalloc(sizeof(storage_dev_t));
     dev->id = ATA_DEV_ID;
-    dev->type = DEV_STORAGE;
+    dev->type = DRV_STORAGE;
 
-    dev->read_sector = (void*) SYSMOD_TO_KERNEL(ata_read_sector);
-    dev->write_sector = (void*) SYSMOD_TO_KERNEL(ata_write_sector);
+    dev->read_sector = ata_read_sector;
+    dev->write_sector = ata_write_sector;
 
-    k_api->register_device(DEV_STORAGE, (void*) dev);
+    k_api->register_device(DRV_STORAGE, (void*) dev);
 
     return 0;
 }
 
-static int exit_ata() {
+static int exit() {
     uint32_t pci_cmd = k_api->pci_read(pci_dev->bus, pci_dev->device, pci_dev->function, 0x04);
     k_api->pci_write(pci_dev->bus, pci_dev->device, pci_dev->function, 0x04, pci_cmd & ~0x05);
 
-    k_api->unregister_device(DEV_STORAGE, (void*) dev);
+    k_api->unregister_device(DRV_STORAGE, (void*) dev);
 
     k_api->kfree(dev);
 
@@ -275,6 +273,6 @@ static int exit_ata() {
 
 SYSMOD_HEADER sysmod_t module_entry = {
     .name = "ATA",
-    .init = init_ata,
-    .exit = exit_ata
+    .init = init,
+    .exit = exit
 };

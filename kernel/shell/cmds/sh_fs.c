@@ -24,8 +24,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "klib/stdio.h"
 
 #include "drivers/terminal.h"
+#include "drivers/vfs.h"
 #include "fs/types/elf.h"
-#include "fs/vfs.h"
 #include "memory/heap.h"
 #include "process/task.h"
 
@@ -93,7 +93,7 @@ void cmd_cd(const char* args) {
                     strcat(work_path, component);
 
                     // Immediate validation
-                    File* f = fs_get(work_path + 1); // Skip initial root slash
+                    File* f = vfs->get(work_path + 1); // Skip initial root slash
                     if (unlikely(!f || !f->is_directory)) {
                         printf("cd: %s is not a directory\n", component);
                         return; // Exit immediately on failure
@@ -122,7 +122,7 @@ void cmd_cat(const char* args) {
     }
 
     char* filename = full_path_to(args);
-    File* f = fs_get(filename);
+    File* f = vfs->get(filename);
 
     if (unlikely(!f)) {
         printf("cat: %s: No such file\n", args);
@@ -150,7 +150,7 @@ void cmd_cat(const char* args) {
         uint32_t chunk_size = (remaining > MAX_BUFFER_SIZE) ? MAX_BUFFER_SIZE : remaining;
 
         // Read from the current tracking offset
-        int bytes_read = fs_read(filename, (uint8_t*) buffer, chunk_size, offset);
+        int bytes_read = vfs->read(filename, (uint8_t*) buffer, chunk_size, offset);
 
         if (likely(bytes_read > 0)) {
             // Explicitly ensure the chunk is null-terminated before printing
@@ -201,7 +201,7 @@ void cmd_write(const char* args) {
     // Assuming you refactor full_path_to to take an output buffer:
     // get_full_path(filename, full_path, sizeof(full_path));
 
-    if (unlikely(!fs_write(full_path_to(filename), (uint8_t*)content, strlen(content), 0))) {
+    if (unlikely(!vfs->write(full_path_to(filename), (uint8_t*)content, strlen(content), 0))) {
         printf("write: Could not write to file %s\n", filename);
     }
 }
@@ -209,21 +209,21 @@ void cmd_write(const char* args) {
 /* Create file command */
 void cmd_touch(const char* args) {
     if (args != NULL && args[0] != '\0') {
-        fs_create(full_path_to(args));
+        vfs->create(full_path_to(args));
     }
 }
 
 /* Create directory command */
 void cmd_mkdir(const char* args) {
     if (args != NULL && args[0] != '\0') {
-        fs_mkdir(full_path_to(args));
+        vfs->mkdir(full_path_to(args));
     }
 }
 
 /* Delete file/folder command */
 void cmd_rm(const char* args) {
     if (args != NULL && args[0] != '\0') {
-        fs_remove(full_path_to(args));
+        vfs->remove(full_path_to(args));
     }
 }
 
@@ -231,7 +231,7 @@ void cmd_rm(const char* args) {
 void cmd_ls(const char* args) {
     const char* target_path = (args[0] == '\0') ? shell_directory : full_path_to(args);
 
-    FileNode* head = fs_getall(target_path);
+    FileNode* head = vfs->getall(target_path);
     FileNode* temp = NULL;
 
     while (head) {

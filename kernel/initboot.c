@@ -18,11 +18,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
+#include <stdbool.h>
+
 #include "klib/string.h"
 
 #include "hal.h"
 
+#include "cpu/pci.h"
+#include "drivers/storage.h"
 #include "drivers/terminal.h"
+#include "drivers/vfs.h"
 #include "memory/pmm.h"
 #include "memory/vmm.h"
 #include "sysmods/loader.h"
@@ -52,6 +57,33 @@ static initboot_entry_t* find_initboot_module(const char* target_name) {
     return NULL;
 }
 
+static inline const char* find_storage_device() {
+    bool has_ata = false;
+
+    for (int i = 0; i < PCI_MAX_DEVICES; i++) {
+        pci_device_t* dev = &pci_devices[i];
+
+        if (dev->class_code == PCI_CLASS_CODE_STORAGE) {
+            // Check for AHCI first
+            if (dev->subclass == PCI_AHCI_SUBCLASS && dev->progif == 0x01) {
+                return "AHCI";
+            }
+
+            // Keep track of an ATA device in case we don't find AHCI
+            if (dev->subclass == PCI_ATA_SUBCLASS) {
+                has_ata = true;
+            }
+        }
+    }
+
+    // Fallback: only if no AHCI was found
+    if (likely(has_ata)) {
+        return "ATA";
+    } else {
+        err_print("find_storage_device: No supported storage device found");
+    }
+}
+
 void initboot() {
     // --- Timer Device ---
 
@@ -64,23 +96,46 @@ void initboot() {
         while (1) system_halt(); // Critical failure, causes unpredictable errors
     }
 
-    // --- Storage Driver ---
-
-    // TODO IMP: Only considers AHCI, adding ATA is trivial.
-
     uint8_t* base_ptr = (uint8_t*) initboot_blob;
 
-    initboot_entry_t* entry = find_initboot_module("AHCI");
+    // --- Storage Driver ---
 
-    if (unlikely(!entry)) {
-        err_print("initboot: AHCI module not found in blob");
+    const char* st_dev = find_storage_device();
+    initboot_entry_t* st_entry = find_initboot_module(st_dev);
+
+    if (unlikely(!st_entry)) {
+        err_printf("initboot: Storage device '%s' not found in blob", st_dev);
         while (1) system_halt();
     }
 
-    void*  binary_buffer = (void*)(base_ptr + entry->offset);
-    size_t binary_size   = (size_t) entry->size;
+    load_sysmod_raw(
+        (void*)(base_ptr + st_entry->offset),
+        (size_t) st_entry->size
+    );
 
-    load_sysmod_raw(binary_buffer, binary_size);
+    if (unlikely(!storage_dev)) {
+        err_print("initboot: Storage device not initialised");
+        while (1) system_halt();
+    }
+
+    // --- VFS (FAT32) Driver ---
+
+    initboot_entry_t* vfs_entry = find_initboot_module("FAT32");
+
+    if (unlikely(!vfs_entry)) {
+        err_print("initboot: VFS device 'FAT32' not found in blob");
+        while (1) system_halt();
+    }
+
+    load_sysmod_raw(
+        (void*)(base_ptr + vfs_entry->offset),
+        (size_t) vfs_entry->size
+    );
+
+    if (unlikely(!vfs)) {
+        err_print("initboot: VFS not initialised");
+        while (1) system_halt();
+    }
 }
 
 void kill_bootstrap() {

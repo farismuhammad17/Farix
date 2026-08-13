@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define KEYBOARD_PS2_DEV_ID  3
 #define ATA_DEV_ID           4
 #define AHCI_DEV_ID          5
+#define FAT32_VFS_ID         6
 
 // DEVELOPER NOTE:
 // Every device struct MUST have a next pointer
@@ -35,13 +36,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // at a time (eg. timer, storage device, etc.)
 
 typedef enum {
-    DEV_OUTPUT,
-    DEV_INPUT,
-    DEV_TIMER,
-    DEV_STORAGE,
-} dev_type_t;
+    DRV_OUTPUT,
+    DRV_INPUT,
+    DRV_TIMER,
+    DRV_STORAGE,
+    DRV_VFS,
+} driver_type_t;
 
-void register_device(dev_type_t type, void* device);
-void unregister_device(dev_type_t type, void* device);
+void register_device(driver_type_t type, void* device);
+void unregister_device(driver_type_t type, void* device);
+
+void* get_device(driver_type_t dev_type);
 
 #endif

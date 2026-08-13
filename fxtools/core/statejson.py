@@ -30,6 +30,7 @@ DEFAULT_SCHEME = {
     "DEFAULT_ARCH": "x86_64",
     "THREADS": 4,
     "RUNTIME_CORES": 4,
+    "RUNTIME_STORAGE_DEVICE": "ahci",
     "QEMU_FULLSCREEN": True,
 
     "USER_NAME": None,

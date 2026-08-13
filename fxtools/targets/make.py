@@ -97,7 +97,7 @@ def _compile_and_link_kernel(compile_to_asm: bool, threads: int):
     if compile_to_asm:
         os.makedirs(kernel_asm_path, exist_ok=True)
         printer.wait("Dumping full kernel assembly...")
-        proc_run(f"{TOOLS['PREFIX']}objdump -d -M intel -S bootloader/x86/boot/farix.bin > build/kernelASM/farix.asm")
+        proc_run(f"{TOOLS['PREFIX']}objdump -d -M intel -S bootloader/x86/boot/farix.bin > {kernel_asm_path}/farix.asm")
 
     proc_run(f"{TOOLS['PREFIX']}objcopy -I elf64-x86-64 -O elf32-i386 bootloader/x86/boot/farix.bin bootloader/x86/boot/kernel.bin")
     os.remove("bootloader/x86/boot/farix.bin")
@@ -126,8 +126,14 @@ def _compile_and_deploy_sysmods(compile_to_asm: bool, threads: int):
         mod_out = f"build/sysmods/{mod_name}.sys"
         os.makedirs(os.path.dirname(mod_obj), exist_ok=True)
 
-        clean_cflags = c.CFLAGS.replace("-mcmodel=kernel", "").replace("-fno-pic", "")
-        cc_flags = f"{TOOLS['CC']} -c {mod_src} -o {mod_obj} {clean_cflags} -mcmodel=large -fno-pie -fno-pic"
+        cc_flags = (f"{TOOLS['CC']} -c {mod_src} -o {mod_obj} "
+            "-ffreestanding "
+            "-fno-builtin "
+            "-mcmodel=large "
+            "-fPIC "
+            "-fno-stack-protector "
+            "-fno-asynchronous-unwind-tables ") + c.INCLUDES_CFLAGS
+
         mod_tasks.append((mod_src, mod_obj, cc_flags))
         mod_link_data.append((mod_name, mod_obj, mod_out))
 
@@ -140,13 +146,17 @@ def _compile_and_deploy_sysmods(compile_to_asm: bool, threads: int):
     for mod_name, mod_obj, mod_out in mod_link_data:
         print(f"\n\x1b[1;35mBuilding System Module: {mod_name}\x1b[0m")
 
-        ld_flags = "-T sysmods/linker.ld -ffreestanding -nostdlib -O2 -Wl,--oformat=binary"
+        ld_flags = "-T sysmods/linker.ld -ffreestanding -nostdlib -O2 -Wl,-shared -Wl,-Bsymbolic -Wl,-q"
         proc_run(f"{TOOLS['CC']} {ld_flags} {mod_obj} -o {mod_out}")
 
         if compile_to_asm:
             os.makedirs(kernel_asm_path, exist_ok=True)
-            print(f"\x1b[36mDumping assembly for system module: {mod_name}\x1b[0m")
-            proc_run(f"{TOOLS['PREFIX']}objdump -d -M intel -S {mod_obj} > build/kernelASM/{mod_name}.asm")
+            print(f"\x1b[36mDumping full ELF structure and assembly for: {mod_name}\x1b[0m")
+
+            # -x dumps ELF headers, section headers, and symbol tables
+            # -d -M intel -S disassembles the text section with source lines
+            # Target {mod_out} (.sys) instead of {mod_obj} (.o)
+            proc_run(f"{TOOLS['PREFIX']}objdump -x -d -M intel -S {mod_out} > {kernel_asm_path}/{mod_name}.asm")
 
         print(f"\x1b[33mDeploying {mod_name}.sys to {emulation.DISK_PATH}/system/\x1b[0m")
         proc_run(f"mcopy -D o -i {emulation.DISK_PATH} {mod_out} ::/system/{mod_name}.sys")
@@ -168,7 +178,7 @@ def _create_initboot(mod_link_data: list[tuple[str, str, str]]):
     binary_data_chunks = []
 
     # Extract module names and read their corresponding .sys binary outputs
-    initboot_mods = ["ahci", "ata"]
+    initboot_mods = ["ahci", "ata", "fat32"]
 
     for mod_name, _, mod_out in mod_link_data:
         if mod_name not in [m for m in initboot_mods]:

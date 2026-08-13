@@ -61,8 +61,6 @@ static input_dev_t*  dev   = NULL;
 static bool shift_pressed = false;
 static bool is_extended   = false;
 
-static uint64_t base_addr = 0;
-
 static unsigned char kbd[128] = {
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
     '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',
@@ -75,7 +73,6 @@ static unsigned char kbd[128] = {
     0, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', '~', 0,
     '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 0, '*', 0, ' '
 };
-static const char* kbd_ptr = NULL;
 
 static void interrupt_handler() {
     uint8_t status = inb(PS2_STATUS_PORT);
@@ -103,7 +100,7 @@ static void interrupt_handler() {
             shift_pressed = false;
         } else if (!(scancode & 0x80)) {
             size_t offset = shift_pressed ? KBD_LEN : 0;
-            unsigned char c = kbd_ptr[scancode + offset];
+            unsigned char c = kbd[scancode + offset];
 
             if (likely(c > 0 && dev->on_event)) {
                 // Pack the literal ASCII value directly into the pointer slot.
@@ -116,11 +113,8 @@ static void interrupt_handler() {
     k_api->irq_send_eoi();
 }
 
-static int init_keyboard(kernel_api_t* api, uint64_t b_addr) {
+static int init(kernel_api_t* api) {
     k_api = api;
-    base_addr = b_addr;
-
-    kbd_ptr = (char*) SYSMOD_TO_KERNEL(kbd);
 
     // Prepare Command Byte
     while (inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
@@ -162,25 +156,25 @@ static int init_keyboard(kernel_api_t* api, uint64_t b_addr) {
 
     dev = k_api->kmalloc(sizeof(input_dev_t));
     dev->id = KEYBOARD_PS2_DEV_ID;
-    dev->type = DEV_INPUT;
+    dev->type = DRV_INPUT;
 
     dev->on_event = NULL;
 
-    k_api->register_device(DEV_INPUT, (void*) dev);
+    k_api->register_device(DRV_INPUT, (void*) dev);
 
-    k_api->register_interrupt(33, (void*) SYSMOD_TO_KERNEL(interrupt_handler));
+    k_api->register_interrupt(33, interrupt_handler);
 
     return 0;
 }
 
-static int exit_keyboard() {
+static int exit() {
     // Disable the Keyboard Port on the controller
     // This ensures no more IRQs hit our handler while we clean up
     while (inb(PS2_STATUS_PORT) & PS2_STATUS_IN_BUSY);
     outb(PS2_COMMAND_PORT, 0xAD); // 0xAD = Disable 1st PS/2 port
 
     k_api->unregister_interrupt(33);
-    k_api->unregister_device(DEV_INPUT, (void*) dev);
+    k_api->unregister_device(DRV_INPUT, (void*) dev);
 
     k_api->kfree(dev);
 
@@ -189,6 +183,6 @@ static int exit_keyboard() {
 
 SYSMOD_HEADER sysmod_t module_entry = {
     .name = "KEYBOARD/PS2",
-    .init = init_keyboard,
-    .exit = exit_keyboard
+    .init = init,
+    .exit = exit
 };

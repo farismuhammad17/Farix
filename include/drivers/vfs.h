@@ -22,8 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define VFS_H
 
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
+
+#include "sysmods/devices.h"
 
 typedef struct {
     const char* name;
@@ -38,6 +39,9 @@ typedef struct FileNode {
 } FileNode;
 
 typedef struct {
+    uint8_t id;
+    driver_type_t type;
+
     char name[8];
 
     int       (*read)   (const char* name, void* buffer, size_t size, uint64_t offset);
@@ -49,18 +53,8 @@ typedef struct {
     FileNode* (*getall) (const char* path);
 
     int (*check_write_safety)(uint64_t lba);
-} VFS;
+} vfs_driver_t;
 
-extern VFS* current_vfs;
-
-void RARE_FUNC vfs_mount (VFS* ops);
-
-int       fs_read   (const char* name, void* buffer, size_t size, uint64_t offset);
-int       fs_write  (const char* name, const void* buffer, size_t size, uint64_t offset);
-int       fs_create (const char* name);
-int       fs_mkdir  (const char* name);
-int       fs_remove (const char* name);
-File*     fs_get    (const char* name);
-FileNode* fs_getall (const char* path);
+extern vfs_driver_t* vfs;
 
 #endif

@@ -32,7 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 typedef struct {
     uint8_t id;
-    dev_type_t type;
+    driver_type_t type;
 
     void (*read_sector)(uint64_t lba, uint8_t* buffer);
     void (*write_sector)(uint64_t lba, uint8_t* buffer);

@@ -30,7 +30,7 @@ Use {printer.F_MAGENTA('fx [target] help')} for further information.
 
 INFO = {
     "Targets": {
-        "editor": "Launch built-in TUI editor.",
+        "studio": "Launch built-in TUI editor.",
         "make": "Compiles the kernel into bootable ISO and creates disk.img with system files",
         "clean": "Cleans up build artifacts and temporary files",
         "init": "Fetches dependencies and sets up the build requirements",
@@ -58,6 +58,7 @@ INFO = {
         "DEFAULT_ARCH": "Architecture to compile to",
         "THREADS": "Default number of threads to use for compiling",
         "RUNTIME_CORES": "Number of CPU cores during runtime in emulation",
+        "RUNTIME_STORAGE_DEVICE": "Default storage device in emulation",
         "QEMU_FULLSCREEN": "Whether to launch into QEMU in fullscreen by default or not",
         "USER_NAME": "Username used when committing",
         "USER_EMAIL": "Email of the user used when committing",

@@ -26,15 +26,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdint.h>
 
 #include "cpu/pci.h"
-#include "cpu/timer.h"
 
 #include "sysmods/devices.h"
 
 #define SYSMOD_HEADER __attribute__((section(".sysmod_header"), used))
-
-// Kernel System Module internal macros
-#define SYSMOD_TO_KERNEL(s)    ((uint64_t)(s) + base_addr)
-#define SYS_ICALL(func, ...)   ((__typeof__(func)*) SYSMOD_TO_KERNEL(func))(__VA_ARGS__)
 
 typedef struct {
     // Output
@@ -71,6 +66,13 @@ typedef struct {
     void (*kfree)(void* ptr);
     void* (*memset)(void* s, int c, size_t n);
     void* (*memcpy)(void* restrict dest, const void* restrict src, size_t n);
+    int (*memcmp)(const void* s1, const void* s2, size_t n);
+    char* (*strrchr)(const char* s, int c);
+    char* (*strchr)(const char* s, int c);
+    int (*strcmp)(const char* s1, const char* s2);
+    char* (*strncpy)(char *dest, const char *src, size_t n);
+    size_t (*strlen)(const char* s);
+    int (*toupper)(int c);
 
     // IRQ
     void (*register_interrupt)(uint8_t, void*);
@@ -88,16 +90,16 @@ typedef struct {
     pci_device_t* pci_devices;
 
     // Device controllers
-    void (*register_device)(dev_type_t dev_type, void* device);
-    void (*unregister_device)(dev_type_t dev_type, void* device);
+    void (*register_device)(driver_type_t dev_type, void* device);
+    void (*unregister_device)(driver_type_t dev_type, void* device);
 
     // Other devices
-    timer_dev_t* (*get_timer_dev)();
+    void* (*get_device)(driver_type_t dev_type);
 } kernel_api_t;
 
 typedef struct {
     char name[16];
-    int (*init)(kernel_api_t* api, uint64_t base_addr);
+    int (*init)(kernel_api_t* api);
     int (*exit)(); // 8 bytes = 32 bytes
 } __attribute__((packed)) sysmod_t;
 

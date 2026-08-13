@@ -18,17 +18,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------
 */
 
-ENTRY(sysmod_entry)
+ENTRY(init)
+
+PHDRS
+{
+    headers PT_PHDR FILEHDR PHDRS;
+    text    PT_LOAD FILEHDR PHDRS FLAGS(5);
+    data    PT_LOAD FLAGS(6);
+}
+
 SECTIONS
 {
-    . = 0x0;
-    .sysmod_header : { *(.sysmod_header) }
+    . = SIZEOF_HEADERS;
+
+    .sysmod_header : { *(.sysmod_header) } :text
     . = ALIGN(16);
 
     .text : {
         *(.text*)
         *(.rodata*)
-    }
-    .data : { *(.data*) }
-    .bss  : { *(.bss*) }
+    } :text
+
+    .data : { *(.data*) } :data
+    .bss  : { *(.bss*) } :data
 }

@@ -25,16 +25,19 @@ from fxtools.vars import acpica
 data = statejson.get()
 arch = data["DEFAULT_ARCH"]
 
-CFLAGS = (
-    "-ffreestanding -O2 -Wall -Wextra -fno-exceptions "
-    "-mno-red-zone "  # Prevents the compiler from using the 128-byte stack red zone
-    "-mno-mmx -mno-sse -mno-sse2 "  # Keep SIMD off initially to keep context switches simple
-    "-fdiagnostics-color=always "
+INCLUDES_CFLAGS = (
     f"-Iinclude "
     f"-I{acpica.ACPICA_ARCH_INDEPENDANT} -I{acpica.ACPICA_ARCH_DEPENDANT} "
     f"-Iarch/{arch}/include "
     f"-Iarch/{arch} "
     "-include include/kernel.h "
+)
+
+CFLAGS = (
+    "-ffreestanding -O2 -Wall -Wextra -fno-exceptions "
+    "-mno-red-zone "  # Prevents the compiler from using the 128-byte stack red zone
+    "-mno-mmx -mno-sse -mno-sse2 "  # Keep SIMD off initially to keep context switches simple
+    "-fdiagnostics-color=always "
     " -mcmodel=kernel -fno-pic "
     "-fno-stack-protector -U_FORTIFY_SOURCE "
-)
+) + INCLUDES_CFLAGS

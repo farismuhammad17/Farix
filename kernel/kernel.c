@@ -29,10 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "drivers/acpi/acpi.h"
 #include "drivers/mouse.h"
 #include "drivers/terminal.h"
-#include "fs/fat32.h"
-#include "fs/ramdisk.h"
 #include "fs/types/elf.h"
-#include "fs/vfs.h"
 #include "memory/heap.h"
 #include "process/task.h"
 #include "shell/shell.h"
@@ -115,11 +112,6 @@ void kmain() {
     initboot();
 
     system_int_on();
-
-    init_ramdisk();
-    init_fat32();
-
-    vfs_mount(&fat32_vfs);
 
     load_sysmod("system/uart.sys");
 

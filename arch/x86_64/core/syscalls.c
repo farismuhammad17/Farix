@@ -25,8 +25,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "hal.h"
 
 #include "drivers/terminal.h"
+#include "drivers/vfs.h"
 #include "fs/types/elf.h"
-#include "fs/vfs.h"
 #include "memory/heap.h"
 #include "memory/vmm.h"
 #include "process/task.h"
@@ -46,7 +46,7 @@ void syscall_handler(syscalls_registers_x86_64_t* regs) {
             FileData* buf = (FileData*) arg2;
             size_t count  = (size_t) arg3;
 
-            FileNode* head = fs_getall((const char*) arg1);
+            FileNode* head = vfs->getall((const char*) arg1);
             FileNode* temp = NULL;
 
             if (unlikely(!head)) {

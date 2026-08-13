@@ -19,16 +19,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <stddef.h>
-
-#include "klib/ctype.h"
-#include "klib/string.h"
+#include <stdint.h>
 
 #include "drivers/storage.h"
-#include "drivers/terminal.h"
-#include "memory/heap.h"
+#include "sysmods/devices.h"
 
-#include "fs/fat32.h"
-#include "fs/vfs.h"
+#include "sysmods/devices.h"
+#include "sysmods/interface.h"
+
+#include "drivers/vfs.h"
 
 // Reference: Microsoft FAT Specification, August 30 2005, 3.1 BPB structure common to FAT12, FAT16, and FAT32 implementations
 #define FIXED_MEDIA_TYPE_VALUE     0xF8
@@ -152,19 +151,12 @@ typedef struct {
 
 static fat32_header_t* disk_info = NULL;
 
-VFS fat32_vfs = {
-    .name = "FAT32",
+static kernel_api_t* k_api = NULL;
+static vfs_driver_t* dev   = NULL;
 
-    .read   = fat32_read,
-    .write  = fat32_write,
-    .create = fat32_create,
-    .mkdir  = fat32_mkdir,
-    .remove = fat32_remove,
-    .get    = fat32_get,
-    .getall = fat32_getall,
+static storage_dev_t* k_storage_dev = NULL;
 
-    .check_write_safety = fat32_check_write_safety
-};
+// --- Helper functions ---
 
 /* Get the LBA the given cluster is at */
 static inline uint64_t get_lba_from_cluster(uint32_t cluster) {
@@ -182,19 +174,19 @@ static inline uint32_t get_file_cluster(fat32_file_t* file) {
 static uint32_t get_next_cluster(uint32_t cluster) {
     // Check if the cluster index is physically possible
     if (unlikely(cluster < 2 || cluster >= disk_info->total_clusters + 2)) {
-        err_printf("get_next_cluster: Attempted to fetch next cluster for invalid index %d", cluster);
+        k_api->err_printf("get_next_cluster: Attempted to fetch next cluster for invalid index %d", cluster);
         return FAT32_ERROR_CODE;
     }
 
     uint32_t fat_sector = disk_info->reserved_sectors + (cluster / 128);
     uint32_t buffer[128];
-    storage_dev->read_sector(disk_info->partition_start_lba + fat_sector, (uint8_t*) buffer);
+    k_storage_dev->read_sector(disk_info->partition_start_lba + fat_sector, (uint8_t*) buffer);
 
     uint32_t next = buffer[cluster % 128] & 0x0FFFFFFF;
 
     // Detect "Zero Link" corruption (a used file pointing to cluster 0)
     if (unlikely(next == 0)) {
-        err_print("get_next_cluster: Corruption detected; file points to cluster 0.");
+        k_api->err_print("get_next_cluster: Corruption detected; file points to cluster 0.");
         return FAT32_ERROR_CODE;
     }
 
@@ -206,7 +198,7 @@ static uint32_t find_free_fat_entry() {
     uint32_t fat_buffer[128];
 
     for (uint32_t s = 0; s < disk_info->sectors_per_fat; s++) {
-        storage_dev->read_sector(disk_info->partition_start_lba + disk_info->reserved_sectors + s, (uint8_t*) fat_buffer);
+        k_storage_dev->read_sector(disk_info->partition_start_lba + disk_info->reserved_sectors + s, (uint8_t*) fat_buffer);
 
         for (int i = 0; i < 128; i++) {
             if (unlikely(s == 0 && i < 2)) continue; // Skip reserved entries
@@ -227,25 +219,25 @@ static uint32_t find_free_fat_entry() {
 
 /* Format to 8 char for name and 3 for extension */
 static void format_to_83(const char* name, uint8_t* out_name) {
-    memset(out_name, ' ', 11);
+    k_api->memset(out_name, ' ', 11);
 
-    const char* dot_ptr = strrchr(name, '.');
+    const char* dot_ptr = k_api->strrchr(name, '.');
 
     size_t name_len;
     if (dot_ptr == NULL) {
-        name_len = strlen(name);
+        name_len = k_api->strlen(name);
     } else {
         name_len = (size_t)(dot_ptr - name);
     }
 
     for (size_t i = 0; i < name_len && i < 8; i++) {
-        out_name[i] = (uint8_t) toupper((unsigned char) name[i]);
+        out_name[i] = (uint8_t) k_api->toupper((unsigned char) name[i]);
     }
 
     if (dot_ptr != NULL) {
         const char* ext = dot_ptr + 1;
         for (size_t k = 0; k < 3 && ext[k] != '\0'; k++) {
-            out_name[8 + k] = (uint8_t) toupper((unsigned char) ext[k]);
+            out_name[8 + k] = (uint8_t) k_api->toupper((unsigned char) ext[k]);
         }
     }
 }
@@ -254,7 +246,7 @@ static void format_to_83(const char* name, uint8_t* out_name) {
 static inline bool compare_fat_names(uint8_t* fat_name, const char* user_name) {
     uint8_t formatted[11];
     format_to_83(user_name, formatted);
-    return memcmp(fat_name, formatted, 11) == 0;
+    return k_api->memcmp(fat_name, formatted, 11) == 0;
 }
 
 /* Update a FAT32 cluster entry and mirror the write to backup FATs if mirroring is enabled. */
@@ -262,16 +254,16 @@ static void update_fat_entry(uint32_t cluster, uint32_t value) {
     uint32_t fat_buffer[128];
     uint32_t lba = disk_info->reserved_sectors + (cluster / 128);
 
-    storage_dev->read_sector(disk_info->partition_start_lba + lba, (uint8_t*) fat_buffer);
+    k_storage_dev->read_sector(disk_info->partition_start_lba + lba, (uint8_t*) fat_buffer);
     fat_buffer[cluster % 128] = value;
-    storage_dev->write_sector(disk_info->partition_start_lba + lba, (uint8_t*) fat_buffer);
+    k_storage_dev->write_sector(disk_info->partition_start_lba + lba, (uint8_t*) fat_buffer);
 
     // Check if bit 7 is 0 (Mirroring Enabled)
     if (!(disk_info->flags & 0x80)) {
         // Loop starts at 1 because we already wrote to FAT 0
         for (uint32_t i = 1; i < disk_info->fat_count; i++) {
             uint32_t backup_lba = lba + (i * disk_info->sectors_per_fat);
-            storage_dev->write_sector(disk_info->partition_start_lba + backup_lba, (uint8_t*) fat_buffer);
+            k_storage_dev->write_sector(disk_info->partition_start_lba + backup_lba, (uint8_t*) fat_buffer);
         }
     }
 }
@@ -287,7 +279,7 @@ static uint32_t find_entry_in_cluster(uint32_t directory_cluster, const char* na
 
         // A cluster can have multiple sectors
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            storage_dev->read_sector(lba + s, (uint8_t*) entries);
+            k_storage_dev->read_sector(lba + s, (uint8_t*) entries);
 
             for (int i = 0; i < 16; i++) {
                 // 0x00 means end of directory, stop searching
@@ -318,20 +310,20 @@ static uint32_t find_cluster_for_path(const char* path) {
     }
 
     while (*start != '\0') {
-        const char* end = strchr(start, '/');
+        const char* end = k_api->strchr(start, '/');
         char segment[13]; // FAT 8.3 names are max 12 chars (8 + 1 + 3)
         size_t len;
 
         if (end == NULL) {
             // Last part of the path (the filename)
-            len = strlen(start);
+            len = k_api->strlen(start);
         } else {
             // Middle part of the path (a folder name)
             len = (size_t)(end - start);
         }
 
         if (len > 12) len = 12;
-        memcpy(segment, start, len);
+        k_api->memcpy(segment, start, len);
         segment[len] = '\0';
 
         if (len > 0) {
@@ -350,7 +342,7 @@ static uint32_t find_cluster_for_path(const char* path) {
 /* Create a new sub-directory entry, allocate its cluster, and initialize its '.' and '..' links. */
 static bool create_directory_entry(uint32_t sector_lba, int index, const char* name, uint32_t parent_cluster) {
     fat32_file_t entries[ENTRIES_PER_SECTOR];
-    storage_dev->read_sector(sector_lba, (uint8_t*) entries);
+    k_storage_dev->read_sector(sector_lba, (uint8_t*) entries);
 
     uint32_t new_cluster = find_free_fat_entry();
     if (unlikely(new_cluster == FAT32_ERROR_CODE)) return false;
@@ -362,33 +354,33 @@ static bool create_directory_entry(uint32_t sector_lba, int index, const char* n
     entries[index].cluster_high = (uint16_t)((new_cluster >> 16) & 0xFFFF);
     entries[index].size = 0;
 
-    storage_dev->write_sector(sector_lba, (uint8_t*) entries);
+    k_storage_dev->write_sector(sector_lba, (uint8_t*) entries);
     update_fat_entry(new_cluster, 0x0FFFFFFF);
 
     // Initialize "." and ".."
     uint8_t folder_data[512] = {0};
     fat32_file_t* dot_entries = (fat32_file_t*) folder_data;
 
-    memcpy(dot_entries[0].name, ".          ", 11);
+    k_api->memcpy(dot_entries[0].name, ".          ", 11);
     dot_entries[0].attributes   = 0x10;
     dot_entries[0].cluster_low  = (uint16_t)(new_cluster & 0xFFFF);
     dot_entries[0].cluster_high = (uint16_t)((new_cluster >> 16) & 0xFFFF);
 
-    memcpy(dot_entries[1].name, "..         ", 11);
+    k_api->memcpy(dot_entries[1].name, "..         ", 11);
     dot_entries[1].attributes   = 0x10;
     dot_entries[1].cluster_low  = (uint16_t)(parent_cluster & 0xFFFF);
     dot_entries[1].cluster_high = (uint16_t)((parent_cluster >> 16) & 0xFFFF);
 
     uint32_t folder_lba = get_lba_from_cluster(new_cluster);
 
-    storage_dev->write_sector(folder_lba, folder_data);
+    k_storage_dev->write_sector(folder_lba, folder_data);
 
     return true;
 }
 
 /* Finds the folder (path) and the file's name and writes to the pointers */
 static void write_path_filename(const char* full_path, char** out_path, size_t* path_len, const char** filename) {
-    char* last_slash = strrchr(full_path, '/');
+    char* last_slash = k_api->strrchr(full_path, '/');
 
     if (last_slash == NULL) {
         (*out_path)[0] = '\0';
@@ -397,115 +389,14 @@ static void write_path_filename(const char* full_path, char** out_path, size_t* 
     } else {
         *path_len = (size_t)(last_slash - full_path);
 
-        strncpy(*out_path, full_path, *path_len);
+        k_api->strncpy(*out_path, full_path, *path_len);
         (*out_path)[*path_len] = '\0';
 
         *filename = last_slash + 1;
     }
 }
 
-/*
-Reads the MBR to find the BPB, from which, we initialise the FAT32 system, after
-a set of checks. We then cache the data into `disk_info` to use.
-*/
-void init_fat32() {
-    mbr_sector_t mbr;
-    storage_dev->read_sector(0, (uint8_t*) &mbr);
-
-    uint32_t partition_base = mbr.partitions[0].start_lba;
-
-    fat32_bpb_t bpb;
-    storage_dev->read_sector(partition_base, (uint8_t*) &bpb);
-
-    // Verify boot signature
-    if (unlikely(bpb.boot_sector_sig != BOOT_SECTOR_SIG)) {
-        err_printf("init_fat32: Invalid boot signature: %d", bpb.boot_sector_sig);
-        return;
-    }
-
-    // Verify Sectors Per Cluster is a power of 2
-    else if (unlikely(bpb.sectors_per_cluster == 0 || (bpb.sectors_per_cluster & (bpb.sectors_per_cluster - 1)) != 0)) {
-        err_printf("init_fat32: Invalid sectors per cluster: %d", bpb.sectors_per_cluster);
-        return;
-    }
-
-    // For FAT32, fat_size_16 must be 0
-    else if (unlikely(bpb.fat_size_16 != 0)) {
-        err_printf("init_fat32: Not a FAT32 volume (FAT12/16 detected): %d", bpb.fat_size_16);
-        return;
-    }
-
-    // For fat32, root_entry_count must be 0
-    else if (unlikely(bpb.root_entry_count != 0)) {
-        err_printf("init_fat32: Invalid root entry count for FAT32: %d", bpb.root_entry_count);
-        return;
-    }
-
-    // If the boot sector says there are 0 sectors
-    else if (unlikely(bpb.total_sectors_32 == 0)) {
-        err_print("init_fat32: Volume reports 0 sectors");
-        return;
-    }
-
-    // If the sectors per fat is reported to be 0
-    else if (unlikely(bpb.sectors_per_fat == 0)) {
-        err_print("init_fat32: FAT size is 0");
-        return;
-    }
-
-    // FAT32 volume version number must be 0x0
-    else if (unlikely(bpb.fs_version != 0x0)) {
-        err_printf("init_fat32: Version no 0x0, rather: %d", bpb.fs_version);
-        return;
-    }
-
-    disk_info = (fat32_header_t*) kmalloc(sizeof(fat32_header_t));
-
-    if (unlikely(!disk_info)) {
-        err_print("init_fat32: Out of memory");
-        return;
-    }
-
-    memcpy(disk_info->boot_jmp, bpb.jmp, 3);
-    memcpy(disk_info->oem_name, bpb.oem_name, 8);
-
-    disk_info->bytes_per_sector    = bpb.bytes_per_sector;
-    disk_info->sectors_per_cluster = bpb.sectors_per_cluster;
-    disk_info->reserved_sectors    = bpb.reserved_sectors;
-    disk_info->fat_count           = bpb.num_fats;
-    disk_info->media_type          = bpb.media_type;
-    disk_info->sectors_per_track   = bpb.sectors_per_track;
-    disk_info->head_count          = bpb.num_heads;
-    disk_info->hidden_sectors      = bpb.hidden_sectors;
-    disk_info->total_sectors_32    = bpb.total_sectors_32;
-
-    disk_info->sectors_per_fat     = bpb.sectors_per_fat;
-    disk_info->flags               = bpb.ext_flags;
-    disk_info->version             = bpb.fs_version;
-    disk_info->root_cluster        = bpb.root_cluster;
-    disk_info->fs_info_sector      = bpb.fs_info_sector;
-    disk_info->backup_boot_sector  = bpb.backup_boot_sector;
-
-    disk_info->drive_num = bpb.drive_number;
-    disk_info->reserved1 = bpb.reserved1;
-    disk_info->boot_sig  = bpb.boot_signature;
-    disk_info->volume_id = bpb.volume_id;
-
-    memcpy(disk_info->fs_type, bpb.fs_type, 8);
-    memcpy(disk_info->volume_label, bpb.volume_label, 11);
-    disk_info->volume_label[11] = '\0';
-
-    // Legacy FAT12/FAT16
-    disk_info->root_dir_entries = 0;
-    disk_info->total_sectors_16 = 0;
-    disk_info->fat_size_16      = 0;
-
-    // Pre-calculated values
-    uint32_t relative_data_area = bpb.reserved_sectors + (bpb.num_fats * bpb.sectors_per_fat);
-    disk_info->data_lba = relative_data_area;
-    disk_info->total_clusters = (bpb.total_sectors_32 - relative_data_area) / bpb.sectors_per_cluster;
-    disk_info->partition_start_lba = partition_base;
-}
+// --- FAT32 functions ---
 
 /* Read a file and write the data into the buffer, reading from offset to offset+size */
 int fat32_read(const char* name, void* buffer, size_t size, uint64_t offset) {
@@ -521,7 +412,7 @@ int fat32_read(const char* name, void* buffer, size_t size, uint64_t offset) {
         parent_cluster = find_cluster_for_path(path);
 
         if (unlikely(parent_cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_read: Parent cluster not found");
+            k_api->err_print("fat32_read: Parent cluster not found");
             return FAT32_ERROR_CODE;
         }
     }
@@ -533,7 +424,7 @@ int fat32_read(const char* name, void* buffer, size_t size, uint64_t offset) {
         uint32_t lba = get_lba_from_cluster(current_dir_cluster);
 
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            storage_dev->read_sector(lba + s, sector_buffer);
+            k_storage_dev->read_sector(lba + s, sector_buffer);
 
             fat32_file_t* files = (fat32_file_t*) sector_buffer;
 
@@ -554,7 +445,7 @@ int fat32_read(const char* name, void* buffer, size_t size, uint64_t offset) {
                         current_cluster = get_next_cluster(current_cluster);
 
                         if (unlikely(current_cluster >= 0x0FFFFFF8 || current_cluster == FAT32_ERROR_CODE)) {
-                            err_printf("fat32_read: Could not get next cluster while skipping, tried %x", current_cluster);
+                            k_api->err_printf("fat32_read: Could not get next cluster while skipping, tried %x", current_cluster);
                             return FAT32_ERROR_CODE;
                         }
                     }
@@ -571,13 +462,13 @@ int fat32_read(const char* name, void* buffer, size_t size, uint64_t offset) {
 
                         // Start from sector_in_cluster on the first cluster, then 0 for others
                         for (int sec = (int) sector_in_cluster; sec < disk_info->sectors_per_cluster && bytes_read < size; sec++) {
-                            storage_dev->read_sector(cluster_lba + sec, sector_buffer);
+                            k_storage_dev->read_sector(cluster_lba + sec, sector_buffer);
 
                             // How much can we take from this sector
                             uint32_t available = 512 - byte_in_sector;
                             uint32_t to_copy = (size - bytes_read > available) ? available : (uint32_t)(size - bytes_read);
 
-                            memcpy((uint8_t*) buffer + bytes_read, sector_buffer + byte_in_sector, to_copy);
+                            k_api->memcpy((uint8_t*) buffer + bytes_read, sector_buffer + byte_in_sector, to_copy);
 
                             bytes_read += to_copy;
                             byte_in_sector = 0; // After the first partial read, we start at byte 0
@@ -587,7 +478,7 @@ int fat32_read(const char* name, void* buffer, size_t size, uint64_t offset) {
                         current_cluster = get_next_cluster(current_cluster);
 
                         if (unlikely(current_cluster == FAT32_ERROR_CODE)) {
-                            err_print("fat32_read: Could not get next cluster");
+                            k_api->err_print("fat32_read: Could not get next cluster");
                             return FAT32_ERROR_CODE;
                         }
                     }
@@ -600,7 +491,7 @@ int fat32_read(const char* name, void* buffer, size_t size, uint64_t offset) {
         current_dir_cluster = get_next_cluster(current_dir_cluster);
 
         if (unlikely(current_dir_cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_read: Could not get next directory cluster");
+            k_api->err_print("fat32_read: Could not get next directory cluster");
             return FAT32_ERROR_CODE;
         }
     }
@@ -617,11 +508,11 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint64_t offs
     write_path_filename(name, &path, &path_len, &filename);
 
     uint32_t parent_cluster = disk_info->root_cluster;
-    if (path[0] != '\0' && strcmp(path, "/") != 0) {
+    if (path[0] != '\0' && k_api->strcmp(path, "/") != 0) {
         parent_cluster = find_cluster_for_path(path);
 
         if (unlikely(parent_cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_write: Parent cluster not found");
+            k_api->err_print("fat32_write: Parent cluster not found");
             return FAT32_ERROR_CODE;
         }
     }
@@ -633,7 +524,7 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint64_t offs
         uint64_t lba = get_lba_from_cluster(current_dir_cluster);
 
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            storage_dev->read_sector(lba + s, dir_buf);
+            k_storage_dev->read_sector(lba + s, dir_buf);
 
             fat32_file_t* entries = (fat32_file_t*) dir_buf;
 
@@ -650,7 +541,7 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint64_t offs
                         current_cluster = get_next_cluster(current_cluster);
 
                         if (unlikely(current_cluster >= 0x0FFFFFF8 || current_cluster == FAT32_ERROR_CODE)) {
-                            err_printf("fat32_write: Could not get next cluster while skipping, tried %x", current_cluster);
+                            k_api->err_printf("fat32_write: Could not get next cluster while skipping, tried %x", current_cluster);
                             return FAT32_ERROR_CODE;
                         }
                     }
@@ -670,15 +561,15 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint64_t offs
                             uint8_t temp_block[512];
 
                             // Read current sector to preserve data we aren't overwriting
-                            storage_dev->read_sector(data_lba + sec, temp_block);
+                            k_storage_dev->read_sector(data_lba + sec, temp_block);
 
                             uint32_t available = 512 - byte_in_sector;
                             uint32_t to_write = (size - bytes_written > available) ? available : (uint32_t)(size - bytes_written);
 
                             // Copy new data into the specific offset of the sector buffer
-                            memcpy(temp_block + byte_in_sector, write_ptr + bytes_written, to_write);
+                            k_api->memcpy(temp_block + byte_in_sector, write_ptr + bytes_written, to_write);
 
-                            storage_dev->write_sector(data_lba + sec, temp_block);
+                            k_storage_dev->write_sector(data_lba + sec, temp_block);
 
                             bytes_written += to_write;
                             byte_in_sector = 0; // After first sector, we start at byte 0
@@ -690,7 +581,7 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint64_t offs
                             current_cluster = get_next_cluster(current_cluster);
 
                             if (unlikely(current_cluster == FAT32_ERROR_CODE)) {
-                                err_print("fat32_write: Could not get next cluster");
+                                k_api->err_print("fat32_write: Could not get next cluster");
                                 return FAT32_ERROR_CODE;
                             }
                         }
@@ -699,7 +590,7 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint64_t offs
                     // Update directory entry size ONLY if file grew
                     if (offset + size > (uint64_t) entries[i].size) {
                         entries[i].size = (uint32_t)(offset + size);
-                        storage_dev->write_sector(lba + s, dir_buf);
+                        k_storage_dev->write_sector(lba + s, dir_buf);
                     }
 
                     return bytes_written;
@@ -710,13 +601,14 @@ int fat32_write(const char* name, const void* buffer, size_t size, uint64_t offs
         current_dir_cluster = get_next_cluster(current_dir_cluster);
 
         if (unlikely(current_dir_cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_write: Could not get next directory cluster");
+            k_api->err_print("fat32_write: Could not get next directory cluster");
             return FAT32_ERROR_CODE;
         }
     }
 
     return FAT32_ERROR_CODE;
 }
+
 
 /* Create a new file at given path */
 int fat32_create(const char* path) {
@@ -727,11 +619,11 @@ int fat32_create(const char* path) {
     write_path_filename(path, &dir_path, &path_len, &filename);
 
     uint32_t parent_cluster = disk_info->root_cluster;
-    if (dir_path[0] != '\0' && strcmp(dir_path, "/") != 0) {
+    if (dir_path[0] != '\0' && k_api->strcmp(dir_path, "/") != 0) {
         parent_cluster = find_cluster_for_path(dir_path);
 
         if (unlikely(parent_cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_create: Parent cluster not found");
+            k_api->err_print("fat32_create: Parent cluster not found");
             return FAT32_ERROR_CODE;
         }
     }
@@ -745,7 +637,7 @@ int fat32_create(const char* path) {
         uint64_t lba = get_lba_from_cluster(current_dir_cluster);
 
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            storage_dev->read_sector(lba + s, buffer);
+            k_storage_dev->read_sector(lba + s, buffer);
             fat32_file_t* entries = (fat32_file_t*) buffer;
 
             for (int i = 0; i < 16; i++) {
@@ -759,7 +651,7 @@ int fat32_create(const char* path) {
                     entries[i].cluster_high = (uint16_t)((file_cluster >> 16) & 0xFFFF);
                     entries[i].size = 0;
 
-                    storage_dev->write_sector(lba + s, buffer);
+                    k_storage_dev->write_sector(lba + s, buffer);
                     update_fat_entry(file_cluster, 0x0FFFFFFF); // Mark EOF in FAT
 
                     return 1;
@@ -770,7 +662,7 @@ int fat32_create(const char* path) {
         current_dir_cluster = get_next_cluster(current_dir_cluster);
 
         if (unlikely(current_dir_cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_create: Could not get next directory cluster");
+            k_api->err_print("fat32_create: Could not get next directory cluster");
             return FAT32_ERROR_CODE;
         }
     }
@@ -786,7 +678,7 @@ int fat32_create(const char* path) {
     uint64_t new_lba = get_lba_from_cluster(new_cluster);
     uint8_t zero_block[512] = {0};
     for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-        storage_dev->write_sector(new_lba + s, zero_block);
+        k_storage_dev->write_sector(new_lba + s, zero_block);
     }
 
     // Place the new file entry in the first slot of the new cluster
@@ -802,8 +694,8 @@ int fat32_create(const char* path) {
     new_entry.size = 0;
 
     // Write the new entry to the start of the new cluster
-    memcpy(buffer, &new_entry, sizeof(fat32_file_t));
-    storage_dev->write_sector(new_lba, buffer);
+    k_api->memcpy(buffer, &new_entry, sizeof(fat32_file_t));
+    k_storage_dev->write_sector(new_lba, buffer);
     update_fat_entry(file_cluster, 0x0FFFFFFF);
 
     return 1;
@@ -818,11 +710,11 @@ int fat32_mkdir(const char* path) {
     write_path_filename(path, &parent_path, &path_len, &folder_name);
 
     uint32_t parent_cluster = disk_info->root_cluster;
-    if (parent_path[0] != '\0' && strcmp(parent_path, "/") != 0) {
+    if (parent_path[0] != '\0' && k_api->strcmp(parent_path, "/") != 0) {
         parent_cluster = find_cluster_for_path(parent_path);
 
         if (unlikely(parent_cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_mkdir: Parent cluster not found");
+            k_api->err_print("fat32_mkdir: Parent cluster not found");
             return FAT32_ERROR_CODE;
         }
     }
@@ -836,7 +728,7 @@ int fat32_mkdir(const char* path) {
         uint64_t lba = get_lba_from_cluster(current_dir_cluster);
 
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            storage_dev->read_sector(lba + s, buffer);
+            k_storage_dev->read_sector(lba + s, buffer);
             fat32_file_t* entries = (fat32_file_t*) buffer;
 
             for (int i = 0; i < 16; i++) {
@@ -849,7 +741,7 @@ int fat32_mkdir(const char* path) {
         current_dir_cluster = get_next_cluster(current_dir_cluster);
 
         if (unlikely(current_dir_cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_mkdir: Could not get next directory cluster");
+            k_api->err_print("fat32_mkdir: Could not get next directory cluster");
             return FAT32_ERROR_CODE;
         }
     }
@@ -865,7 +757,7 @@ int fat32_mkdir(const char* path) {
 
     // Initialize the new sector with zeros
     for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-        storage_dev->write_sector(new_lba + s, zero_block);
+        k_storage_dev->write_sector(new_lba + s, zero_block);
     }
 
     // Use slot 0 of the newly allocated directory cluster
@@ -881,11 +773,11 @@ int fat32_remove(const char* name) {
     write_path_filename(name, &path, &path_len, &target_name);
 
     uint32_t parent_cluster = disk_info->root_cluster;
-    if (path[0] != '\0' && strcmp(path, "/") != 0) {
+    if (path[0] != '\0' && k_api->strcmp(path, "/") != 0) {
         parent_cluster = find_cluster_for_path(path);
 
         if (unlikely(parent_cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_remove: Parent cluster not found");
+            k_api->err_print("fat32_remove: Parent cluster not found");
             return FAT32_ERROR_CODE;
         }
     }
@@ -897,7 +789,7 @@ int fat32_remove(const char* name) {
         uint64_t first_lba = get_lba_from_cluster(cluster);
 
         for (uint32_t s = 0; s < disk_info->sectors_per_cluster; s++) {
-            storage_dev->read_sector(first_lba + s, dir_buf);
+            k_storage_dev->read_sector(first_lba + s, dir_buf);
             fat32_file_t* entries = (fat32_file_t*) dir_buf;
 
             for (int i = 0; i < 16; i++) {
@@ -911,7 +803,7 @@ int fat32_remove(const char* name) {
                         uint32_t next_cluster = get_next_cluster(current_file_cluster);
 
                         if (unlikely(next_cluster == FAT32_ERROR_CODE)) {
-                            err_print("fat32_remove: Could not get next cluster");
+                            k_api->err_print("fat32_remove: Could not get next cluster");
                             return FAT32_ERROR_CODE;
                         }
 
@@ -921,7 +813,7 @@ int fat32_remove(const char* name) {
 
                     // Mark directory entry as deleted
                     entries[i].name[0] = 0xE5;
-                    storage_dev->write_sector(first_lba + s, dir_buf);
+                    k_storage_dev->write_sector(first_lba + s, dir_buf);
 
                     return 1;
                 }
@@ -931,7 +823,7 @@ int fat32_remove(const char* name) {
         cluster = get_next_cluster(cluster);
 
         if (unlikely(cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_remove: Could not get cluster");
+            k_api->err_print("fat32_remove: Could not get cluster");
             return FAT32_ERROR_CODE;
         }
     }
@@ -942,7 +834,7 @@ int fat32_remove(const char* name) {
 /* Get the file object at the given absolute name */
 File* fat32_get(const char* name) {
     uint32_t cluster = find_cluster_for_path(name);
-    if (unlikely(cluster == 0 && strcmp(name, "/") != 0)) return NULL;
+    if (unlikely(cluster == 0 && k_api->strcmp(name, "/") != 0)) return NULL;
 
     char* path;
     size_t path_len;
@@ -951,11 +843,11 @@ File* fat32_get(const char* name) {
     write_path_filename(name, &path, &path_len, &filename);
 
     uint32_t parent_cluster = disk_info->root_cluster;
-    if (path[0] != '\0' && strcmp(path, "/") != 0) {
+    if (path[0] != '\0' && k_api->strcmp(path, "/") != 0) {
         parent_cluster = find_cluster_for_path(path);
 
         if (unlikely(parent_cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_get: Parent cluster not found");
+            k_api->err_print("fat32_get: Parent cluster not found");
             return NULL;
         }
     }
@@ -969,14 +861,14 @@ File* fat32_get(const char* name) {
         uint64_t lba = get_lba_from_cluster(current_dir_cluster);
 
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            storage_dev->read_sector(lba + s, sector_buf);
+            k_storage_dev->read_sector(lba + s, sector_buf);
             fat32_file_t* entries = (fat32_file_t*) sector_buf;
             for (int i = 0; i < 16; i++) {
                 if (unlikely(entries[i].name[0] == 0x00)) goto search_done;
                 if (unlikely(entries[i].name[0] == 0xE5)) continue;
 
                 if (compare_fat_names(entries[i].name, filename)) {
-                    memcpy(&found_entry, &entries[i], sizeof(fat32_file_t));
+                    k_api->memcpy(&found_entry, &entries[i], sizeof(fat32_file_t));
                     entry_found = true;
 
                     goto search_done;
@@ -987,7 +879,7 @@ File* fat32_get(const char* name) {
         current_dir_cluster = get_next_cluster(current_dir_cluster);
 
         if (unlikely(current_dir_cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_get: Could not get next directory cluster");
+            k_api->err_print("fat32_get: Could not get next directory cluster");
             return NULL;
         }
     }
@@ -995,8 +887,8 @@ File* fat32_get(const char* name) {
 search_done:
     if (unlikely(!entry_found)) return NULL;
 
-    File* f = (File*) kmalloc(sizeof(File));
-    memset(f, 0, sizeof(File));
+    File* f = (File*) k_api->kmalloc(sizeof(File));
+    k_api->memset(f, 0, sizeof(File));
 
     f->name = name;
     f->is_directory = (found_entry.attributes & 0x10);
@@ -1005,7 +897,7 @@ search_done:
     if (f->is_directory) {
         f->data = NULL;
     } else {
-        f->data = (uint8_t*) kmalloc(f->size);
+        f->data = (uint8_t*) k_api->kmalloc(f->size);
         if (!f->data) return f;
 
         uint32_t current_cluster = get_file_cluster(&found_entry);
@@ -1017,12 +909,12 @@ search_done:
             for (int s = 0; s < disk_info->sectors_per_cluster && bytes_read < f->size; s++) {
                 uint32_t remaining = f->size - bytes_read;
                 if (remaining >= 512) {
-                    storage_dev->read_sector(start_lba + s, (uint8_t*)(f->data + bytes_read));
+                    k_storage_dev->read_sector(start_lba + s, (uint8_t*)(f->data + bytes_read));
                     bytes_read += 512;
                 } else {
                     uint8_t bounce[512];
-                    storage_dev->read_sector(start_lba + s, bounce);
-                    memcpy((uint8_t*)(f->data + bytes_read), bounce, remaining);
+                    k_storage_dev->read_sector(start_lba + s, bounce);
+                    k_api->memcpy((uint8_t*)(f->data + bytes_read), bounce, remaining);
                     bytes_read += remaining;
                 }
             }
@@ -1030,7 +922,7 @@ search_done:
             current_cluster = get_next_cluster(current_cluster);
 
             if (unlikely(current_cluster == FAT32_ERROR_CODE)) {
-                err_print("fat32_get: Could not get next cluster");
+                k_api->err_print("fat32_get: Could not get next cluster");
                 return NULL;
             }
         }
@@ -1042,11 +934,11 @@ search_done:
 /* Get a linked list of all the contents of a given directory */
 FileNode* fat32_getall(const char* path) {
     uint32_t parent_cluster = disk_info->root_cluster;
-    if (path[0] != '\0' && strcmp(path, "/") != 0) {
+    if (path[0] != '\0' && k_api->strcmp(path, "/") != 0) {
         parent_cluster = find_cluster_for_path(path);
 
         if (unlikely(parent_cluster == FAT32_ERROR_CODE)) {
-            err_print("fat32_getall: Parent cluster not found");
+            k_api->err_print("fat32_getall: Parent cluster not found");
             return NULL;
         }
     }
@@ -1059,7 +951,7 @@ FileNode* fat32_getall(const char* path) {
         uint64_t lba = get_lba_from_cluster(current_cluster);
 
         for (int s = 0; s < disk_info->sectors_per_cluster; s++) {
-            storage_dev->read_sector(lba + s, buffer);
+            k_storage_dev->read_sector(lba + s, buffer);
 
             fat32_file_t* entries = (fat32_file_t*) buffer;
 
@@ -1069,15 +961,15 @@ FileNode* fat32_getall(const char* path) {
                             (entries[i].attributes & 0x08) ||
                              entries[i].name[0] == '.')) continue;
 
-                FileNode* newNode = (FileNode*) kmalloc(sizeof(FileNode));
+                FileNode* newNode = (FileNode*) k_api->kmalloc(sizeof(FileNode));
                 if (unlikely(!newNode)) return head;
-                memset(newNode, 0, sizeof(FileNode));
+                k_api->memset(newNode, 0, sizeof(FileNode));
 
                 newNode->file.size = entries[i].size;
                 newNode->file.is_directory = (entries[i].attributes & 0x10);
 
                 // We need 13 bytes max (8 + 1 dot + 3 ext + 1 null)
-                char* formatted_name = (char*) kmalloc(13);
+                char* formatted_name = (char*) k_api->kmalloc(13);
                 int p = 0;
 
                 // Copy Filename
@@ -1127,3 +1019,141 @@ int fat32_check_write_safety(uint64_t lba) {
 
     return 0;
 }
+
+// --- Init/Exit ---
+
+static int init(kernel_api_t* api) {
+    k_api = api;
+    k_storage_dev = (storage_dev_t*) k_api->get_device(DRV_STORAGE);
+
+    mbr_sector_t mbr;
+    k_storage_dev->read_sector(0, (uint8_t*) &mbr);
+
+    // Verify MBR signature (same as BPB's)
+    if (unlikely(mbr.signature != BOOT_SECTOR_SIG)) {
+        k_api->err_printf("init_fat32: Invalid MBR signature: %d", mbr.signature);
+        return 1;
+    }
+
+    uint32_t partition_base = mbr.partitions[0].start_lba;
+
+    fat32_bpb_t bpb;
+    k_storage_dev->read_sector(partition_base, (uint8_t*) &bpb);
+
+    // Verify boot signature
+    if (unlikely(bpb.boot_sector_sig != BOOT_SECTOR_SIG)) {
+        k_api->err_printf("init_fat32: Invalid BPB signature: %d", bpb.boot_sector_sig);
+        return 2;
+    }
+
+    // Verify Sectors Per Cluster is a power of 2
+    else if (unlikely(bpb.sectors_per_cluster == 0 || (bpb.sectors_per_cluster & (bpb.sectors_per_cluster - 1)) != 0)) {
+        k_api->err_printf("init_fat32: Invalid sectors per cluster: %d", bpb.sectors_per_cluster);
+        return 3;
+    }
+
+    // For FAT32, fat_size_16 must be 0
+    else if (unlikely(bpb.fat_size_16 != 0)) {
+        k_api->err_printf("init_fat32: Not a FAT32 volume (FAT12/16 detected): %d", bpb.fat_size_16);
+        return 4;
+    }
+
+    // For fat32, root_entry_count must be 0
+    else if (unlikely(bpb.root_entry_count != 0)) {
+        k_api->err_printf("init_fat32: Invalid root entry count for FAT32: %d", bpb.root_entry_count);
+        return 5;
+    }
+
+    // If the boot sector says there are 0 sectors
+    else if (unlikely(bpb.total_sectors_32 == 0)) {
+        k_api->err_print("init_fat32: Volume reports 0 sectors");
+        return 6;
+    }
+
+    // If the sectors per fat is reported to be 0
+    else if (unlikely(bpb.sectors_per_fat == 0)) {
+        k_api->err_print("init_fat32: FAT size is 0");
+        return 7;
+    }
+
+    // FAT32 volume version number must be 0x0
+    else if (unlikely(bpb.fs_version != 0x0)) {
+        k_api->err_printf("init_fat32: Version no 0x0, rather: %d", bpb.fs_version);
+        return 8;
+    }
+
+    disk_info = (fat32_header_t*) k_api->kmalloc(sizeof(fat32_header_t));
+
+    if (unlikely(!disk_info)) {
+        k_api->err_print("init_fat32: Out of memory");
+        return 9;
+    }
+
+    k_api->memcpy(disk_info->boot_jmp, bpb.jmp, 3);
+    k_api->memcpy(disk_info->oem_name, bpb.oem_name, 8);
+
+    disk_info->bytes_per_sector    = bpb.bytes_per_sector;
+    disk_info->sectors_per_cluster = bpb.sectors_per_cluster;
+    disk_info->reserved_sectors    = bpb.reserved_sectors;
+    disk_info->fat_count           = bpb.num_fats;
+    disk_info->media_type          = bpb.media_type;
+    disk_info->sectors_per_track   = bpb.sectors_per_track;
+    disk_info->head_count          = bpb.num_heads;
+    disk_info->hidden_sectors      = bpb.hidden_sectors;
+    disk_info->total_sectors_32    = bpb.total_sectors_32;
+
+    disk_info->sectors_per_fat     = bpb.sectors_per_fat;
+    disk_info->flags               = bpb.ext_flags;
+    disk_info->version             = bpb.fs_version;
+    disk_info->root_cluster        = bpb.root_cluster;
+    disk_info->fs_info_sector      = bpb.fs_info_sector;
+    disk_info->backup_boot_sector  = bpb.backup_boot_sector;
+
+    disk_info->drive_num = bpb.drive_number;
+    disk_info->reserved1 = bpb.reserved1;
+    disk_info->boot_sig  = bpb.boot_signature;
+    disk_info->volume_id = bpb.volume_id;
+
+    k_api->memcpy(disk_info->fs_type, bpb.fs_type, 8);
+    k_api->memcpy(disk_info->volume_label, bpb.volume_label, 11);
+    disk_info->volume_label[11] = '\0';
+
+    // Legacy FAT12/FAT16
+    disk_info->root_dir_entries = 0;
+    disk_info->total_sectors_16 = 0;
+    disk_info->fat_size_16      = 0;
+
+    // Pre-calculated values
+    uint32_t relative_data_area = bpb.reserved_sectors + (bpb.num_fats * bpb.sectors_per_fat);
+    disk_info->data_lba = relative_data_area;
+    disk_info->total_clusters = (bpb.total_sectors_32 - relative_data_area) / bpb.sectors_per_cluster;
+    disk_info->partition_start_lba = partition_base;
+
+    dev = k_api->kmalloc(sizeof(vfs_driver_t));
+    dev->id = FAT32_VFS_ID;
+    dev->type = DRV_VFS;
+
+    dev->read   = fat32_read;
+    dev->write  = fat32_write;
+    dev->create = fat32_create;
+    dev->mkdir  = fat32_mkdir;
+    dev->remove = fat32_remove;
+    dev->get    = fat32_get;
+    dev->getall = fat32_getall;
+
+    dev->check_write_safety = fat32_check_write_safety;
+
+    k_api->register_device(DRV_VFS, (void*) dev);
+
+    return 0;
+}
+
+static int exit() {
+    return 0;
+}
+
+SYSMOD_HEADER sysmod_t module_entry = {
+    .name = "FAT32",
+    .init = init,
+    .exit = exit
+};

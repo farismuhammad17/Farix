@@ -28,7 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 typedef struct output_dev_t {
     struct output_dev_t* next;
     uint8_t id;
-    dev_type_t type;
+    driver_type_t type;
 
     void (*printf)(const char* format, ...);
 } output_dev_t;
